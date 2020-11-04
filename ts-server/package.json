@@ -1,0 +1,31 @@
+{
+  "name": "ts-server",
+  "version": "1.0.0",
+  "description": "Back end code for running toy soldiers game!",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "node build/index.js start",
+    "update-shared": "npm run build --prefix ../ts-shared && npm install ../ts-shared"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://lcgonsalves@github.com/lcgonsalves/toy-soldiers-js.git"
+  },
+  "author": "Léo Gonsalves",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lcgonsalves/toy-soldiers-js/issues"
+  },
+  "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme",
+  "dependencies": {
+    "@types/express": "4.17.8",
+    "@types/node": "14.11.8",
+    "@types/socket.io": "2.1.11",
+    "express": "4.17.1",
+    "socket.io": "2.3.0",
+    "ts-shared": "file:../ts-shared"
+  }
+}

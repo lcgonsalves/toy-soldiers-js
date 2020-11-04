@@ -1,0 +1,31 @@
+{
+  "name": "toy-soldiers",
+  "version": "1.0.0",
+  "description": "Toy Soldiers Top Repository",
+  "main": "ProjectManager",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run startServer",
+    "startServer": "npm start --prefix ./ts-server",
+    "buildAndServe": "rm -r ./ts-server/static/ts-game-build/ && npm run build --prefix ./ts-game && cp -R ./ts-game/build ./ts-server/static/ts-game-build/",
+    "startFront": "npm start --prefix ./ts-game",
+    "setup": "npm install --prefix ./ts-server && npm install --prefix ./ts-game && npm install --prefix ./ts-shared"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://lcgonsalves@github.com/lcgonsalves/toy-soldiers-js.git"
+  },
+  "keywords": [
+    "web",
+    "game",
+    "risk",
+    "open",
+    "source"
+  ],
+  "author": "Léo Gonsalves",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lcgonsalves/toy-soldiers-js/issues"
+  },
+  "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme"
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"ServerWebsocketManager.js","sourceRoot":"","sources":["../../src/server/ServerWebsocketManager.ts"],"names":[],"mappings":";;AAAA,yCAAsG;AAEtG;;GAEG;AACH,MAAM,sBAAuB,SAAQ,oCAAwB;IAE/C,EAAE,CAAC,SAA0B,EAAE,OAAkD;QACvF,OAAO,SAAS,CAAC;IACrB,CAAC;CAEJ"}

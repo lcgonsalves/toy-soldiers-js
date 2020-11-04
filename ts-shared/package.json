@@ -1,0 +1,33 @@
+{
+  "name": "ts-shared",
+  "version": "1.0.0",
+  "description": "Main dependency for shared code between back end and front end.",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --declaration",
+    "watch": "tsc -w --declaration",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://lcgonsalves@github.com/lcgonsalves/toy-soldiers-js.git"
+  },
+  "author": "Léo Gonsalves",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lcgonsalves/toy-soldiers-js/issues"
+  },
+  "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme",
+  "devDependencies": {
+    "typescript": "^4.0.3"
+  },
+  "dependencies": {
+    "@types/socket.io": "^2.1.11",
+    "@types/socket.io-client": "^1.4.34",
+    "rxjs": "^6.6.3",
+    "socket.io": "^2.3.0",
+    "socket.io-client": "^2.3.1"
+  }
+}
