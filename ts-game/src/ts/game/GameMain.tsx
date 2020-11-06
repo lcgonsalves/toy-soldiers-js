@@ -1,279 +1,21 @@
 import React, {Component} from 'react';
-import {select} from "d3-selection";
-import {path} from "d3-path";
-import {scaleLinear} from "d3-scale";
-import {extent} from "d3-array";
-import * as d3 from "d3";
-
+import {select, pointer, Selection, BaseType} from "d3-selection";
+import {path, Path} from "d3-path";
+import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
+import Node from "ts-shared/build/graph/Node";
+import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
+import {Matrix} from "ts-matrix";
+import UnitConverter from "ts-shared/build/util/UnitConverter";
+import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
+import "../../css/DirectedGraph.css";
 
 // todo: move state to props
 interface GameMainProps {
 
 }
-
-interface IComparable {
-    /**
-     * Returns true if objects are functionally equal.
-     * @param other
-     */
-    equals(other: IComparable): boolean;
-}
-
-class Coordinate {
-    readonly x: number;
-    readonly y: number;
-
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-
-    /**
-     * Returns the midpoint between two coordinates.
-     * @param other
-     */
-    midpoint(other: Coordinate): Coordinate {
-        return new Coordinate((this.x + other.x) / 2, (this.y + other.y) / 2);
-    }
-
-    /**
-     * Returns the distance between two coordinates.
-     * @param other
-     */
-    distance(other: Coordinate): number {
-
-        return Math.sqrt(
-          Math.pow(this.x - other.x, 2) +
-          Math.pow(this.y - other.y, 2)
-        )
-
-    }
-
-}
-
-class DirectedEdge implements IComparable {
-    get to(): Node {
-        return this._to;
-    }
-    get from(): Node {
-        return this._from;
-    }
-
-    private readonly _from: Node;
-    private readonly _to: Node;
-
-    constructor(from: Node, to: Node) {
-        this._from = from;
-        this._to = to;
-    }
-
-    public toString(): string {
-        return `${this._from.toString()} -> ${this._to.toString()}`
-    }
-
-    equals(other: DirectedEdge): boolean {
-        return this._to.equals(other._to) && this._from.equals(other._from);
-    }
-}
-
-class Node implements IComparable {
-    private readonly _coordinate: Coordinate;
-    private readonly _id: string;
-    private edges: DirectedEdge[];
-
-    get y(): number { return this._coordinate.y; }
-    get x(): number { return this._coordinate.x; }
-    get id(): string { return this._id; }
-
-    constructor(id: string, x: number, y: number, edges: DirectedEdge[] = []) {
-        this._id = id;
-        this._coordinate = new Coordinate(x, y);
-        this.edges = edges;
-    }
-
-    /** returns midpoint between two nodes */
-    public midpoint(other: Node): Coordinate {
-        return this._coordinate.midpoint(other._coordinate);
-    }
-
-    /** returns distance between two nodes */
-    public distance(other: Node): number {
-        return this._coordinate.distance(other._coordinate);
-    }
-
-    /** Converts the node and its immediate connections to a string */
-    public toStringComplex(): string {
-        const destinations = this.edges.map(e => e.to.toStringSimple());
-
-        if (this.edges.length === 0 || destinations.length === 0) return `(${this.x}, ${this.y})`;
-
-        return `[${this._id}](${this.x}, ${this.y}) -> ${destinations.reduce((acc, cur) => acc + ", " + cur)}`;
-    }
-
-    /** Converts the node to a simple string with no edges */
-    public toStringSimple(): string {
-        return `[${this._id}](${this.x}, ${this.y})`
-    }
-
-    /** Returns true if the node has the same coordinates. */
-    equals(other: Node): boolean {
-        return this._id === other._id;
-    }
-
-    /** Updates edges of this node to be the same as a template. Template must pass _.equals() validation */
-    public updateEdges(template: Node): Node {
-        if (!template.equals(this))
-            throw new Error("Cannot update edges from a different Node! Nodes must .equals() each other.");
-
-        // TODO: do I need to verify if edges.from() all match this??
-        this.edges = template.edges;
-
-        return this;
-    }
-
-    /**
-     * Returns true if other node is directly accessible from this node.
-     * O(edges.length)
-     *
-     */
-    isAdjacent(other: Node): boolean {
-        return !!this.edges.find(edge => edge.to.equals(other));
-    }
-
-    /** Gets all the nodes immediately adjacent to this. */
-    getAdjacent(): Node[] {
-        return this.edges.map(edge => edge.to);
-    }
-
-    /**
-     * Connects this node to other node.
-     *
-     * @param {Node} other target node
-     * @param {boolean} bidirectional optional – whether the connection should work both ways
-     * @returns {Node} this node (for chaining connections)
-     */
-    connectTo(other: Node, bidirectional: boolean = false): Node {
-        if (bidirectional) other.connectTo(this);
-        if (!this.isAdjacent(other)) {
-            this.edges.push(new DirectedEdge(this, other));
-        }
-
-        return this;
-    }
-
-}
-
-// TODO: node removal?
-class DirectedGraph implements IComparable {
-    private _nodes: Node[];
-    public readonly domain: [number, number] = [0, 3];
-
-    constructor(...nodes: Node[]) {
-        this._nodes = [...nodes];
-    }
-
-    get nodes(): Node[] { return this._nodes }
-
-    public toString(): string {
-        return this._nodes.map(n => n.toString()).reduce( (acc, cur) => acc + "\n" + cur );
-    }
-
-    /**
-     * Returns true if graph contains a given node.
-     *
-     * @param n
-     */
-    public contains(n: Node): boolean {
-        return !!this._nodes.find(_ => _.equals(n));
-    }
-
-    /**
-     * Returns given node if it exists in the graph. If node doesn't
-     * exist, an error is thrown.
-     *
-     * @param n
-     */
-    public get(n: Node): Node {
-        const outputNode = this._nodes.find(_ => _.equals(n));
-        if (!outputNode) throw new Error("Cannot get node that is not part of the graph.");
-        else return outputNode;
-    }
-
-    /**
-     * Returns given node if it exists in the graph. If node doesn't
-     * exist, else is returned.
-     *
-     * @param n
-     * @param fallbackValue
-     */
-    public getOrElse(n: Node, fallbackValue: any): Node | any {
-        if (!this.contains(n)) return fallbackValue;
-        else return this.get(n);
-    }
-
-    /**
-     * Adds node(s) to the graph if not yet contained. If a node is already contained,
-     * this function updates the edges of that node to the new one.
-     *
-     * @param n
-     */
-    public addNode(...n: Node[]): DirectedGraph {
-        n.forEach(node => !this.contains(node) ? this._nodes.push(node) : this.findAndUpdateEdges(node));
-        return this;
-    }
-
-    /**
-     * For a given node n, if it is already contained by the graph, update its edges.
-     * Otherwise, add it to the graph.
-     *
-     * @param n the node
-     */
-    private findAndUpdateEdges(n: Node): Node {
-        return this.get(n).updateEdges(n);
-    }
-
-    /**
-     * Adds a pair of nodes to the graph and connects them. If either of the nodes already
-     * exists, it will be connected to the other. If both already exist, they will be connected to each other.
-     *
-     * @param {Node} n1 Starting node if unidirectional
-     * @param {Node} n2 Ending node if unidirectional
-     * @param {boolean} bidirectional false if unidirectional
-     * @returns {Node} the second node, or ending node if unidirectional
-     */
-    public addAndConnect(n1: Node, n2: Node, bidirectional: boolean = false): DirectedGraph {
-        // TODO: rethink node addition
-        if (
-          n1.x > this.domain[1] ||
-          n1.x < this.domain[0] ||
-          n1.y > this.domain[1] ||
-          n1.y < this.domain[0] ||
-          n2.x > this.domain[1] ||
-          n2.x < this.domain[0] ||
-          n2.y > this.domain[1] ||
-          n2.y < this.domain[0]
-        ) throw new Error("Nodes do not fit in the coordinate system!");
-
-        let firstNode: Node, secondNode: Node;
-
-        firstNode = this.getOrElse(n1, n1);
-        secondNode = this.getOrElse(n2, n2);
-
-        firstNode.connectTo(secondNode, bidirectional);
-
-        // adds if they don't exist yet
-        return this.addNode(firstNode, secondNode);
-    }
-
-    equals(other: DirectedGraph): boolean {
-        return this._nodes.every(other.contains);
-    }
-
-}
-
 interface GameMainState {
-    g: DirectedGraph,
-    r: number
+    nodes: Node[],
+    pathCurveDegree: number
 }
 
 // type shorthand for ease of reading
@@ -281,117 +23,247 @@ type SVGElement = React.RefObject<SVGSVGElement>;
 
 class GameMain extends Component<any, GameMainState> {
     state: GameMainState;
+    private graph: DirectedGraph = new DirectedGraph();
     private svgElement: SVGElement = React.createRef();
+    private nodeElements: Selection<SVGCircleElement, Node, SVGGElement, unknown> | undefined;
+    private edgeElements: Selection<SVGPathElement, DirectedEdge, SVGGElement, unknown> | undefined;
 
     constructor(props: any) {
         super(props);
 
         // init nodes
         let p1, p2, p3, p4, p5;
-        p1 = new Node("P1", 0, 0);
-        p2 = new Node("P2", 0, 2);
-        p3 = new Node("P3", 1, 1);
-        p4 = new Node("P4", 2, 0);
-        p5 = new Node("P5", 2, 2);
+        p1 = new Node("P1", 94, 10);
+        p2 = new Node("P2", 30, 10);
+        p3 = new Node("P3", 50, 35);
+        p4 = new Node("P4", 90, 80);
+        p5 = new Node("P5", 87, 67);
 
-        const g = new DirectedGraph()
-          .addAndConnect(p1, p2)
+        this.graph.isSnappingNodesToGrid = true;
+        this.graph.addAndConnect(p1, p4)
           // .addAndConnect(p1, p4)
           // .addAndConnect(p4, p5, true)
           // .addAndConnect(p2, p5, true)
           // .addAndConnect(p5, p3)
           // .addAndConnect(p3, p1);
 
-        this.state = {g: g, r: 0};
+        this.state = {nodes: this.graph.nodes, pathCurveDegree: 1};
 
-        console.log(this.state.g.toString());
     }
 
     /** Once HTML elements have loaded, this method is run to initialize the SVG elements using D3. */
     private initializeGraph(): void {
-        const svg = this.svgElement.current;
-        const nodes = this.state.g.nodes;
-        const mainGroup = select(svg).append("g").attr("id", "main");
+        const drawGrid = (context: Path): Path => {
+            const xDomain = this.graph.domain.x,
+                yDomain = this.graph.domain.y;
 
-        console.log(extent(nodes, n => n.x));
+            for (let col = xDomain.min; xDomain.contains(col); col += this.graph.step) {
+                context.moveTo(col, yDomain.min);
+                context.lineTo(col, yDomain.max);
+            }
 
-        // @ts-ignore
-        const scaleX = x => {
-            const output = scaleLinear().domain(this.state.g.domain).range([20, 80])(x);
-            if (output) return output;
-            else throw new Error("Could not scale variable X");
-        };
-        // @ts-ignore
-        const scaleY = y => {
-            const output = scaleLinear().domain(this.state.g.domain).range([20, 80])(y);
-            if (output) return output;
-            else throw new Error("Could not scale variable X");
-        };
+            for (let row = yDomain.min; yDomain.contains(row); row += this.graph.step) {
+                context.moveTo(xDomain.min, row);
+                context.lineTo(xDomain.max, row);
+            }
 
-        const scaleBoth = (valueX: number, valueY: number): number[] => [scaleX(valueX), scaleY(valueY)];
-
-        const graphNodes = mainGroup.append("g")
-          .attr("id", "nodes")
-          .selectAll("directed-graph-node")
-          .data(this.state.g.nodes)
-          .enter()
-          .append("g")
-          .attr("id", node => node.toStringSimple());
-
-        const calculateRadius = (a: Coordinate, b: Coordinate): number => {
-            return a.distance(b);
+            return context;
         }
 
-        const drawEdgesOfNode = (node: Node, context: d3.Path): d3.Path => {
-            node.getAdjacent().forEach( adjacentNode => {
-                const midpoint = node.midpoint(adjacentNode);
+        const mainGroup = select(this.svgElement.current)
+            .append("g")
+            .attr("id", "main");
 
+        // draw grid
+        mainGroup.append("path")
+            .classed("grid", true)
+            .attr("d", drawGrid(path()).toString());
 
-                const [x0, y0] = scaleBoth(node.x, node.y);
-                const [x1, y1] = scaleBoth(midpoint.x, midpoint.y);
-                const [x2, y2] = scaleBoth(adjacentNode.x, adjacentNode.y);
-                const minumumRadius = calculateRadius(
-                  new Coordinate(x0, y0),
-                  new Coordinate(x1, y1)
-                ) * 1.5;
+        // append nodes svg group
+        mainGroup.append("g")
+            .attr("id", "nodes");
 
-                context.moveTo(x0, y0);
-                context.arcTo(x1, y1, x2, y2, minumumRadius);
-            });
+        // append edges svg group
+        mainGroup.append("g")
+            .attr("id", "edges");
+
+    }
+
+    /** Generates a drag function for a given element, with all handlers assigned */
+    private initDragHandlers<E extends DraggedElementBaseType, N extends Node>(): DragBehavior<E, N, SubjectPosition | N> {
+        const updateNodeArray = () => this.setState({nodes: this.graph.nodes});
+
+        // sets node to active
+        function onStart(this: E, evt: any, dataPoint: N) {
+            select(this).classed("dragging", true);
+        }
+
+        // changes the element's location
+        function onDrag(this: E, evt: any, dataPoint: N) {
+            const {x, y} = DirectedGraph.snapToGrid(evt.x, evt.y)
+
+            select(this)
+                .selectAll("circle")
+                .attr("cx", x)
+                .attr("cy", y);
+
+            select(this)
+                .selectAll("text")
+                .attr("x", x + dataPoint.weight + 1)
+                .attr("y", y);
+
+        }
+
+        // deactivates node, updates real value
+        function onEnd(this: E, evt: any, coordinate: N) {
+            const {x, y} = DirectedGraph.snapToGrid(evt.x, evt.y)
+
+            select(this).classed("dragging", false);
+            coordinate.moveTo(x, y);
+            updateNodeArray();
+        }
+
+        return drag<E, N>()
+            .on("start", onStart)
+            .on("drag", onDrag)
+            .on("end", onEnd);
+    }
+
+    /** draws a line connecting two nodes given an edge */
+    private drawEdge(edge: DirectedEdge, context: Path, curved?: boolean): Path {
+        const drawStraightEdge = (edge: DirectedEdge, context: Path): Path => {
+            const {from, to} = edge;
+
+            context.moveTo(from.x, from.y);
+            context.lineTo(to.x, to.y);
 
             return context;
         };
+        const drawCurvedEdge = (edge: DirectedEdge, context: Path): Path => {
+            const {from, to} = edge;
 
-        console.log(drawEdgesOfNode(this.state.g.nodes[0], path()));
+            const degree = this.state.pathCurveDegree;
+            const midpoint = from.midpoint(to);
+            const vectorFromMidpointToSource = midpoint.vector(from);
 
-        // @ts-ignore
-        graphNodes.append("path")
-          .attr("stroke", "red")
-          .attr("d", node => drawEdgesOfNode(node, path()));
+            const radius = Math.sqrt(
+                Math.pow(degree, 2) +
+                Math.pow(vectorFromMidpointToSource.length(), 2)
+            );
 
-        graphNodes.append("circle")
-          .attr("stroke", "steelblue")
-          .attr("cx", node => scaleX(node.x))
-          .attr("cy", node => scaleY(node.y))
-          .attr("r", 5);
+            const ratio = radius / vectorFromMidpointToSource.length();
 
-        // graphNodes.append("text")
-        //   .attr("id", "node-text")
-        //   .attr("x", node => scaleX(node.x))
-        //   .attr("y", node => scaleX(node.y))
-        //   .attr("font-size", 3)
-        //   .text(node => node.toStringSimple())
+            const rotationMatrix = (theta: number): Matrix =>
+                new Matrix(2, 2,
+                    [[Number(Math.cos(theta).toFixed(1)), -Number(Math.sin(theta).toFixed(1))],
+                        [Number(Math.sin(theta).toFixed(1)), Number(Math.cos(theta).toFixed(1))]]);
+
+            const rotatedVector = UnitConverter.matrixToVector(
+                rotationMatrix((3 * Math.PI) / 2)
+                    .multiply(UnitConverter.vectorToMatrix(vectorFromMidpointToSource))
+            ).scale(ratio);
+
+            const tangentPoint = UnitConverter.vectorToCoordinate(rotatedVector);
+
+            // TODO: rm debug -- draw line from midpoint to tan
+            context.moveTo(midpoint.x, midpoint.y);
+            context.lineTo(tangentPoint.x, tangentPoint.y);
+
+            context.moveTo(from.x, from.y);
+            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, radius);
+            context.lineTo(edge.to.x, edge.to.y);
+            return context;
+        };
+
+        if (curved) return drawCurvedEdge(edge, context);
+        else return drawStraightEdge(edge, context);
     }
 
+    /** re-evaluates data and renders graph */
     private updateGraph(): void {
-        const svg = this.svgElement.current;
-        const mainGroup = select(svg).selectAll("directed-graph-node");
 
-        console.log(mainGroup);
+        const graphEdgeContainer = select(this.svgElement.current)
+            .select("#edges");
+
+        const graphEdges = graphEdgeContainer
+            .selectAll<SVGPathElement, Node>("path")
+            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
+
+        // add new edges
+        const edgeGroupOnEnter = graphEdges.enter()
+            .append("g")
+            .attr("class", ".directed-graph-edge");
+
+        // remove old unused edges
+        graphEdges.exit().remove();
+
+        // update path of unchanged edges
+        graphEdges.attr("d", edge => this.drawEdge(edge, path()).toString())
+
+        // draw new edges
+        edgeGroupOnEnter.append("path")
+            .classed("edge", true)
+            .attr("d", edge => this.drawEdge(edge, path()).toString());
+
+        // select nodes & edges
+        const graphNodes = select(this.svgElement.current)
+            .select("#nodes")
+            .selectAll<SVGCircleElement, Node>("g")
+            .data<Node>(this.state.nodes, _ => _.id);
+
+        // update nodes with their current position
+        graphNodes.selectAll<SVGCircleElement, Node>("circle")
+            .attr("cx", node => node.x)
+            .attr("cy", node => node.y);
+
+        graphNodes.selectAll<SVGTextElement, Node>("text")
+            .attr("x", node => node.x + node.weight + 1)
+            .attr("y", node => node.y)
+
+        // add newly added nodes if any
+        const nodeG = graphNodes.enter()
+            .append("g")
+            .classed("node_container", true)
+            .call(this.initDragHandlers<SVGGElement, Node>());
+
+        nodeG.append("circle")
+            .classed("node", true)
+            .attr("cx", node => node.x)
+            .attr("cy", node => node.y)
+            .attr("r", node => node.weight);
+
+        nodeG.append("text")
+            .classed("node_label", true)
+            .attr("x", node => node.x + node.weight + 1)
+            .attr("y", node => node.y)
+            .text(node => node.id);
+
+        // remove nodes that don't exist anymore
+        graphNodes.exit().remove();
+
+        // TODO: remove debug parameter
+        const graphEdgeDEBUG = graphEdgeContainer
+            .selectAll<SVGPathElement, Node>("circle")
+            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
+
+        // add midpoint for debug
+        graphEdgeDEBUG.enter().append("circle")
+            .attr("stroke", "red")
+            .attr("cx", edge => edge.from.midpoint(edge.to).x)
+            .attr("cy", edge => edge.from.midpoint(edge.to).y)
+            .attr("r", 0.5);
+
+        graphEdgeDEBUG.exit().remove();
+
+        graphEdgeDEBUG
+            .attr("cx", edge => edge.from.midpoint(edge.to).x)
+            .attr("cy", edge => edge.from.midpoint(edge.to).y);
+
     }
 
     componentDidMount(): void {
         this.initializeGraph();
+        this.updateGraph();
     }
 
     componentDidUpdate(prevProps: Readonly<any>, prevState: Readonly<GameMainState>, snapshot?: any): void {
@@ -404,12 +276,12 @@ class GameMain extends Component<any, GameMainState> {
           <div>
               <svg
                 ref={this.svgElement}
-                height="100vh"
-                width="100vw"
-                viewBox={`0 0 100 100`}
+                height="90vh"
+                width="90vw"
+                viewBox={`-10 -10 110 110`}
               />
-              <input type="range" min={0} max={100} step={1} value={this.state.r} onChange={evt => this.setState({r: parseInt(evt.target.value)})}/>
-              <p>{this.state.r}</p>
+              <input type="range" min={0} max={100} step={1} value={this.state.pathCurveDegree} onChange={evt => this.setState({pathCurveDegree: parseInt(evt.target.value)})}/>
+              <p>{this.state.pathCurveDegree}</p>
           </div>
         );
     }

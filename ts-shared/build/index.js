@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ServerWebsocketManager = exports.SocketEventCode = void 0;
-const EventTypes_1 = require("./socket/EventTypes");
-Object.defineProperty(exports, "SocketEventCode", { enumerable: true, get: function () { return EventTypes_1.SocketEventCode; } });
-const WebsocketManager_1 = require("./socket/WebsocketManager");
-Object.defineProperty(exports, "ServerWebsocketManager", { enumerable: true, get: function () { return WebsocketManager_1.ServerWebsocketManager; } });
+exports.WebsocketTools = exports.WebsocketEventDefinitions = void 0;
+const WebsocketEventDefinitions = require("./socket/EventTypes");
+exports.WebsocketEventDefinitions = WebsocketEventDefinitions;
+const WebsocketTools = require("./socket/WebsocketManager");
+exports.WebsocketTools = WebsocketTools;
 //# sourceMappingURL=index.js.map

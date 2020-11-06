@@ -1,5 +1,5 @@
-import {SocketEvent, SocketEventResponse, SocketEventCode} from "./socket/EventTypes";
-import {ServerWebsocketManager, WebsocketEventHandler} from "./socket/WebsocketManager"
+import * as WebsocketEventDefinitions from "./socket/EventTypes";
+import * as WebsocketTools from "./socket/WebsocketManager";
 
-export {SocketEvent, SocketEventResponse, SocketEventCode};
-export {ServerWebsocketManager, WebsocketEventHandler};
+export {WebsocketEventDefinitions};
+export {WebsocketTools};

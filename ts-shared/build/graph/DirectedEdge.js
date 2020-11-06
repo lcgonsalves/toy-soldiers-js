@@ -12,6 +12,13 @@ class DirectedEdge {
     get from() {
         return this._from;
     }
+    get toVector() {
+        return this.from.vector(this.to);
+    }
+    /** gets id corresponding to the pair of nodes associated by this edge */
+    get id() {
+        return `${this.from.id}->${this.to.id}`;
+    }
     toString() {
         return `${this._from.toString()} -> ${this._to.toString()}`;
     }

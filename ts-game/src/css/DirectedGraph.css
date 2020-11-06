@@ -1,0 +1,25 @@
+.node {
+    fill: #66663d;
+    stroke: #414141;
+    stroke-width: 0.5;
+}
+
+.edge {
+    fill: none;
+    stroke: gold;
+}
+
+.movable {
+
+}
+
+.grid {
+    stroke-width: 0.3;
+    stroke: #414141;
+    opacity: 0.5;
+}
+
+.node_label {
+    color: black;
+    font-size: 2pt;
+}

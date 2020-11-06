@@ -1,5 +1,5 @@
 import * as SocketIO from "socket.io";
-import {ServerWebsocketManager} from "ts-shared";
+import {WebsocketTools as WS} from "ts-shared";
 
 class EventTicker {
     private io: SocketIO.Server;
@@ -12,7 +12,6 @@ class EventTicker {
      */
     constructor(server: any) {
         this.io = SocketIO(server);
-
 
         this.io.on("connection", socket => {
             console.log("hello new user!!!");

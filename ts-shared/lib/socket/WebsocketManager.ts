@@ -3,6 +3,7 @@ import {Subscription, Subject, Observable, fromEvent} from "rxjs";
 import * as SocketIO from "socket.io";
 import * as SocketIOClient from "socket.io-client";
 
+
 /**
  * Signature for an event handling callback function.
  */
@@ -33,9 +34,9 @@ abstract class AbstractWebsocketManager {
      * @param {SocketEventCode} eventCode the event code of a given SocketEvent
      * @param {Function} handler
      */
-    protected abstract on (
-      eventCode: SocketEventCode,
-      handler: WebsocketEventHandler
+    protected abstract on(
+        eventCode: SocketEventCode,
+        handler: WebsocketEventHandler
     ): Subscription;
 
     /**
@@ -59,7 +60,8 @@ export class ServerWebsocketManager extends AbstractWebsocketManager {
         this._isClient = false;
 
         this._io.on("connection", (socket: SocketIO.Socket) => {
-            socket.on("event", () => {})
+            socket.on("event", () => {
+            })
 
             fromEvent(socket, "event").subscribe()
         });
@@ -67,12 +69,13 @@ export class ServerWebsocketManager extends AbstractWebsocketManager {
     }
 
     protected on(
-      eventCode: SocketEventCode,
-      handler: WebsocketEventHandler
+        eventCode: SocketEventCode,
+        handler: WebsocketEventHandler
     ): Subscription {
         return null;
     }
 
 }
+
 
 

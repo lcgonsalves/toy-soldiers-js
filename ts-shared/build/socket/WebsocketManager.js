@@ -30,7 +30,8 @@ class ServerWebsocketManager extends AbstractWebsocketManager {
         super(socketIOReference);
         this._isClient = false;
         this._io.on("connection", (socket) => {
-            socket.on("event", () => { });
+            socket.on("event", () => {
+            });
             rxjs_1.fromEvent(socket, "event").subscribe();
         });
     }

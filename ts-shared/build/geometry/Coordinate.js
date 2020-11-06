@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const ts_matrix_1 = require("ts-matrix");
 class Coordinate {
     constructor(x, y) {
         this.x = x;
@@ -26,6 +27,20 @@ class Coordinate {
     distance(other) {
         return Math.sqrt(Math.pow(this.x - other.x, 2) +
             Math.pow(this.y - other.y, 2));
+    }
+    /**
+     * Returns a vector from this to other Coordinate
+     * @param other
+     */
+    vector(other) {
+        const x = other.x - this.x;
+        const y = other.y - this.y;
+        return new ts_matrix_1.Vector([x, y]);
+    }
+    moveTo(x, y) {
+        this.x = x;
+        this.y = y;
+        return this;
     }
 }
 exports.default = Coordinate;

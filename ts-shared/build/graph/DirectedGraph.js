@@ -1,13 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const Node_1 = require("./Node");
+const Interval_1 = require("../geometry/Interval");
+const Coordinate_1 = require("../geometry/Coordinate");
 class DirectedGraph {
     constructor(...nodes) {
-        this.domain = [0, 100];
-        this._nodes = [...nodes];
+        this._nodes = {};
+        this._isSnappingNodesToGrid = false;
+        nodes.forEach(n => this._nodes[n.id] = n);
     }
-    get nodes() { return this._nodes; }
+    get nodes() { return Object.values(this._nodes); }
+    get isSnappingNodesToGrid() { return this._isSnappingNodesToGrid; }
+    set isSnappingNodesToGrid(value) { this._isSnappingNodesToGrid = value; }
+    get domain() {
+        return {
+            x: DirectedGraph.xDomain,
+            y: DirectedGraph.yDomain
+        };
+    }
+    get step() { return DirectedGraph.step; }
     toString() {
-        return this._nodes.map(n => n.toString()).reduce((acc, cur) => acc + "\n" + cur);
+        return this.nodes.map(n => n.toString()).reduce((acc, cur) => acc + "\n" + cur);
     }
     /**
      * Returns true if graph contains a given node.
@@ -15,7 +28,8 @@ class DirectedGraph {
      * @param n
      */
     contains(n) {
-        return !!this._nodes.find(_ => _.equals(n));
+        const node = this.nodes[n.id];
+        return node && n.equals(n);
     }
     /**
      * Returns given node if it exists in the graph. If node doesn't
@@ -24,11 +38,10 @@ class DirectedGraph {
      * @param n
      */
     get(n) {
-        const outputNode = this._nodes.find(_ => _.equals(n));
-        if (!outputNode)
-            throw new Error("Cannot get node that is not part of the graph.");
+        if (this.contains(n))
+            return this.nodes[n.id];
         else
-            return outputNode;
+            throw new Error("Node is not contained in the graph!");
     }
     /**
      * Returns given node if it exists in the graph. If node doesn't
@@ -50,16 +63,28 @@ class DirectedGraph {
      * @param n
      */
     addNode(...n) {
-        n.forEach(node => !this.contains(node) ? this._nodes.push(node) : this.findAndUpdateEdges(node));
+        n.forEach(node => {
+            if (this._isSnappingNodesToGrid) {
+                const { x, y } = DirectedGraph.snapToGrid(node.x, node.y);
+                node.moveTo(x, y);
+            }
+            if (!DirectedGraph.xDomain.contains(node.x) || !DirectedGraph.yDomain.contains(node.y))
+                throw new Error("Node does not fit in the coordinate system!");
+            !this.contains(node) ? this._nodes[node.id] = node : this.findAndUpdateEdges(node);
+        });
         return this;
     }
     /**
-     * Given a set of coordinates
-     * @param x
-     * @param y
-     * @param id
+     * Adds a node to the graph at the input coordinates.
+     * @param {number} x
+     * @param {number} y
+     * @param {string} id optional identifier for the point. if no identifier is passed, one will be generated.
+     * @returns {Node} the newly added node
      */
-    addNodeAt(x, y, id = "") {
+    addNodeAt(x, y, id) {
+        const n = new Node_1.default(id, x, y);
+        this.addNode(n);
+        return n;
     }
     /**
      * For a given node n, if it is already contained by the graph, update its edges.
@@ -69,6 +94,28 @@ class DirectedGraph {
      */
     findAndUpdateEdges(n) {
         return this.get(n).updateEdges(n);
+    }
+    /** Helper method to move coordinates in accordance to domain, range and step */
+    static snapToGrid(x, y) {
+        let snappedX = Math.round(x), snappedY = Math.round(y);
+        let remainderX = snappedX % DirectedGraph.step, remainderY = snappedY % DirectedGraph.step;
+        // local helpers
+        const correctRemainderSign = rem => rem < DirectedGraph.step / 2 ? -rem : DirectedGraph.step - rem;
+        function snap(domain, snapped, remainder) {
+            if (domain.contains(snapped)) {
+                snapped = remainder === 0 ? snapped : snapped + correctRemainderSign(remainder);
+            }
+            else {
+                console.error("out of bounds");
+                snapped = snapped > domain.max ?
+                    domain.max :
+                    domain.min;
+            }
+            return snapped;
+        }
+        snappedX = snap(DirectedGraph.xDomain, snappedX, remainderX);
+        snappedY = snap(DirectedGraph.yDomain, snappedY, remainderY);
+        return new Coordinate_1.default(snappedX, snappedY);
     }
     /**
      * Adds a pair of nodes to the graph and connects them. If either of the nodes already
@@ -80,16 +127,6 @@ class DirectedGraph {
      * @returns {Node} the second node, or ending node if unidirectional
      */
     addAndConnect(n1, n2, bidirectional = false) {
-        // TODO: rethink node addition
-        if (n1.x > this.domain[1] ||
-            n1.x < this.domain[0] ||
-            n1.y > this.domain[1] ||
-            n1.y < this.domain[0] ||
-            n2.x > this.domain[1] ||
-            n2.x < this.domain[0] ||
-            n2.y > this.domain[1] ||
-            n2.y < this.domain[0])
-            throw new Error("Nodes do not fit in the coordinate system!");
         let firstNode, secondNode;
         firstNode = this.getOrElse(n1, n1);
         secondNode = this.getOrElse(n2, n2);
@@ -98,8 +135,11 @@ class DirectedGraph {
         return this.addNode(firstNode, secondNode);
     }
     equals(other) {
-        return this._nodes.every(other.contains);
+        return Object.values(this._nodes).every(other.contains);
     }
 }
 exports.default = DirectedGraph;
+DirectedGraph.xDomain = new Interval_1.Interval(0, 100);
+DirectedGraph.yDomain = new Interval_1.Interval(0, 100);
+DirectedGraph.step = 10;
 //# sourceMappingURL=DirectedGraph.js.map

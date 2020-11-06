@@ -1,29 +1,42 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Coordinate_1 = require("../geometry/Coordinate");
 const DirectedEdge_1 = require("./DirectedEdge");
+const Coordinate_1 = require("../geometry/Coordinate");
 class Node {
     constructor(id, x, y, edges = []) {
+        this._weight = 2.5;
         this._id = id;
         this._coordinate = new Coordinate_1.default(x, y);
-        this.edges = edges;
+        this._edges = edges;
     }
     get y() { return this._coordinate.y; }
     get x() { return this._coordinate.x; }
+    get edges() { return this._edges; }
     get coord() { return this._coordinate; }
     get id() { return this._id; }
+    get weight() { return this._weight; }
+    set weight(value) { this._weight = value; }
     /** returns midpoint between two nodes */
     midpoint(other) {
-        return this._coordinate.midpoint(other._coordinate);
+        return this._coordinate.midpoint(other);
     }
     /** returns distance between two nodes */
     distance(other) {
-        return this._coordinate.distance(other._coordinate);
+        return this._coordinate.distance(other);
+    }
+    /** returns vector between two nodes */
+    vector(other) {
+        return this.coord.vector(other);
+    }
+    /** reassigns this Node's coordinate to a new value */
+    moveTo(x, y) {
+        this._coordinate.moveTo(x, y);
+        return this;
     }
     /** Converts the node and its immediate connections to a string */
     toStringComplex() {
-        const destinations = this.edges.map(e => e.to.toStringSimple());
-        if (this.edges.length === 0 || destinations.length === 0)
+        const destinations = this._edges.map(e => e.to.toStringSimple());
+        if (this._edges.length === 0 || destinations.length === 0)
             return `(${this.x}, ${this.y})`;
         return `[${this._id}](${this.x}, ${this.y}) -> ${destinations.reduce((acc, cur) => acc + ", " + cur)}`;
     }
@@ -40,7 +53,7 @@ class Node {
         if (!template.equals(this))
             throw new Error("Cannot update edges from a different Node! Nodes must .equals() each other.");
         // TODO: do I need to verify if edges.from() all match this??
-        this.edges = template.edges;
+        this._edges = template._edges;
         return this;
     }
     /**
@@ -49,11 +62,11 @@ class Node {
      *
      */
     isAdjacent(other) {
-        return !!this.edges.find(edge => edge.to.equals(other));
+        return !!this._edges.find(edge => edge.to.equals(other));
     }
     /** Gets all the nodes immediately adjacent to this. */
     getAdjacent() {
-        return this.edges.map(edge => edge.to);
+        return this._edges.map(edge => edge.to);
     }
     /**
      * Connects this node to other node.
@@ -66,7 +79,7 @@ class Node {
         if (bidirectional)
             other.connectTo(this);
         if (!this.isAdjacent(other)) {
-            this.edges.push(new DirectedEdge_1.default(this, other));
+            this._edges.push(new DirectedEdge_1.default(this, other));
         }
         return this;
     }

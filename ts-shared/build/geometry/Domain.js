@@ -4,4 +4,4 @@ Object.defineProperty(exports, "__esModule", { value: true });
 class Domain {
 }
 exports.default = Domain;
-//# sourceMappingURL=Domain.js.map
+//# sourceMappingURL=Interval.js.map
