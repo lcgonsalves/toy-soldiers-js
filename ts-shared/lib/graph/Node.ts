@@ -1,7 +1,7 @@
 import ICoordinate from "../geometry/ICoordinate";
 import DirectedEdge from "./DirectedEdge";
 import Coordinate from "../geometry/Coordinate";
-import {Vector} from "ts-matrix";
+import Vector from "../util/Vector";
 
 export default class Node implements ICoordinate {
     private readonly _coordinate: ICoordinate;
@@ -12,7 +12,7 @@ export default class Node implements ICoordinate {
     get y(): number { return this._coordinate.y; }
     get x(): number { return this._coordinate.x; }
     get edges(): DirectedEdge[] { return this._edges; }
-    get coord(): Coordinate { return this._coordinate; }
+    get coord(): ICoordinate { return this._coordinate; }
     get id(): string { return this._id; }
     get weight(): number { return this._weight; }
     set weight(value: number) { this._weight = value; }
@@ -102,6 +102,15 @@ export default class Node implements ICoordinate {
         }
 
         return this;
+    }
+
+    overlaps(other: ICoordinate): boolean {
+        // if (other instanceof Node) handle weight possibility
+        return this.coord.overlaps(other);
+    }
+
+    perpedicularVector(other: ICoordinate): Vector {
+        return this.coord.perpedicularVector(other);
     }
 
 }

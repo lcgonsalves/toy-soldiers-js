@@ -83,6 +83,13 @@ class Node {
         }
         return this;
     }
+    overlaps(other) {
+        // if (other instanceof Node) handle weight possibility
+        return this.coord.overlaps(other);
+    }
+    perpedicularVector(other) {
+        return this.coord.perpedicularVector(other);
+    }
 }
 exports.default = Node;
 //# sourceMappingURL=Node.js.map

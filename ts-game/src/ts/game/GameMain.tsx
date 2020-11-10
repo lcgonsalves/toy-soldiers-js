@@ -4,10 +4,9 @@ import {path, Path} from "d3-path";
 import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
-import {Matrix} from "ts-matrix";
-import UnitConverter from "ts-shared/build/util/UnitConverter";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import "../../css/DirectedGraph.css";
+import Coordinate from "ts-shared/build/geometry/Coordinate";
 
 // todo: move state to props
 interface GameMainProps {
@@ -33,10 +32,10 @@ class GameMain extends Component<any, GameMainState> {
 
         // init nodes
         let p1, p2, p3, p4, p5;
-        p1 = new Node("P1", 94, 10);
+        p1 = new Node("P1", 40, 30);
         p2 = new Node("P2", 30, 10);
         p3 = new Node("P3", 50, 35);
-        p4 = new Node("P4", 90, 80);
+        p4 = new Node("P4", 60, 70);
         p5 = new Node("P5", 87, 67);
 
         this.graph.isSnappingNodesToGrid = true;
@@ -47,7 +46,7 @@ class GameMain extends Component<any, GameMainState> {
           // .addAndConnect(p5, p3)
           // .addAndConnect(p3, p1);
 
-        this.state = {nodes: this.graph.nodes, pathCurveDegree: 1};
+        this.state = {nodes: this.graph.nodes, pathCurveDegree: 10};
 
     }
 
@@ -141,40 +140,35 @@ class GameMain extends Component<any, GameMainState> {
         };
         const drawCurvedEdge = (edge: DirectedEdge, context: Path): Path => {
             const {from, to} = edge;
+            const p0 = new Coordinate(from.x, from.y),
+                p2 = new Coordinate(to.x, to.y);
 
-            const degree = this.state.pathCurveDegree;
-            const midpoint = from.midpoint(to);
-            const vectorFromMidpointToSource = midpoint.vector(from);
-
+            const degree = this.state.pathCurveDegree; // = 10
+            const midpoint = p0.midpoint(p2); // coordinate of midpoint
+            const perpendicularVectorMTo = p2.perpedicularVector(midpoint); // "perpendicular" vector from midpoint to p2
             const radius = Math.sqrt(
                 Math.pow(degree, 2) +
-                Math.pow(vectorFromMidpointToSource.length(), 2)
-            );
+                Math.pow(midpoint.vector(p2).length(), 2)
+            ); // pitágoras for radius square root of (10^2) + (magnitude of vector)^2
+            const ratio = perpendicularVectorMTo.length() / degree;
+            const finalVector = vectorToCoordinate(perpendicularVectorMTo.scale(ratio).add(perpendicularVectorMTo)); // scale vector
+            const tangentPoint =
+                new Coordinate(finalVector.x + p2.x, finalVector.y + p2.y) // result
 
-            const ratio = radius / vectorFromMidpointToSource.length();
-
-            const rotationMatrix = (theta: number): Matrix =>
-                new Matrix(2, 2,
-                    [[Number(Math.cos(theta).toFixed(1)), -Number(Math.sin(theta).toFixed(1))],
-                        [Number(Math.sin(theta).toFixed(1)), Number(Math.cos(theta).toFixed(1))]]);
-
-            const rotatedVector = UnitConverter.matrixToVector(
-                rotationMatrix((3 * Math.PI) / 2)
-                    .multiply(UnitConverter.vectorToMatrix(vectorFromMidpointToSource))
-            ).scale(ratio);
-
-            const tangentPoint = UnitConverter.vectorToCoordinate(rotatedVector);
+            console.log(midpoint);
+            console.log(tangentPoint)
 
             // TODO: rm debug -- draw line from midpoint to tan
             context.moveTo(midpoint.x, midpoint.y);
             context.lineTo(tangentPoint.x, tangentPoint.y);
 
-            context.moveTo(from.x, from.y);
-            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, radius);
-            context.lineTo(edge.to.x, edge.to.y);
+            context.moveTo(p0.x, p0.y);
+            context.arcTo(tangentPoint.x, tangentPoint.y, p2.x, p2.y, radius);
+            context.lineTo(p2.x, p2.y);
             return context;
         };
 
+        drawStraightEdge(edge, context);
         if (curved) return drawCurvedEdge(edge, context);
         else return drawStraightEdge(edge, context);
     }
@@ -182,6 +176,32 @@ class GameMain extends Component<any, GameMainState> {
     /** re-evaluates data and renders graph */
     private updateGraph(): void {
 
+        const graphEdgeContainer = this.renderEdges();
+
+        this.renderNodes();
+
+        // TODO: remove debug parameter
+        const graphEdgeDEBUG = graphEdgeContainer
+            .selectAll<SVGPathElement, Node>("circle")
+            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
+
+        // add midpoint for debug
+        graphEdgeDEBUG.enter().append("circle")
+            .attr("stroke", "red")
+            .attr("cx", edge => edge.from.midpoint(edge.to).x)
+            .attr("cy", edge => edge.from.midpoint(edge.to).y)
+            .attr("r", 0.5);
+
+        graphEdgeDEBUG.exit().remove();
+
+        graphEdgeDEBUG
+            .attr("cx", edge => edge.from.midpoint(edge.to).x)
+            .attr("cy", edge => edge.from.midpoint(edge.to).y);
+
+    }
+
+    /** renders edges contained by each node */
+    private renderEdges() {
         const graphEdgeContainer = select(this.svgElement.current)
             .select("#edges");
 
@@ -198,14 +218,19 @@ class GameMain extends Component<any, GameMainState> {
         graphEdges.exit().remove();
 
         // update path of unchanged edges
-        graphEdges.attr("d", edge => this.drawEdge(edge, path()).toString())
+        graphEdges.attr("d", edge => this.drawEdge(edge, path(), true).toString())
 
         // draw new edges
         edgeGroupOnEnter.append("path")
             .classed("edge", true)
-            .attr("d", edge => this.drawEdge(edge, path()).toString());
+            .attr("d", edge => this.drawEdge(edge, path(), true).toString());
 
-        // select nodes & edges
+        return graphEdgeContainer;
+    }
+
+    /** renders nodes in state */
+    private renderNodes() {
+        // select nodes
         const graphNodes = select(this.svgElement.current)
             .select("#nodes")
             .selectAll<SVGCircleElement, Node>("g")
@@ -240,25 +265,6 @@ class GameMain extends Component<any, GameMainState> {
 
         // remove nodes that don't exist anymore
         graphNodes.exit().remove();
-
-        // TODO: remove debug parameter
-        const graphEdgeDEBUG = graphEdgeContainer
-            .selectAll<SVGPathElement, Node>("circle")
-            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
-
-        // add midpoint for debug
-        graphEdgeDEBUG.enter().append("circle")
-            .attr("stroke", "red")
-            .attr("cx", edge => edge.from.midpoint(edge.to).x)
-            .attr("cy", edge => edge.from.midpoint(edge.to).y)
-            .attr("r", 0.5);
-
-        graphEdgeDEBUG.exit().remove();
-
-        graphEdgeDEBUG
-            .attr("cx", edge => edge.from.midpoint(edge.to).x)
-            .attr("cy", edge => edge.from.midpoint(edge.to).y);
-
     }
 
     componentDidMount(): void {

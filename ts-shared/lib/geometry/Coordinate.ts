@@ -1,6 +1,5 @@
 import ICoordinate from "./ICoordinate";
-import IComparable from "../util/IComparable";
-import {Vector} from "ts-matrix";
+import Vector from "../util/Vector";
 
 export default class Coordinate implements ICoordinate {
     x: number;
@@ -55,6 +54,24 @@ export default class Coordinate implements ICoordinate {
         this.x = x;
         this.y = y;
         return this;
+    }
+
+    overlaps(other: ICoordinate): boolean {
+        return this.x === other.x && this.y === other.y;
+    }
+
+    perpedicularVector(other: ICoordinate, ccw?: boolean): Vector {
+        let x, y;
+
+        x = this.y - other.y;
+        y = this.x - other.x;
+
+        if (!ccw) {
+            x = -x;
+            y = -y;
+        }
+
+        return new Vector([x, y]);
     }
 
 }

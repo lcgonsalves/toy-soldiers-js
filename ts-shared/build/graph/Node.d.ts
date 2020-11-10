@@ -1,7 +1,6 @@
 import ICoordinate from "../geometry/ICoordinate";
 import DirectedEdge from "./DirectedEdge";
-import Coordinate from "../geometry/Coordinate";
-import { Vector } from "ts-matrix";
+import Vector from "../util/Vector";
 export default class Node implements ICoordinate {
     private readonly _coordinate;
     private readonly _id;
@@ -10,7 +9,7 @@ export default class Node implements ICoordinate {
     get y(): number;
     get x(): number;
     get edges(): DirectedEdge[];
-    get coord(): Coordinate;
+    get coord(): ICoordinate;
     get id(): string;
     get weight(): number;
     set weight(value: number);
@@ -47,4 +46,6 @@ export default class Node implements ICoordinate {
      * @returns {Node} this node (for chaining connections)
      */
     connectTo(other: Node, bidirectional?: boolean): Node;
+    overlaps(other: ICoordinate): boolean;
+    perpedicularVector(other: ICoordinate): Vector;
 }

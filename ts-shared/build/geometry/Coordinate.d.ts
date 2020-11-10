@@ -1,5 +1,5 @@
 import ICoordinate from "./ICoordinate";
-import { Vector } from "ts-matrix";
+import Vector from "../util/Vector";
 export default class Coordinate implements ICoordinate {
     x: number;
     y: number;
@@ -25,4 +25,6 @@ export default class Coordinate implements ICoordinate {
      */
     vector(other: ICoordinate): Vector;
     moveTo(x: number, y: number): ICoordinate;
+    overlaps(other: ICoordinate): boolean;
+    perpedicularVector(other: ICoordinate, ccw?: boolean): Vector;
 }

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const ts_matrix_1 = require("ts-matrix");
+const Vector_1 = require("../util/Vector");
 class Coordinate {
     constructor(x, y) {
         this.x = x;
@@ -35,12 +35,25 @@ class Coordinate {
     vector(other) {
         const x = other.x - this.x;
         const y = other.y - this.y;
-        return new ts_matrix_1.Vector([x, y]);
+        return new Vector_1.default([x, y]);
     }
     moveTo(x, y) {
         this.x = x;
         this.y = y;
         return this;
+    }
+    overlaps(other) {
+        return this.x === other.x && this.y === other.y;
+    }
+    perpedicularVector(other, ccw) {
+        let x, y;
+        x = this.y - other.y;
+        y = this.x - other.x;
+        if (!ccw) {
+            x = -x;
+            y = -y;
+        }
+        return new Vector_1.default([x, y]);
     }
 }
 exports.default = Coordinate;
