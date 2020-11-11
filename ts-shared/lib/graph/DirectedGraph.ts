@@ -1,16 +1,15 @@
 import IComparable from "../util/IComparable";
 import Node from "./Node";
 import {Interval} from "../geometry/Interval";
-import ICoordinate from "../geometry/ICoordinate";
-import Coordinate from "../geometry/Coordinate";
+import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 
 export default class DirectedGraph implements IComparable {
     private readonly _nodes: {
         [id: string]: Node
     } = {};
     private _isSnappingNodesToGrid: boolean = false;
-    private static readonly xDomain: Interval = new Interval(0, 100);
-    private static readonly yDomain: Interval = new Interval(0, 100);
+    private static readonly xDomain: Interval = new Interval(-100, 100);
+    private static readonly yDomain: Interval = new Interval(-100, 100);
     private static readonly step: number = 10;
 
     constructor(...nodes: Node[]) {
@@ -40,9 +39,13 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n
      */
-    public contains(n: Node): boolean {
-        const node = this.nodes[n.id];
-        return node && n.equals(n);
+    public contains(n: Node | string): boolean {
+        if (n instanceof Node) {
+            const node = this.nodes[n.id];
+            return node && n.equals(n);
+        } else if (typeof n === "string") {
+            return this.nodes[n] !== undefined;
+        } else return false;
     }
 
     /**
@@ -51,8 +54,12 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n
      */
-    public get(n: Node): Node {
-        if (this.contains(n)) return this.nodes[n.id];
+    public get(n: Node | string): Node {
+        if (this.contains(n)) {
+            if (n instanceof Node) return this.nodes[n.id];
+            else if (typeof n === "string") return this.nodes[n];
+            else throw new Error("Parameter type should be either Node or string!")
+        }
         else throw new Error("Node is not contained in the graph!");
     }
 
