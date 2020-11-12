@@ -1,7 +1,45 @@
-import ICoordinate from "./ICoordinate";
 import Vector from "../util/Vector";
+import IComparable from "../util/IComparable";
 
-export default class Coordinate implements ICoordinate {
+/**
+ * Defines properties of two dimensional points and operations
+ * between them.
+ */
+export interface ICoordinate extends IComparable {
+    x: number;
+    y: number;
+
+    /**
+     * Returns the midpoint between two point-like items.
+     * @param other
+     */
+    midpoint(other: ICoordinate): ICoordinate;
+
+    /**
+     * Returns the distance between two point-like items.
+     * @param other
+     */
+    distance(other: ICoordinate): number;
+
+    /**
+     * Returns a vector calculated between this coordinate
+     * and another given coordinate.
+     * @param other
+     */
+    vectorTo(other: ICoordinate): Vector;
+
+    /** Returns a vector perpendicular to the vector between this coordinate and other */
+    perpendicularVector(other: ICoordinate, ccw: boolean): Vector;
+
+    /** Changes value of current coordinate to given x-y value */
+    moveTo(x: number, y: number): ICoordinate;
+
+    /** Returns true if the given ICoordinate shares the same coordinates */
+    overlaps(other: ICoordinate): boolean;
+
+}
+
+export class Coordinate implements ICoordinate {
     x: number;
     y: number;
 
@@ -43,7 +81,7 @@ export default class Coordinate implements ICoordinate {
      * Returns a vector from this to other Coordinate
      * @param other
      */
-    vector(other: ICoordinate): Vector {
+    vectorTo(other: ICoordinate): Vector {
         const x = other.x - this.x;
         const y = other.y - this.y;
 
@@ -60,18 +98,14 @@ export default class Coordinate implements ICoordinate {
         return this.x === other.x && this.y === other.y;
     }
 
-    perpedicularVector(other: ICoordinate, ccw?: boolean): Vector {
+    perpendicularVector(other: ICoordinate, ccw: boolean = true): Vector {
         let x, y;
 
-        x = this.y - other.y;
+        x = -(this.y - other.y);
         y = this.x - other.x;
 
-        if (!ccw) {
-            x = -x;
-            y = -y;
-        }
-
-        return new Vector([x, y]);
+        const v = new Vector([x, y]);
+        return ccw ? v : v.scale(-1);
     }
 
 }

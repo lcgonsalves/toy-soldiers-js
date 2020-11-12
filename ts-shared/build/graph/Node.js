@@ -2,11 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const DirectedEdge_1 = require("./DirectedEdge");
 const Coordinate_1 = require("../geometry/Coordinate");
+const Vector_1 = require("../util/Vector");
 class Node {
     constructor(id, x, y, edges = []) {
-        this._weight = 2.5;
+        this._radius = 2.5;
+        this._bufferRadius = 1.5;
         this._id = id;
-        this._coordinate = new Coordinate_1.default(x, y);
+        this._coordinate = new Coordinate_1.Coordinate(x, y);
         this._edges = edges;
     }
     get y() { return this._coordinate.y; }
@@ -14,8 +16,11 @@ class Node {
     get edges() { return this._edges; }
     get coord() { return this._coordinate; }
     get id() { return this._id; }
-    get weight() { return this._weight; }
-    set weight(value) { this._weight = value; }
+    get radius() { return this._radius; }
+    set radius(value) { this._radius = value; }
+    get vector() { return new Vector_1.default([this.coord.x, this.coord.y]); }
+    get bufferRadius() { return this._bufferRadius; }
+    set bufferRadius(value) { this._bufferRadius = value; }
     /** returns midpoint between two nodes */
     midpoint(other) {
         return this._coordinate.midpoint(other);
@@ -25,8 +30,8 @@ class Node {
         return this._coordinate.distance(other);
     }
     /** returns vector between two nodes */
-    vector(other) {
-        return this.coord.vector(other);
+    vectorTo(other) {
+        return this.coord.vectorTo(other);
     }
     /** reassigns this Node's coordinate to a new value */
     moveTo(x, y) {
@@ -87,8 +92,8 @@ class Node {
         // if (other instanceof Node) handle weight possibility
         return this.coord.overlaps(other);
     }
-    perpedicularVector(other) {
-        return this.coord.perpedicularVector(other);
+    perpendicularVector(other, ccw = true) {
+        return this.coord.perpendicularVector(other, ccw);
     }
 }
 exports.default = Node;

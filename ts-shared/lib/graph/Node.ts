@@ -1,21 +1,24 @@
-import ICoordinate from "../geometry/ICoordinate";
 import DirectedEdge from "./DirectedEdge";
-import Coordinate from "../geometry/Coordinate";
+import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import Vector from "../util/Vector";
 
 export default class Node implements ICoordinate {
     private readonly _coordinate: ICoordinate;
     private readonly _id: string;
     private _edges: DirectedEdge[];
-    private _weight: number = 2.5;
+    private _radius: number = 2.5;
+    private _bufferRadius: number = 1.5;
 
     get y(): number { return this._coordinate.y; }
     get x(): number { return this._coordinate.x; }
     get edges(): DirectedEdge[] { return this._edges; }
     get coord(): ICoordinate { return this._coordinate; }
     get id(): string { return this._id; }
-    get weight(): number { return this._weight; }
-    set weight(value: number) { this._weight = value; }
+    get radius(): number { return this._radius; }
+    set radius(value: number) { this._radius = value; }
+    get vector(): Vector { return new Vector([this.coord.x, this.coord.y]); }
+    get bufferRadius(): number { return this._bufferRadius; }
+    set bufferRadius(value: number) { this._bufferRadius = value; }
 
     constructor(id: string, x: number, y: number, edges: DirectedEdge[] = []) {
         this._id = id;
@@ -34,8 +37,8 @@ export default class Node implements ICoordinate {
     }
 
     /** returns vector between two nodes */
-    public vector(other: ICoordinate): Vector {
-        return this.coord.vector(other);
+    public vectorTo(other: ICoordinate): Vector {
+        return this.coord.vectorTo(other);
     }
 
     /** reassigns this Node's coordinate to a new value */
@@ -109,8 +112,8 @@ export default class Node implements ICoordinate {
         return this.coord.overlaps(other);
     }
 
-    perpedicularVector(other: ICoordinate): Vector {
-        return this.coord.perpedicularVector(other);
+    perpendicularVector(other: ICoordinate, ccw: boolean = true): Vector {
+        return this.coord.perpendicularVector(other, ccw);
     }
 
 }

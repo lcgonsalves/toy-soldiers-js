@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Coordinate = void 0;
 const Vector_1 = require("../util/Vector");
 class Coordinate {
     constructor(x, y) {
@@ -32,7 +33,7 @@ class Coordinate {
      * Returns a vector from this to other Coordinate
      * @param other
      */
-    vector(other) {
+    vectorTo(other) {
         const x = other.x - this.x;
         const y = other.y - this.y;
         return new Vector_1.default([x, y]);
@@ -45,16 +46,13 @@ class Coordinate {
     overlaps(other) {
         return this.x === other.x && this.y === other.y;
     }
-    perpedicularVector(other, ccw) {
+    perpendicularVector(other, ccw = true) {
         let x, y;
-        x = this.y - other.y;
+        x = -(this.y - other.y);
         y = this.x - other.x;
-        if (!ccw) {
-            x = -x;
-            y = -y;
-        }
-        return new Vector_1.default([x, y]);
+        const v = new Vector_1.default([x, y]);
+        return ccw ? v : v.scale(-1);
     }
 }
-exports.default = Coordinate;
+exports.Coordinate = Coordinate;
 //# sourceMappingURL=Coordinate.js.map

@@ -115,7 +115,7 @@ class DirectedGraph {
         }
         snappedX = snap(DirectedGraph.xDomain, snappedX, remainderX);
         snappedY = snap(DirectedGraph.yDomain, snappedY, remainderY);
-        return new Coordinate_1.default(snappedX, snappedY);
+        return new Coordinate_1.Coordinate(snappedX, snappedY);
     }
     /**
      * Adds a pair of nodes to the graph and connects them. If either of the nodes already
@@ -134,12 +134,16 @@ class DirectedGraph {
         // adds if they don't exist yet
         return this.addNode(firstNode, secondNode);
     }
+    /** returns an array of nodes whose position intersects with the given edge */
+    getNodesIntersectingWith(edge) {
+        return this.nodes.filter(n => (!(n.equals(edge.from) || n.equals(edge.to)) && edge.intersects(n)));
+    }
     equals(other) {
         return Object.values(this._nodes).every(other.contains);
     }
 }
 exports.default = DirectedGraph;
-DirectedGraph.xDomain = new Interval_1.Interval(0, 100);
-DirectedGraph.yDomain = new Interval_1.Interval(0, 100);
+DirectedGraph.xDomain = new Interval_1.Interval(-100, 100);
+DirectedGraph.yDomain = new Interval_1.Interval(-100, 100);
 DirectedGraph.step = 10;
 //# sourceMappingURL=DirectedGraph.js.map

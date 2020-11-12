@@ -1,16 +1,21 @@
 import IComparable from "../util/IComparable";
+import {ICoordinate} from "../geometry/Coordinate";
 import Node from "../graph/Node";
 import Vector from "../util/Vector";
-import ICoordinate from "../../build/geometry/ICoordinate";
+import {ILine, Line} from "../geometry/Line";
+import {sq} from "../util/Shorthands";
 
 /** Encodes a connection between a source and a destination */
-export default class DirectedEdge implements IComparable {
+export default class DirectedEdge implements ILine {
     private readonly _from: Node;
     private readonly _to: Node;
     get to(): Node { return this._to; }
     get from(): Node { return this._from; }
-    get toVector(): Vector { return this.from.vector(this.to); }
     get id(): string { return `${this.from.id}->${this.to.id}` }
+    get toVector(): Vector { return this.from.vectorTo(this.to); }
+    get toLine(): Line { return Line.from(this.from, this.to); }
+    get midpoint(): ICoordinate { return this.from.midpoint(this.to); }
+    get size(): number { return this.toVector.length(); }
 
     constructor(from: Node, to: Node) {
         this._from = from;
@@ -25,17 +30,51 @@ export default class DirectedEdge implements IComparable {
         return other instanceof DirectedEdge && this._to.equals(other._to) && this._from.equals(other._from);
     }
 
-    /** Returns coordinate of point (x1,y1) as defined in the usage of d3.path().arcTo() from a given degree parameter */
-    getArcTangentPoint(degree: number = 10): ICoordinate {
+    /** Returns coordinate of point (x1,y1) as defined in the usage of d3.path().arcTo() from a given curvature degree parameter */
+    getArcToTangentPoint(intersectingNode?: Node): ICoordinate {
         const {from, to} = this;
-
         const midpoint = from.midpoint(to);
-        const perpendicularVectorMTo = from.perpedicularVector(midpoint);
-        const radius = Math.sqrt(Math.pow(degree, 2) + Math.pow(from.vector(midpoint).length(), 2));
-        const ratio = perpendicularVectorMTo.length() / degree;
-        const finalVector = perpendicularVectorMTo.scale(ratio).add(perpendicularVectorMTo);
-        const tangentPoint: ICoordinate = null;
+        const curvature = intersectingNode ? intersectingNode.radius + intersectingNode.bufferRadius : 0;
 
-        return tangentPoint;
+        const perpendicularVec = from.perpendicularVector(midpoint);
+
+        const radius = (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
+        const degree = radius - curvature;
+        const ratio = perpendicularVec.length() / degree;
+        const finalVectorA = perpendicularVec.scale(ratio);
+        const finalVectorB = finalVectorA.scale(-1);
+
+
+        // pick final vector based on the shortest distance between apex and intersecting node coord
+        let finalVector = intersectingNode &&
+            finalVectorA.toCoordinate(midpoint).distance(intersectingNode) >
+            finalVectorB.toCoordinate(midpoint).distance(intersectingNode) ?
+            finalVectorA :
+            finalVectorB;
+
+        return finalVector.toCoordinate(midpoint);
+    }
+
+    shortestDistanceBetween(point: ICoordinate): number {
+        return Line.from(this.from, this.to).shortestDistanceBetween(point);
+    }
+
+    /** determines if a given Node is collinear (intersects, collides) with a straight line between
+     * the nodes of this edge */
+    intersects(node: Node): boolean {
+        const distanceToEdge = this.shortestDistanceBetween(node);
+        const distanceToA = this.from.distance(node);
+        const distanceToB = this.to.distance(node);
+
+        const intersectsLine = distanceToEdge <= node.radius + node.bufferRadius;
+
+        const out = intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
+
+        console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
+        console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
+        console.log("const intersectsLine = ", intersectsLine);
+        console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
+
+        return out;
     }
 }

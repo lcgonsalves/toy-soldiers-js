@@ -1,7 +1,8 @@
 import IComparable from "../util/IComparable";
 import Node from "./Node";
 import { Interval } from "../geometry/Interval";
-import ICoordinate from "../geometry/ICoordinate";
+import { ICoordinate } from "../geometry/Coordinate";
+import DirectedEdge from "./DirectedEdge";
 export default class DirectedGraph implements IComparable {
     private readonly _nodes;
     private _isSnappingNodesToGrid;
@@ -38,7 +39,7 @@ export default class DirectedGraph implements IComparable {
      * @param n
      * @param fallbackValue
      */
-    getOrElse(n: Node, fallbackValue: any): Node | any;
+    getOrElse<T>(n: Node, fallbackValue: T): Node | T;
     /**
      * Adds node(s) to the graph if not yet contained. If a node is already contained,
      * this function updates the edges of that node to the new one.
@@ -73,5 +74,7 @@ export default class DirectedGraph implements IComparable {
      * @returns {Node} the second node, or ending node if unidirectional
      */
     addAndConnect(n1: Node, n2: Node, bidirectional?: boolean): DirectedGraph;
+    /** returns an array of nodes whose position intersects with the given edge */
+    getNodesIntersectingWith(edge: DirectedEdge): Node[];
     equals(other: DirectedGraph): boolean;
 }

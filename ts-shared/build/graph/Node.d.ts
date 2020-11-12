@@ -1,25 +1,29 @@
-import ICoordinate from "../geometry/ICoordinate";
 import DirectedEdge from "./DirectedEdge";
+import { ICoordinate } from "../geometry/Coordinate";
 import Vector from "../util/Vector";
 export default class Node implements ICoordinate {
     private readonly _coordinate;
     private readonly _id;
     private _edges;
-    private _weight;
+    private _radius;
+    private _bufferRadius;
     get y(): number;
     get x(): number;
     get edges(): DirectedEdge[];
     get coord(): ICoordinate;
     get id(): string;
-    get weight(): number;
-    set weight(value: number);
+    get radius(): number;
+    set radius(value: number);
+    get vector(): Vector;
+    get bufferRadius(): number;
+    set bufferRadius(value: number);
     constructor(id: string, x: number, y: number, edges?: DirectedEdge[]);
     /** returns midpoint between two nodes */
     midpoint(other: ICoordinate): ICoordinate;
     /** returns distance between two nodes */
     distance(other: ICoordinate): number;
     /** returns vector between two nodes */
-    vector(other: ICoordinate): Vector;
+    vectorTo(other: ICoordinate): Vector;
     /** reassigns this Node's coordinate to a new value */
     moveTo(x: number, y: number): Node;
     /** Converts the node and its immediate connections to a string */
@@ -47,5 +51,5 @@ export default class Node implements ICoordinate {
      */
     connectTo(other: Node, bidirectional?: boolean): Node;
     overlaps(other: ICoordinate): boolean;
-    perpedicularVector(other: ICoordinate): Vector;
+    perpendicularVector(other: ICoordinate, ccw?: boolean): Vector;
 }

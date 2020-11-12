@@ -2,6 +2,7 @@ import IComparable from "../util/IComparable";
 import Node from "./Node";
 import {Interval} from "../geometry/Interval";
 import {Coordinate, ICoordinate} from "../geometry/Coordinate";
+import DirectedEdge from "./DirectedEdge";
 
 export default class DirectedGraph implements IComparable {
     private readonly _nodes: {
@@ -39,13 +40,9 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n
      */
-    public contains(n: Node | string): boolean {
-        if (n instanceof Node) {
-            const node = this.nodes[n.id];
-            return node && n.equals(n);
-        } else if (typeof n === "string") {
-            return this.nodes[n] !== undefined;
-        } else return false;
+    public contains(n: Node): boolean {
+        const node = this.nodes[n.id];
+        return node && n.equals(n);
     }
 
     /**
@@ -54,12 +51,8 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n
      */
-    public get(n: Node | string): Node {
-        if (this.contains(n)) {
-            if (n instanceof Node) return this.nodes[n.id];
-            else if (typeof n === "string") return this.nodes[n];
-            else throw new Error("Parameter type should be either Node or string!")
-        }
+    public get(n: Node): Node {
+        if (this.contains(n)) return this.nodes[n.id];
         else throw new Error("Node is not contained in the graph!");
     }
 
@@ -70,7 +63,7 @@ export default class DirectedGraph implements IComparable {
      * @param n
      * @param fallbackValue
      */
-    public getOrElse(n: Node, fallbackValue: any): Node | any {
+    public getOrElse<T>(n: Node, fallbackValue: T): Node | T {
         if (!this.contains(n)) return fallbackValue;
         else return this.get(n);
     }
@@ -168,6 +161,13 @@ export default class DirectedGraph implements IComparable {
 
         // adds if they don't exist yet
         return this.addNode(firstNode, secondNode);
+    }
+
+    /** returns an array of nodes whose position intersects with the given edge */
+    public getNodesIntersectingWith(edge: DirectedEdge): Node[] {
+        return this.nodes.filter(n => (
+            !(n.equals(edge.from) || n.equals(edge.to)) && edge.intersects(n)
+        ));
     }
 
     equals(other: DirectedGraph): boolean {
