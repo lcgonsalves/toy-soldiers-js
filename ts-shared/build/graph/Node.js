@@ -95,6 +95,10 @@ class Node {
     perpendicularVector(other, ccw = true) {
         return this.coord.perpendicularVector(other, ccw);
     }
+    moveBy(x, y) {
+        this.coord.moveBy(x, y);
+        return this;
+    }
 }
 exports.default = Node;
 //# sourceMappingURL=Node.js.map

@@ -34,6 +34,9 @@ export interface ICoordinate extends IComparable {
     /** Changes value of current coordinate to given x-y value */
     moveTo(x: number, y: number): ICoordinate;
 
+    /** adds values to given coordinate */
+    moveBy(x: number, y: number): ICoordinate;
+
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 
@@ -106,6 +109,12 @@ export class Coordinate implements ICoordinate {
 
         const v = new Vector([x, y]);
         return ccw ? v : v.scale(-1);
+    }
+
+    moveBy(x: number, y: number): ICoordinate {
+        this.x += x;
+        this.y += y;
+        return this;
     }
 
 }

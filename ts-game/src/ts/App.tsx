@@ -1,7 +1,7 @@
 import React from 'react';
 import io from "socket.io-client";
 import '../css/App.css';
-import GameMain from "./game/GameMain";
+import MapEditor from "./game/MapEditor";
 // const socket: SocketIOClient.Socket = io("http://localhost:80");
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
     return (
         <div className="App">
             Hello
-            <GameMain/>
+            <MapEditor/>
         </div>
 
     );

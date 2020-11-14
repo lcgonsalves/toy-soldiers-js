@@ -52,4 +52,5 @@ export default class Node implements ICoordinate {
     connectTo(other: Node, bidirectional?: boolean): Node;
     overlaps(other: ICoordinate): boolean;
     perpendicularVector(other: ICoordinate, ccw?: boolean): Vector;
+    moveBy(x: number, y: number): Node;
 }

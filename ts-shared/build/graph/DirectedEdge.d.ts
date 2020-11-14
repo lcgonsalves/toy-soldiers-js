@@ -19,6 +19,8 @@ export default class DirectedEdge implements ILine {
     equals(other: IComparable): boolean;
     /** Returns coordinate of point (x1,y1) as defined in the usage of d3.path().arcTo() from a given curvature degree parameter */
     getArcToTangentPoint(intersectingNode?: Node): ICoordinate;
+    /** returns radius needed for a when given an intersecting node */
+    getCurveRadius(intersectingNode?: Node): number;
     shortestDistanceBetween(point: ICoordinate): number;
     /** determines if a given Node is collinear (intersects, collides) with a straight line between
      * the nodes of this edge */

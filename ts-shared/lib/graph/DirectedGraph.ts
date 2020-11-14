@@ -174,4 +174,9 @@ export default class DirectedGraph implements IComparable {
         return Object.values(this._nodes).every(other.contains);
     }
 
+    /** returns true if there is a node at a given location */
+    public containsNodeAtPosition(location: ICoordinate): boolean {
+        return this.nodes.filter(_ => _.overlaps(location)).length > 0
+    }
+
 }

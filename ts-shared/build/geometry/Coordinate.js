@@ -53,6 +53,11 @@ class Coordinate {
         const v = new Vector_1.default([x, y]);
         return ccw ? v : v.scale(-1);
     }
+    moveBy(x, y) {
+        this.x += x;
+        this.y += y;
+        return this;
+    }
 }
 exports.Coordinate = Coordinate;
 //# sourceMappingURL=Coordinate.js.map

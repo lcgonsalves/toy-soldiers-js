@@ -40,6 +40,13 @@ class DirectedEdge {
             finalVectorB;
         return finalVector.toCoordinate(midpoint);
     }
+    /** returns radius needed for a when given an intersecting node */
+    getCurveRadius(intersectingNode) {
+        const { from, to } = this;
+        const midpoint = from.midpoint(to);
+        const curvature = intersectingNode ? intersectingNode.radius + intersectingNode.bufferRadius : 0;
+        return (4 * Shorthands_1.sq(curvature) + Shorthands_1.sq(from.distance(to))) / (8 * curvature);
+    }
     shortestDistanceBetween(point) {
         return Line_1.Line.from(this.from, this.to).shortestDistanceBetween(point);
     }
@@ -51,10 +58,10 @@ class DirectedEdge {
         const distanceToB = this.to.distance(node);
         const intersectsLine = distanceToEdge <= node.radius + node.bufferRadius;
         const out = intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
-        console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
-        console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
-        console.log("const intersectsLine = ", intersectsLine);
-        console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
+        // console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
+        // console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
+        // console.log("const intersectsLine = ", intersectsLine);
+        // console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
         return out;
     }
 }

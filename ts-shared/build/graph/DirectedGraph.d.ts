@@ -77,4 +77,6 @@ export default class DirectedGraph implements IComparable {
     /** returns an array of nodes whose position intersects with the given edge */
     getNodesIntersectingWith(edge: DirectedEdge): Node[];
     equals(other: DirectedGraph): boolean;
+    /** returns true if there is a node at a given location */
+    containsNodeAtPosition(location: ICoordinate): boolean;
 }

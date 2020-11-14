@@ -116,4 +116,9 @@ export default class Node implements ICoordinate {
         return this.coord.perpendicularVector(other, ccw);
     }
 
+    moveBy(x: number, y: number): Node {
+        this.coord.moveBy(x,y);
+        return this;
+    }
+
 }

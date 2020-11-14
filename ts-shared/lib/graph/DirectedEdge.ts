@@ -55,6 +55,14 @@ export default class DirectedEdge implements ILine {
         return finalVector.toCoordinate(midpoint);
     }
 
+    /** returns radius needed for a when given an intersecting node */
+    getCurveRadius(intersectingNode?: Node): number {
+        const {from, to} = this;
+        const midpoint = from.midpoint(to);
+        const curvature = intersectingNode ? intersectingNode.radius + intersectingNode.bufferRadius : 0;
+        return (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
+    }
+
     shortestDistanceBetween(point: ICoordinate): number {
         return Line.from(this.from, this.to).shortestDistanceBetween(point);
     }
@@ -70,10 +78,10 @@ export default class DirectedEdge implements ILine {
 
         const out = intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
 
-        console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
-        console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
-        console.log("const intersectsLine = ", intersectsLine);
-        console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
+        // console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
+        // console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
+        // console.log("const intersectsLine = ", intersectsLine);
+        // console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
 
         return out;
     }

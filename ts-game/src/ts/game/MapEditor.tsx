@@ -1,12 +1,14 @@
 import React, {Component} from 'react';
-import {select, pointer, Selection, BaseType} from "d3-selection";
+import {pointer, select} from "d3-selection";
 import {path, Path} from "d3-path";
-import {D3DragEvent, drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
+import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import "../../css/DirectedGraph.css";
-import {Line} from "ts-shared/build/geometry/Line";
+import "../../css/Editor.css"
+import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import Tooltip from "../ui/Tooltip";
 
 // todo: move state to props
 interface GameMainProps {
@@ -14,17 +16,47 @@ interface GameMainProps {
 }
 interface GameMainState {
     nodes: Node[],
-    pathCurveDegree: number,
-    arcRadius: number
+    displayTooltip: boolean,
+    tooltipLocation: ICoordinate,
+    cursorLocation: ICoordinate | undefined,
+    spcialKeysPressed: {
+        [key: string]: boolean
+    }
 }
 
 // type shorthand for ease of reading
 type SVGElement = React.RefObject<SVGSVGElement>;
 
-class GameMain extends Component<GameMainProps, GameMainState> {
+enum SupportedSpecialKey {
+    Shift = "Shift",
+    Control = "Control"
+}
+type KeyActivationMap = { [key: string]: boolean };
+class SpecialKey {
+    public static readonly allowed: string[] = Object.keys(SupportedSpecialKey);
+    public static defaultPressMap(): KeyActivationMap {
+        const map: { [key: string]: boolean } = {};
+        SpecialKey.allowed.forEach(key => map[key] = false);
+        return map;
+    };
+    public static convertToCSSClass(map: KeyActivationMap): string[] {
+        return Object.keys(map)
+          .filter(key => this.allowed.includes(key) && map[key])
+          .map(key => {
+              switch (key) {
+                  case SupportedSpecialKey.Shift:
+                      return "shift-pressed";
+                  case SupportedSpecialKey.Control:
+                      return "ctrl-pressed";
+              }
+          }) as string[];
+    }
+}
+class MapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
     private graph: DirectedGraph = new DirectedGraph();
     private svgElement: SVGElement = React.createRef();
+    public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
         super(props);
@@ -46,7 +78,13 @@ class GameMain extends Component<GameMainProps, GameMainState> {
           // .addAndConnect(p5, p3)
           // .addAndConnect(p3, p1);
 
-        this.state = {nodes: this.graph.nodes, pathCurveDegree: 10, arcRadius: 10};
+        this.state = {
+            nodes: this.graph.nodes,
+            displayTooltip: false,
+            tooltipLocation: new Coordinate(0, 0),
+            cursorLocation: undefined,
+            spcialKeysPressed: SpecialKey.defaultPressMap()
+        };
 
     }
 
@@ -67,11 +105,20 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             }
 
             return context;
-        }
+        };
+        const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x ,y)});
+        const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x ,y)});
+        const isShiftPressed = () => this.state.spcialKeysPressed[SupportedSpecialKey.Shift];
 
         const mainGroup = select(this.svgElement.current)
             .append("g")
-            .attr("id", "main");
+            .attr("id", "main")
+            .on("mousemove", function (this: any, evt: any) {
+              if (isShiftPressed()) {
+                  const [x,y] = pointer(evt);
+                  updateCursorLocation(x,y);
+              }
+            });
 
         // draw grid
         mainGroup.append("path")
@@ -85,6 +132,10 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         // append edges svg group
         mainGroup.append("g")
             .attr("id", "edges");
+
+        // append add-node icon svg group
+        mainGroup.append("g")
+          .attr("id", "add-nodes");
 
     }
 
@@ -141,13 +192,12 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         const drawCurvedEdge = (edge: DirectedEdge, context: Path, intersectingNode: Node): Path => {
             const midpoint = edge.midpoint;
             const tangentPoint = edge.getArcToTangentPoint(intersectingNode);
-            const radius = Math.sqrt(Math.pow(this.state.pathCurveDegree, 2) + Math.pow(edge.from.vectorTo(midpoint).length(), 2));
 
             context.moveTo(midpoint.x, midpoint.y);
             context.lineTo(tangentPoint.x, tangentPoint.y);
 
             context.moveTo(edge.from.x, edge.from.y);
-            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, radius);
+            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, edge.getCurveRadius(intersectingNode));
             context.lineTo(edge.to.x, edge.to.y);
             return context;
         };
@@ -166,6 +216,8 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         const graphEdgeContainer = this.renderEdges();
 
         this.renderNodes();
+
+        this.renderAddNodeHelperIcons();
 
         // TODO: remove debug parameter
         const graphEdgeDEBUG = graphEdgeContainer
@@ -230,7 +282,7 @@ class GameMain extends Component<GameMainProps, GameMainState> {
 
         graphNodes.selectAll<SVGTextElement, Node>("text")
             .attr("x", node => node.x + node.radius + 1)
-            .attr("y", node => node.y)
+            .attr("y", node => node.y);
 
         // add newly added nodes if any
         const nodeG = graphNodes.enter()
@@ -254,6 +306,88 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         graphNodes.exit().remove();
     }
 
+    /** shows circles where nodes can be added */
+    private renderAddNodeHelperIcons() {
+        if (!this.state.cursorLocation) return;
+
+        const possibleNodeAdditionsNearby: ICoordinate[] = [];
+        const {x,y} = this.state.cursorLocation;
+        const snappedCoord = DirectedGraph.snapToGrid(this.state.cursorLocation.x, this.state.cursorLocation.y);
+
+        if (this.state.spcialKeysPressed[SupportedSpecialKey.Shift]) {
+            const possibilities = [-this.graph.step, 0, this.graph.step];
+            possibilities.forEach((A) => {
+                possibilities.forEach((B) => {
+                    let c = new Coordinate(snappedCoord.x, snappedCoord.y).moveBy(A, B);
+                    if (this.graph.domain.x.contains(c.x) && this.graph.domain.y.contains(c.y) && !this.graph.containsNodeAtPosition(c))
+                        possibleNodeAdditionsNearby.push(c);
+                });
+            });
+        }
+
+        const nodeWidth = 2.4;
+
+        // select nodes
+        const graphNodes = select(this.svgElement.current)
+          .select("#add-nodes")
+          .selectAll<SVGCircleElement, ICoordinate>("g")
+          .data<ICoordinate>(possibleNodeAdditionsNearby, _ => `(${_.x}, ${_.y})`);
+
+        graphNodes
+          .selectAll<SVGCircleElement, ICoordinate>("circle")
+          .filter(_ => !_.equals(snappedCoord))
+          .attr("r", nodeWidth / 2)
+          .attr("opacity", 0.6);
+
+        graphNodes
+          .selectAll<SVGCircleElement, ICoordinate>("circle")
+          .filter(_ => _.equals(snappedCoord))
+          .attr("r", nodeWidth)
+          .attr("opacity", 0.9);
+
+        graphNodes
+          .selectAll<SVGTextElement, ICoordinate>("text")
+          .attr("x", coord => coord.x - (coord.equals(snappedCoord) ? nodeWidth / 2 : nodeWidth / 4))
+          .classed("node-add-helper-plus-small", _ => !_.equals(snappedCoord))
+          .classed("node-add-helper-plus-large", _ => _.equals(snappedCoord));
+
+
+        const helperNodes = graphNodes.enter()
+          .append("g")
+          .classed("node-add-helper-container", true);
+
+        helperNodes
+          .filter(_ => !_.equals(snappedCoord))
+          .classed("outer", true)
+          .append("circle")
+          .classed("node-add-helper-circle", true)
+          .attr("cx", coord => coord.x)
+          .attr("cy", coord => coord.y)
+          .attr("r", nodeWidth / 2)
+          .attr("opacity", 0.6);
+
+        helperNodes
+          .filter(_ => _.equals(snappedCoord))
+          .classed("inner", true)
+          .append("circle")
+          .classed("node-add-helper-circle", true)
+          .attr("cx", coord => coord.x)
+          .attr("cy", coord => coord.y)
+          .attr("r", nodeWidth)
+          .attr("opacity", 0.9);
+
+        helperNodes.append("text")
+          .attr("alignment-baseline", "central")
+          .classed("node-add-helper-plus-small", _ => !_.equals(snappedCoord))
+          .classed("node-add-helper-plus-large", _ => _.equals(snappedCoord))
+          .attr("x", coord => coord.x - (coord.equals(snappedCoord) ? nodeWidth / 2 : nodeWidth / 4))
+          .attr("y", coord => coord.y)
+          .text("+");
+
+        // remove nodes that don't exist anymore
+        graphNodes.exit().remove();
+    }
+
     componentDidMount(): void {
         this.initializeGraph();
         this.updateGraph();
@@ -263,38 +397,56 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         this.updateGraph();
     }
 
+
+    /** renders tooltip in appropriate position */
+    private renderTooltip(x: number, y: number) {
+        const CSSPosition = {
+            left: `${x}px`,
+            top: `${y}px`
+        };
+
+        return <div className="tooltip" style={CSSPosition}>
+            <button onClick={() => console.log("click")}>+</button>
+        </div>
+    }
+
+    private onSpecialKeyAction(keyCode: string, isActive: boolean): void {
+        const isKeyValid = Object.keys(SupportedSpecialKey).includes(keyCode);
+        if (isKeyValid) {
+            this.setState(prevState => {
+                const updatedActiveKeyMapping = prevState.spcialKeysPressed;
+                updatedActiveKeyMapping[keyCode] = isActive;
+
+                return {
+                    spcialKeysPressed: {...updatedActiveKeyMapping}
+                }
+            });
+        }
+    }
+
     public render() {
 
-        try {
-            const p3 = this.graph.nodes.find(_ => _.id === "P3");
-            const p1 = this.graph.nodes.find(_ => _.id === "P1");
-
-            if (p1 && p3) {
-                p1.edges.forEach(_ => {
-                    console.log("intersects point?", _.intersects(p3));
-                });
-            }
-
-        } catch (e) {
-            console.error("error");
-        }
+        const concatCSSClasses = (...classes: string[]): string => classes.reduce((prev, cur) => `${prev} ${cur}`);
 
         return (
-          <div>
+          <div
+            className={concatCSSClasses(MapEditor.cssClass, ...SpecialKey.convertToCSSClass(this.state.spcialKeysPressed))}
+            tabIndex={0}
+            onKeyDown={evt => this.onSpecialKeyAction(evt.key, true)}
+            onKeyUp={evt => this.onSpecialKeyAction(evt.key, false)}
+          >
+              <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000} />
               <svg
                 ref={this.svgElement}
                 height="90vh"
                 width="90vw"
                 viewBox={`-10 -10 110 110`}
               />
-              <input type="range" min={0} max={100} step={1} value={this.state.pathCurveDegree} onChange={evt => this.setState({pathCurveDegree: parseInt(evt.target.value)})}/>
-              <p>Degree {this.state.pathCurveDegree}</p>
-              <input type="range" min={0} max={100} step={1} value={this.state.arcRadius} onChange={evt => this.setState({arcRadius: parseInt(evt.target.value)})}/>
-              <p>Radius {this.state.arcRadius}</p>
           </div>
         );
     }
+
 }
 
 
-export default GameMain;
+export default MapEditor;

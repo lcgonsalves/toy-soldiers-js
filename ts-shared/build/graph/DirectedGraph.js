@@ -141,6 +141,10 @@ class DirectedGraph {
     equals(other) {
         return Object.values(this._nodes).every(other.contains);
     }
+    /** returns true if there is a node at a given location */
+    containsNodeAtPosition(location) {
+        return this.nodes.filter(_ => _.overlaps(location)).length > 0;
+    }
 }
 exports.default = DirectedGraph;
 DirectedGraph.xDomain = new Interval_1.Interval(-100, 100);
