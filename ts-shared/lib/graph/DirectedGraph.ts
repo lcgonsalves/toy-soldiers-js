@@ -38,21 +38,24 @@ export default class DirectedGraph implements IComparable {
     /**
      * Returns true if graph contains a given node.
      *
-     * @param n
+     * @param {Node | string} n a node or a string representing its ID
      */
-    public contains(n: Node): boolean {
-        const node = this._nodes[n.id];
-        return node && n.equals(node);
+    public contains(n: Node | string): boolean {
+        const node = n instanceof Node ? this._nodes[n.id] : this._nodes[n];
+        const nodesEqual = node && n instanceof Node && n.equals(node);
+        const idsEqual = node && typeof n === "string" && n === node.id;
+
+        return ( nodesEqual || idsEqual );
     }
 
     /**
      * Returns given node if it exists in the graph. If node doesn't
      * exist, an error is thrown.
      *
-     * @param n
+     * @param {Node | string} n either a node or a string representing its id
      */
-    public get(n: Node): Node {
-        if (this.contains(n)) return this._nodes[n.id];
+    public get(n: Node | string): Node {
+        if (this.contains(n)) return n instanceof Node ? this._nodes[n.id] : this._nodes[n];
         else throw new Error("Node is not contained in the graph!");
     }
 
