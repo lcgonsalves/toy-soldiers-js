@@ -6,7 +6,7 @@ import DirectedEdge from "./DirectedEdge";
 
 export default class DirectedGraph implements IComparable {
     private readonly _nodes: {
-        [id: string]: Node
+        [id: string]: Node | undefined
     } = {};
     private _isSnappingNodesToGrid: boolean = false;
     private static readonly xDomain: Interval = new Interval(-100, 100);
@@ -17,7 +17,7 @@ export default class DirectedGraph implements IComparable {
         nodes.forEach(n => this._nodes[n.id] = n);
     }
 
-    get nodes(): Node[] { return Object.values(this._nodes) }
+    get nodes(): Node[] { return Object.values(this._nodes).filter(_ => !!_) }
     get isSnappingNodesToGrid(): boolean { return this._isSnappingNodesToGrid; }
     set isSnappingNodesToGrid(value: boolean) { this._isSnappingNodesToGrid = value; }
     get domain(): {
@@ -164,6 +164,21 @@ export default class DirectedGraph implements IComparable {
 
         // adds if they don't exist yet
         return this.addNode(firstNode, secondNode);
+    }
+
+    /** given a node or node id, removes nodes */
+    public removeAndDisconnect(nodeOrID: Node | string): DirectedGraph {
+        if (this.contains(nodeOrID)) {
+            const n = nodeOrID instanceof Node ? nodeOrID : new Node(nodeOrID, 0, 0);
+
+            // remove from dictionary
+            this._nodes[n.id] = undefined;
+
+            // iterate over node array and disconnect
+            this.nodes.forEach(node => node.disconnectFrom(n));
+        }
+
+        return this;
     }
 
     /** returns an array of nodes whose position intersects with the given edge */

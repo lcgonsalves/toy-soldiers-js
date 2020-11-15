@@ -121,4 +121,11 @@ export default class Node implements ICoordinate {
         return this;
     }
 
+    /** if node is connected to @param node, then the conenction is removed */
+    disconnectFrom(node: Node): Node {
+        // filter edges where destination is given node
+        this._edges = this._edges.filter(e => !e.to.equals(node));
+        return this;
+    }
+
 }
