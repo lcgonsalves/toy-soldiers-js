@@ -41,8 +41,8 @@ export default class DirectedGraph implements IComparable {
      * @param n
      */
     public contains(n: Node): boolean {
-        const node = this.nodes[n.id];
-        return node && n.equals(n);
+        const node = this._nodes[n.id];
+        return node && n.equals(node);
     }
 
     /**
@@ -52,7 +52,7 @@ export default class DirectedGraph implements IComparable {
      * @param n
      */
     public get(n: Node): Node {
-        if (this.contains(n)) return this.nodes[n.id];
+        if (this.contains(n)) return this._nodes[n.id];
         else throw new Error("Node is not contained in the graph!");
     }
 

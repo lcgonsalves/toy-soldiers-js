@@ -12,7 +12,7 @@ const c = new Node("C", 0, 0);
 
 const g = new DirectedGraph().addAndConnect(a,b).addAndConnect(a,c);
 
-console.log(g.nodes);
+console.log(g.get(new Node("A", 43243, 434)));
 
 export {WebsocketEventDefinitions};
 export {WebsocketTools};
