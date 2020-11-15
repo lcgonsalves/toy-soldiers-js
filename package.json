@@ -10,7 +10,8 @@
     "watchShared": "npm run watch --prefix ./ts-shared",
     "buildAndServe": "rm -r ./ts-server/static/ts-game-build/ && npm run build --prefix ./ts-game && cp -R ./ts-game/build ./ts-server/static/ts-game-build/",
     "startFront": "npm start --prefix ./ts-game",
-    "setup": "npm install --prefix ./ts-server && npm install --prefix ./ts-game && npm install --prefix ./ts-shared"
+    "setup": "npm install --prefix ./ts-server && npm install --prefix ./ts-game && npm install --prefix ./ts-shared",
+    "linkShared": "npm link --prefix ./ts-shared && npm link ts-shared --prefix ./ts-game && npm link ts-shared --prefix ./ts-server"
   },
   "repository": {
     "type": "git",

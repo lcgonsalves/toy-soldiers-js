@@ -27,6 +27,13 @@ This project is organized into 3 main parts:
    * Bulk of the mechanics. Where shared abstractions are defined (Game Objects, Coordinates, etc)
    * You will probably edit this alongside `Game`
    
+#### First time setup
+When you clone the repository for the first time you can install all the dependencies by running
+`npm run setup` in the root folder. If you intend on making local changes to `ts-shared` you should 
+`npm link` the shared folder.
+
+You can do so by running `npm run linkShared` in the root folder, or manually.
+   
 #### Launching
 You can launch both the front end and the back end by running the following commands from
 the directory root, respectively:
