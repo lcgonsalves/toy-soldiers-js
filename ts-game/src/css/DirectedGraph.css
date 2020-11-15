@@ -1,12 +1,32 @@
-.node {
+.node_circle {
     fill: #66663d;
     stroke: #414141;
     stroke-width: 0.5;
 }
 
+.node {
+    stroke-width: 0.19;
+    stroke: #222222;
+}
+
+.node_container:hover {
+    fill: #a9a959;
+    cursor: grab;
+    stroke-width: 0.15;
+}
+
+.grabbed {
+    cursor: grabbing;
+    fill: #c8c863;
+    stroke: #545454;
+    stroke-width: 0.2;
+}
+
 .edge {
     fill: none;
     stroke: gold;
+    stroke-width: 3;
+    z-index: 0;
 }
 
 .movable {
@@ -17,6 +37,7 @@
     stroke-width: 0.3;
     stroke: #414141;
     opacity: 0.5;
+    z-index: 3;
 }
 
 .node_label {

@@ -47,12 +47,12 @@ export default class DirectedEdge implements ILine {
 
         // pick final vector based on the shortest distance between apex and intersecting node coord
         let finalVector = intersectingNode &&
-            finalVectorA.toCoordinate(midpoint).distance(intersectingNode) >
-            finalVectorB.toCoordinate(midpoint).distance(intersectingNode) ?
+            finalVectorA.getEndpoint(midpoint).distance(intersectingNode) >
+            finalVectorB.getEndpoint(midpoint).distance(intersectingNode) ?
             finalVectorA :
             finalVectorB;
 
-        return finalVector.toCoordinate(midpoint);
+        return finalVector.getEndpoint(midpoint);
     }
 
     shortestDistanceBetween(point: ICoordinate): number {
@@ -68,13 +68,6 @@ export default class DirectedEdge implements ILine {
 
         const intersectsLine = distanceToEdge <= node.radius + node.bufferRadius;
 
-        const out = intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
-
-        console.log(`P3->${this.from.toStringSimple()} (from): `, distanceToA);
-        console.log(`P3->${this.to.toStringSimple()} (to): }`, distanceToB);
-        console.log("const intersectsLine = ", intersectsLine);
-        console.log(`Either distance above the size [=${this.size}]?`, (distanceToA > this.size || distanceToB > this.size));
-
-        return out;
+        return intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
     }
 }

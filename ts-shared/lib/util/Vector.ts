@@ -13,7 +13,7 @@ export default class Vector extends TSVector {
      * @param startingFrom {ICoordinate} initial point (source of vector)
      * @returns {ICoordinate} coordinate representing end point
      */
-    toCoordinate(startingFrom: ICoordinate = new Coordinate(0, 0)): ICoordinate {
+    getEndpoint(startingFrom: ICoordinate = new Coordinate(0, 0)): ICoordinate {
         if (this.rows !== 2) throw new Error("Only two dimensional vectors may be converted to ICoordinates!");
         const [x, y]= this.values;
         return new Coordinate(startingFrom.x + x, startingFrom.y + y);

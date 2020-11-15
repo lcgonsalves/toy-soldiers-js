@@ -7,6 +7,7 @@ import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import "../../css/DirectedGraph.css";
 import {Line} from "ts-shared/build/geometry/Line";
+import {Interval} from "ts-shared/build/geometry/Interval";
 
 // todo: move state to props
 interface GameMainProps {
@@ -36,6 +37,8 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         p3 = new Node("P3", 30, 50);
         p4 = new Node("P4", 40, 50);
         p5 = new Node("P5", 87, 67);
+
+        p3.bufferRadius = 4
 
         this.graph.isSnappingNodesToGrid = true;
         this.graph.addAndConnect(p1, p2)
@@ -78,13 +81,15 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             .classed("grid", true)
             .attr("d", drawGrid(path()).toString());
 
-        // append nodes svg group
-        mainGroup.append("g")
-            .attr("id", "nodes");
-
         // append edges svg group
         mainGroup.append("g")
             .attr("id", "edges");
+
+        // append nodes svg group
+        mainGroup.append("g")
+            .attr("id", "nodes")
+            .classed("node", true);
+
 
     }
 
@@ -94,12 +99,23 @@ class GameMain extends Component<GameMainProps, GameMainState> {
 
         // sets node to active
         function onStart(this: E, evt: any, dataPoint: N) {
-            select(this).classed("dragging", true);
+            select(this).classed("grabbed", true);
         }
 
+        const step = this.graph.step;
         // changes the element's location
         function onDrag(this: E, evt: any, dataPoint: N) {
-            const {x, y} = DirectedGraph.snapToGrid(evt.x, evt.y)
+            let {x, y} = evt;
+
+            const snapCore = DirectedGraph.snapToGrid(x,y);
+            const fractionOfStep = step * 0.04;
+            const snapZone = {
+                x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
+                y: new Interval(  snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
+            };
+
+            x = snapZone.x.contains(x) ? snapCore.x : x;
+            y = snapZone.y.contains(y) ? snapCore.y : y;
 
             select(this)
                 .selectAll("circle")
@@ -117,7 +133,7 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         function onEnd(this: E, evt: any, coordinate: N) {
             const {x, y} = DirectedGraph.snapToGrid(evt.x, evt.y)
 
-            select(this).classed("dragging", false);
+            select(this).classed("grabbed", false);
             coordinate.moveTo(x, y);
             updateNodeArray();
         }
@@ -143,8 +159,8 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             const tangentPoint = edge.getArcToTangentPoint(intersectingNode);
             const radius = Math.sqrt(Math.pow(this.state.pathCurveDegree, 2) + Math.pow(edge.from.vectorTo(midpoint).length(), 2));
 
-            context.moveTo(midpoint.x, midpoint.y);
-            context.lineTo(tangentPoint.x, tangentPoint.y);
+            // context.moveTo(midpoint.x, midpoint.y);
+            // context.lineTo(tangentPoint.x, tangentPoint.y);
 
             context.moveTo(edge.from.x, edge.from.y);
             context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, radius);
@@ -164,7 +180,6 @@ class GameMain extends Component<GameMainProps, GameMainState> {
     private updateGraph(): void {
 
         const graphEdgeContainer = this.renderEdges();
-
         this.renderNodes();
 
         // TODO: remove debug parameter
@@ -173,17 +188,17 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
 
         // add midpoint for debug
-        graphEdgeDEBUG.enter().append("circle")
-            .attr("stroke", "red")
-            .attr("cx", edge => edge.from.midpoint(edge.to).x)
-            .attr("cy", edge => edge.from.midpoint(edge.to).y)
-            .attr("r", 0.5);
-
-        graphEdgeDEBUG.exit().remove();
-
-        graphEdgeDEBUG
-            .attr("cx", edge => edge.from.midpoint(edge.to).x)
-            .attr("cy", edge => edge.from.midpoint(edge.to).y);
+        // graphEdgeDEBUG.enter().append("circle")
+        //     .attr("stroke", "red")
+        //     .attr("cx", edge => edge.from.midpoint(edge.to).x)
+        //     .attr("cy", edge => edge.from.midpoint(edge.to).y)
+        //     .attr("r", 0.5);
+        //
+        // graphEdgeDEBUG.exit().remove();
+        //
+        // graphEdgeDEBUG
+        //     .attr("cx", edge => edge.from.midpoint(edge.to).x)
+        //     .attr("cy", edge => edge.from.midpoint(edge.to).y);
 
     }
 
@@ -210,6 +225,7 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         // draw new edges
         edgeGroupOnEnter.append("path")
             .classed("edge", true)
+            .attr("paint-order", 3)
             .attr("d", edge => this.drawEdge(edge, path(), true).toString());
 
         return graphEdgeContainer;
@@ -236,10 +252,11 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         const nodeG = graphNodes.enter()
             .append("g")
             .classed("node_container", true)
+            .attr("paint-order", 1)
             .call(this.initDragHandlers<SVGGElement, Node>());
 
         nodeG.append("circle")
-            .classed("node", true)
+            .classed("node_circle", true)
             .attr("cx", node => node.x)
             .attr("cy", node => node.y)
             .attr("r", node => node.radius);
@@ -264,20 +281,6 @@ class GameMain extends Component<GameMainProps, GameMainState> {
     }
 
     public render() {
-
-        try {
-            const p3 = this.graph.nodes.find(_ => _.id === "P3");
-            const p1 = this.graph.nodes.find(_ => _.id === "P1");
-
-            if (p1 && p3) {
-                p1.edges.forEach(_ => {
-                    console.log("intersects point?", _.intersects(p3));
-                });
-            }
-
-        } catch (e) {
-            console.error("error");
-        }
 
         return (
           <div>
