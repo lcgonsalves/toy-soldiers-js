@@ -1,11 +1,14 @@
 import React, {Component} from 'react';
-import {select, pointer, Selection, BaseType} from "d3-selection";
+import {pointer, select} from "d3-selection";
 import {path, Path} from "d3-path";
-import {D3DragEvent, drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
+import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import "../../css/DirectedGraph.css";
+import "../../css/Editor.css"
+import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import Tooltip from "../ui/Tooltip";
 import {Line} from "ts-shared/build/geometry/Line";
 import {Interval} from "ts-shared/build/geometry/Interval";
 
@@ -15,17 +18,19 @@ interface GameMainProps {
 }
 interface GameMainState {
     nodes: Node[],
-    pathCurveDegree: number,
-    arcRadius: number
+    displayTooltip: boolean,
+    tooltipLocation: ICoordinate,
+    cursorLocation: ICoordinate | undefined
 }
 
 // type shorthand for ease of reading
 type SVGElement = React.RefObject<SVGSVGElement>;
 
-class GameMain extends Component<GameMainProps, GameMainState> {
+class MapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
     private graph: DirectedGraph = new DirectedGraph();
     private svgElement: SVGElement = React.createRef();
+    public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
         super(props);
@@ -38,8 +43,6 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         p4 = new Node("P4", 40, 50);
         p5 = new Node("P5", 87, 67);
 
-        p3.bufferRadius = 4
-
         this.graph.isSnappingNodesToGrid = true;
         this.graph.addAndConnect(p1, p2)
             .addAndConnect(p3, p2);
@@ -49,7 +52,12 @@ class GameMain extends Component<GameMainProps, GameMainState> {
           // .addAndConnect(p5, p3)
           // .addAndConnect(p3, p1);
 
-        this.state = {nodes: this.graph.nodes, pathCurveDegree: 10, arcRadius: 10};
+        this.state = {
+            nodes: this.graph.nodes,
+            displayTooltip: false,
+            tooltipLocation: new Coordinate(0, 0),
+            cursorLocation: undefined
+        };
 
     }
 
@@ -70,7 +78,9 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             }
 
             return context;
-        }
+        };
+        const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x ,y)});
+        const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x ,y)});
 
         const mainGroup = select(this.svgElement.current)
             .append("g")
@@ -90,6 +100,10 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             .attr("id", "nodes")
             .classed("node", true);
 
+
+        // append add-node icon svg group
+        mainGroup.append("g")
+          .attr("id", "add-nodes");
 
     }
 
@@ -155,15 +169,9 @@ class GameMain extends Component<GameMainProps, GameMainState> {
             return context;
         };
         const drawCurvedEdge = (edge: DirectedEdge, context: Path, intersectingNode: Node): Path => {
-            const midpoint = edge.midpoint;
             const tangentPoint = edge.getArcToTangentPoint(intersectingNode);
-            const radius = Math.sqrt(Math.pow(this.state.pathCurveDegree, 2) + Math.pow(edge.from.vectorTo(midpoint).length(), 2));
-
-            // context.moveTo(midpoint.x, midpoint.y);
-            // context.lineTo(tangentPoint.x, tangentPoint.y);
-
             context.moveTo(edge.from.x, edge.from.y);
-            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, radius);
+            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, edge.getCurveRadius(intersectingNode));
             context.lineTo(edge.to.x, edge.to.y);
             return context;
         };
@@ -179,26 +187,8 @@ class GameMain extends Component<GameMainProps, GameMainState> {
     /** re-evaluates data and renders graph */
     private updateGraph(): void {
 
-        const graphEdgeContainer = this.renderEdges();
+        this.renderEdges();
         this.renderNodes();
-
-        // TODO: remove debug parameter
-        const graphEdgeDEBUG = graphEdgeContainer
-            .selectAll<SVGPathElement, Node>("circle")
-            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
-
-        // add midpoint for debug
-        // graphEdgeDEBUG.enter().append("circle")
-        //     .attr("stroke", "red")
-        //     .attr("cx", edge => edge.from.midpoint(edge.to).x)
-        //     .attr("cy", edge => edge.from.midpoint(edge.to).y)
-        //     .attr("r", 0.5);
-        //
-        // graphEdgeDEBUG.exit().remove();
-        //
-        // graphEdgeDEBUG
-        //     .attr("cx", edge => edge.from.midpoint(edge.to).x)
-        //     .attr("cy", edge => edge.from.midpoint(edge.to).y);
 
     }
 
@@ -225,7 +215,6 @@ class GameMain extends Component<GameMainProps, GameMainState> {
         // draw new edges
         edgeGroupOnEnter.append("path")
             .classed("edge", true)
-            .attr("paint-order", 3)
             .attr("d", edge => this.drawEdge(edge, path(), true).toString());
 
         return graphEdgeContainer;
@@ -246,23 +235,22 @@ class GameMain extends Component<GameMainProps, GameMainState> {
 
         graphNodes.selectAll<SVGTextElement, Node>("text")
             .attr("x", node => node.x + node.radius + 1)
-            .attr("y", node => node.y)
+            .attr("y", node => node.y);
 
         // add newly added nodes if any
         const nodeG = graphNodes.enter()
             .append("g")
-            .classed("node_container", true)
-            .attr("paint-order", 1)
+            .classed("node-container", true)
             .call(this.initDragHandlers<SVGGElement, Node>());
 
         nodeG.append("circle")
-            .classed("node_circle", true)
+            .classed("node-circle", true)
             .attr("cx", node => node.x)
             .attr("cy", node => node.y)
             .attr("r", node => node.radius);
 
         nodeG.append("text")
-            .classed("node_label", true)
+            .classed("node-label", true)
             .attr("x", node => node.x + node.radius + 1)
             .attr("y", node => node.y)
             .text(node => node.id);
@@ -283,21 +271,21 @@ class GameMain extends Component<GameMainProps, GameMainState> {
     public render() {
 
         return (
-          <div>
+          <div
+            className={MapEditor.cssClass}
+          >
+              <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000} />
               <svg
                 ref={this.svgElement}
                 height="90vh"
                 width="90vw"
                 viewBox={`-10 -10 110 110`}
               />
-              <input type="range" min={0} max={100} step={1} value={this.state.pathCurveDegree} onChange={evt => this.setState({pathCurveDegree: parseInt(evt.target.value)})}/>
-              <p>Degree {this.state.pathCurveDegree}</p>
-              <input type="range" min={0} max={100} step={1} value={this.state.arcRadius} onChange={evt => this.setState({arcRadius: parseInt(evt.target.value)})}/>
-              <p>Radius {this.state.arcRadius}</p>
           </div>
         );
     }
+
 }
 
 
-export default GameMain;
+export default MapEditor;

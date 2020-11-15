@@ -55,6 +55,14 @@ export default class DirectedEdge implements ILine {
         return finalVector.getEndpoint(midpoint);
     }
 
+    /** returns radius needed for a when given an intersecting node */
+    getCurveRadius(intersectingNode?: Node): number {
+        const {from, to} = this;
+        const midpoint = from.midpoint(to);
+        const curvature = intersectingNode ? intersectingNode.radius + intersectingNode.bufferRadius : 0;
+        return (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
+    }
+
     shortestDistanceBetween(point: ICoordinate): number {
         return Line.from(this.from, this.to).shortestDistanceBetween(point);
     }

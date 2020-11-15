@@ -1,4 +1,4 @@
-.node_circle {
+.node-circle {
     fill: #66663d;
     stroke: #414141;
     stroke-width: 0.5;
@@ -9,7 +9,7 @@
     stroke: #222222;
 }
 
-.node_container:hover {
+.node-container:hover {
     fill: #a9a959;
     cursor: grab;
     stroke-width: 0.15;
@@ -40,7 +40,11 @@
     z-index: 3;
 }
 
-.node_label {
+.node-label {
     color: black;
     font-size: 2pt;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }

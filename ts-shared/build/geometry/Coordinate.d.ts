@@ -27,6 +27,8 @@ export interface ICoordinate extends IComparable {
     perpendicularVector(other: ICoordinate, ccw: boolean): Vector;
     /** Changes value of current coordinate to given x-y value */
     moveTo(x: number, y: number): ICoordinate;
+    /** adds values to given coordinate */
+    moveBy(x: number, y: number): ICoordinate;
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 }
@@ -57,4 +59,5 @@ export declare class Coordinate implements ICoordinate {
     moveTo(x: number, y: number): ICoordinate;
     overlaps(other: ICoordinate): boolean;
     perpendicularVector(other: ICoordinate, ccw?: boolean): Vector;
+    moveBy(x: number, y: number): ICoordinate;
 }
