@@ -60,5 +60,6 @@ one must abide to certain rules:
 * New additions must be thoroughly documented with JSDoc comments
 * Any affected parts of the code must have their documentation updated in the same pull request
 * New modules must have a JSDoc page generated for them in the appropriate location
+* Merge in the appropriate branch!
 
 Thanks for respecting the organization of the repository! Let's get conquering!
