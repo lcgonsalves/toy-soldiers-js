@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run startServer",
     "startServer": "npm start --prefix ./ts-server",
+    "watchShared": "npm run watch --prefix ./ts-shared",
     "buildAndServe": "rm -r ./ts-server/static/ts-game-build/ && npm run build --prefix ./ts-game && cp -R ./ts-game/build ./ts-server/static/ts-game-build/",
     "startFront": "npm start --prefix ./ts-game",
     "setup": "npm install --prefix ./ts-server && npm install --prefix ./ts-game && npm install --prefix ./ts-shared"
@@ -27,5 +28,8 @@
   "bugs": {
     "url": "https://github.com/lcgonsalves/toy-soldiers-js/issues"
   },
-  "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme"
+  "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme",
+  "devDependencies": {
+    "typedoc": "^0.19.2"
+  }
 }

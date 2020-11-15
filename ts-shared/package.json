@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/lcgonsalves/toy-soldiers-js#readme",
   "devDependencies": {
-    "typescript": "^4.0.3"
+    "typescript": "4.0.3"
   },
   "dependencies": {
     "@types/socket.io": "^2.1.11",
