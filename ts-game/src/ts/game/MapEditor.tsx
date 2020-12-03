@@ -93,14 +93,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 
         const mainGroup = select(this.svgElement.current)
             .append("g")
-            .attr("id", "main")
-            .call(this.initZoomHandlers<SVGGElement, any>(bgCoords, 20, zoomed))
-
-        function zoomed(this: SVGGElement, event: any, d: any) {
-            const transform = event.transform;
-            console.log(event)
-            mainGroup.attr("transform", transform.toString()) //  "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")");
-        }
+            .attr("id", "main");
 
 
         // background for event tracking
@@ -110,6 +103,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .attr("width", bgCoords.topL.distance(bgCoords.topR))
             .attr("height", bgCoords.topL.distance(bgCoords.bottomL))
             .attr("fill", "#bcbcbc")
+            .call(this.initZoomHandlers<SVGRectElement, any>(bgCoords, 20))
 
         // draw grid
         mainGroup.append("path")
@@ -190,8 +184,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             topL: ICoordinate,
             bottomR: ICoordinate
         },
-        buffer: number = 25,
-        handler: (this: E, event: any, d: Data) => void
+        buffer: number = 25
     ): ZoomBehavior<E, Data> {
         function zoomed(this: E, event: any, d: Data) {
             const transform = event.transform;
