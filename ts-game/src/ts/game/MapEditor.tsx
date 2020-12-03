@@ -1,21 +1,25 @@
 import React, {Component} from 'react';
-import {pointer, select} from "d3-selection";
+
+
+import "../../css/DirectedGraph.css";
+import "../../css/Editor.css"
+
+import {BaseType, Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
 import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
-import "../../css/DirectedGraph.css";
-import "../../css/Editor.css"
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Tooltip from "../ui/Tooltip";
-import {Line} from "ts-shared/build/geometry/Line";
 import {Interval} from "ts-shared/build/geometry/Interval";
+import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
 
 // todo: move state to props
 interface GameMainProps {
 
 }
+
 interface GameMainState {
     nodes: Node[],
     displayTooltip: boolean,
@@ -24,12 +28,12 @@ interface GameMainState {
 }
 
 // type shorthand for ease of reading
-type SVGElement = React.RefObject<SVGSVGElement>;
+type ReactSVGRef = React.RefObject<SVGSVGElement>;
 
 class MapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
     private graph: DirectedGraph = new DirectedGraph();
-    private svgElement: SVGElement = React.createRef();
+    private svgElement: ReactSVGRef = React.createRef();
     public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
@@ -46,11 +50,11 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         this.graph.isSnappingNodesToGrid = true;
         this.graph.addAndConnect(p1, p2)
             .addAndConnect(p3, p2);
-          // .addAndConnect(p1, p4)
-          // .addAndConnect(p4, p5, true)
-          // .addAndConnect(p2, p5, true)
-          // .addAndConnect(p5, p3)
-          // .addAndConnect(p3, p1);
+        // .addAndConnect(p1, p4)
+        // .addAndConnect(p4, p5, true)
+        // .addAndConnect(p2, p5, true)
+        // .addAndConnect(p5, p3)
+        // .addAndConnect(p3, p1);
 
         this.state = {
             nodes: this.graph.nodes,
@@ -79,15 +83,61 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 
             return context;
         };
-        const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x ,y)});
-        const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x ,y)});
+        const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x, y)});
+        const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x, y)});
+
+
+        // defines extents of grid
+        const gridCoords = {
+            topL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.min),
+            topR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.min),
+            bottomL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.max),
+            bottomR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.max)
+        }
+
+        // defines extents of background
+        const bgCoords = {
+            topL: new Coordinate(gridCoords.topL.x  - 150, gridCoords.topL.y - 150),
+            topR: new Coordinate(gridCoords.topR.x  + 150, gridCoords.topR.y - 150),
+            bottomL: new Coordinate(gridCoords.bottomL.x  - 150, gridCoords.bottomL.y + 150),
+            bottomR: new Coordinate(gridCoords.bottomR.x  + 150, gridCoords.bottomR.y + 150)
+        };
+
+
+        // background for event tracking
+        const backgroundElement = select(this.svgElement.current)
+            .append("g")
+            .attr("id", "background")
+            .append("rect")
+            .attr("x", bgCoords.topL.x)
+            .attr("y", bgCoords.topL.y)
+            .attr("width", bgCoords.topL.distance(bgCoords.topR))
+            .attr("height", bgCoords.topL.distance(bgCoords.bottomL))
+            .attr("fill", "#bcbcbc")
+
 
         const mainGroup = select(this.svgElement.current)
             .append("g")
             .attr("id", "main");
 
+        const zoom = this.initZoomHandlers<SVGRectElement, any, SVGGElement>(bgCoords, 20, mainGroup);
+        backgroundElement.call(zoom);
+
         // draw grid
-        mainGroup.append("path")
+        const gridGroup = mainGroup.append("g")
+            .attr("id", "grid")
+            .attr("pointer-events", "none");
+
+
+        gridGroup.append("rect")
+            .attr("x", gridCoords.topL.x)
+            .attr("y", gridCoords.topL.y)
+            .attr("height", gridCoords.topL.distance(gridCoords.bottomL))
+            .attr("width", gridCoords.topL.distance(gridCoords.topR))
+            .attr("fill", "#dedede");
+
+
+        gridGroup.append("path")
             .classed("grid", true)
             .attr("d", drawGrid(path()).toString());
 
@@ -100,12 +150,12 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .attr("id", "nodes")
             .classed("node", true);
 
-
         // append add-node icon svg group
         mainGroup.append("g")
-          .attr("id", "add-nodes");
+            .attr("id", "add-nodes");
 
     }
+
 
     /** Generates a drag function for a given element, with all handlers assigned */
     private initDragHandlers<E extends DraggedElementBaseType, N extends Node>(): DragBehavior<E, N, SubjectPosition | N> {
@@ -117,15 +167,16 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         }
 
         const step = this.graph.step;
+
         // changes the element's location
         function onDrag(this: E, evt: any, dataPoint: N) {
             let {x, y} = evt;
 
-            const snapCore = DirectedGraph.snapToGrid(x,y);
+            const snapCore = DirectedGraph.snapToGrid(x, y);
             const fractionOfStep = step * 0.04;
             const snapZone = {
                 x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
-                y: new Interval(  snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
+                y: new Interval(snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
             };
 
             x = snapZone.x.contains(x) ? snapCore.x : x;
@@ -158,6 +209,30 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .on("end", onEnd);
     }
 
+    /** initializes zoom function
+     * @param {Object} extent object that defines topL and bottomL `Coordinate`s for the size of the zoom
+     * @param {number} buffer Buffer to the translation extent */
+    private initZoomHandlers<E extends ZoomedElementBaseType, Data, ElementToTransform extends BaseType>(
+        extent: {
+            topL: ICoordinate,
+            bottomR: ICoordinate
+        },
+        buffer: number = 25,
+        selection: Selection<ElementToTransform, Data, null, undefined>
+    ): ZoomBehavior<E, Data> {
+        function zoomed(this: E, event: any, d: Data) {
+            selection.attr("transform", event.transform.toString()) //  "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")");
+        }
+
+        return zoom<E, Data>()
+            .scaleExtent([0.5, 2])
+            .translateExtent([
+                [extent.topL.x - buffer, extent.topL.y - buffer],
+                [extent.bottomR.x + buffer, extent.bottomR.y + buffer]
+            ])
+            .on("zoom", zoomed);
+    }
+
     /** draws a line connecting two nodes given an edge */
     private drawEdge(edge: DirectedEdge, context: Path, curved?: boolean): Path {
         const drawStraightEdge = (edge: DirectedEdge, context: Path): Path => {
@@ -180,7 +255,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         const intersectingNode = this.graph.getNodesIntersectingWith(edge)[0];
 
         // drawStraightEdge(edge, context);
-        if (intersectingNode)  return drawCurvedEdge(edge, context, intersectingNode);
+        if (intersectingNode) return drawCurvedEdge(edge, context, intersectingNode);
         else return drawStraightEdge(edge, context);
     }
 
@@ -271,17 +346,17 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
     public render() {
 
         return (
-          <div
-            className={MapEditor.cssClass}
-          >
-              <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000} />
-              <svg
-                ref={this.svgElement}
-                height="90vh"
-                width="90vw"
-                viewBox={`-10 -10 110 110`}
-              />
-          </div>
+            <div
+                className={MapEditor.cssClass}
+            >
+                <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000}/>
+                <svg
+                    ref={this.svgElement}
+                    height="100vh"
+                    width="100vw"
+                    viewBox={`0 0 100 100`}
+                />
+            </div>
         );
     }
 

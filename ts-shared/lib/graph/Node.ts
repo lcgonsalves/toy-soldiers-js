@@ -128,4 +128,8 @@ export default class Node implements ICoordinate {
         return this;
     }
 
+    toArray(): [number, number] {
+        return this.coord.toArray();
+    }
+
 }

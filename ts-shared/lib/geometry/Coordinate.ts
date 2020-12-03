@@ -40,6 +40,9 @@ export interface ICoordinate extends IComparable {
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 
+    /** converts coordinate to a d3 friendly format */
+    toArray(): [number, number];
+
 }
 
 export class Coordinate implements ICoordinate {
@@ -115,6 +118,10 @@ export class Coordinate implements ICoordinate {
         this.x += x;
         this.y += y;
         return this;
+    }
+
+    toArray(): [number, number] {
+        return [this.x, this.y];
     }
 
 }

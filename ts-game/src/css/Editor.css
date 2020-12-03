@@ -28,3 +28,8 @@
     fill: darkgreen;
     font-size: 4px;
 }
+
+/* SVG GROUPS */
+#background {
+    cursor: move;
+}
