@@ -1,17 +1,19 @@
 import React, {Component} from 'react';
+
+
+import "../../css/DirectedGraph.css";
+import "../../css/Editor.css"
+
 import {BaseType, Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
 import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
-import "../../css/DirectedGraph.css";
-import "../../css/Editor.css"
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Tooltip from "../ui/Tooltip";
 import {Interval} from "ts-shared/build/geometry/Interval";
-import {zoom, ZoomBehavior, ZoomedElementBaseType, zoomTransform} from "d3-zoom";
-import d3 from 'd3';
+import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
 
 // todo: move state to props
 interface GameMainProps {
@@ -84,13 +86,6 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x, y)});
         const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x, y)});
 
-        // defines extents of background
-        const bgCoords = {
-            topL: new Coordinate(-300, -300),
-            topR: new Coordinate(300, -300),
-            bottomL: new Coordinate(-300, 300),
-            bottomR: new Coordinate(300, 300)
-        };
 
         // defines extents of grid
         const gridCoords = {
@@ -99,6 +94,14 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             bottomL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.max),
             bottomR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.max)
         }
+
+        // defines extents of background
+        const bgCoords = {
+            topL: new Coordinate(gridCoords.topL.x  - 150, gridCoords.topL.y - 150),
+            topR: new Coordinate(gridCoords.topR.x  + 150, gridCoords.topR.y - 150),
+            bottomL: new Coordinate(gridCoords.bottomL.x  - 150, gridCoords.bottomL.y + 150),
+            bottomR: new Coordinate(gridCoords.bottomR.x  + 150, gridCoords.bottomR.y + 150)
+        };
 
 
         // background for event tracking
