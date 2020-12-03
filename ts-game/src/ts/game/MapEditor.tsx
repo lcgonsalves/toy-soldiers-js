@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {select} from "d3-selection";
+import {BaseType, Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
 import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
@@ -84,29 +84,57 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         const updateTooltipLocation = (x: number, y: number): void => this.setState({tooltipLocation: new Coordinate(x, y)});
         const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x, y)});
 
+        // defines extents of background
         const bgCoords = {
+            topL: new Coordinate(-300, -300),
+            topR: new Coordinate(300, -300),
+            bottomL: new Coordinate(-300, 300),
+            bottomR: new Coordinate(300, 300)
+        };
+
+        // defines extents of grid
+        const gridCoords = {
             topL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.min),
             topR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.min),
             bottomL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.max),
             bottomR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.max)
-        };
-
-        const mainGroup = select(this.svgElement.current)
-            .append("g")
-            .attr("id", "main");
+        }
 
 
         // background for event tracking
-        mainGroup.append("rect")
+        const backgroundElement = select(this.svgElement.current)
+            .append("g")
+            .attr("id", "background")
+            .append("rect")
             .attr("x", bgCoords.topL.x)
             .attr("y", bgCoords.topL.y)
             .attr("width", bgCoords.topL.distance(bgCoords.topR))
             .attr("height", bgCoords.topL.distance(bgCoords.bottomL))
             .attr("fill", "#bcbcbc")
-            .call(this.initZoomHandlers<SVGRectElement, any>(bgCoords, 20))
+
+
+        const mainGroup = select(this.svgElement.current)
+            .append("g")
+            .attr("id", "main");
+
+        const zoom = this.initZoomHandlers<SVGRectElement, any, SVGGElement>(bgCoords, 20, mainGroup);
+        backgroundElement.call(zoom);
 
         // draw grid
-        mainGroup.append("path")
+        const gridGroup = mainGroup.append("g")
+            .attr("id", "grid")
+            .attr("pointer-events", "none");
+
+
+        gridGroup.append("rect")
+            .attr("x", gridCoords.topL.x)
+            .attr("y", gridCoords.topL.y)
+            .attr("height", gridCoords.topL.distance(gridCoords.bottomL))
+            .attr("width", gridCoords.topL.distance(gridCoords.topR))
+            .attr("fill", "#dedede");
+
+
+        gridGroup.append("path")
             .classed("grid", true)
             .attr("d", drawGrid(path()).toString());
 
@@ -178,19 +206,19 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .on("end", onEnd);
     }
 
-    /** initializes zoom function */
-    private initZoomHandlers<E extends ZoomedElementBaseType, Data>(
+    /** initializes zoom function
+     * @param {Object} extent object that defines topL and bottomL `Coordinate`s for the size of the zoom
+     * @param {number} buffer Buffer to the translation extent */
+    private initZoomHandlers<E extends ZoomedElementBaseType, Data, ElementToTransform extends BaseType>(
         extent: {
             topL: ICoordinate,
             bottomR: ICoordinate
         },
-        buffer: number = 25
+        buffer: number = 25,
+        selection: Selection<ElementToTransform, Data, null, undefined>
     ): ZoomBehavior<E, Data> {
         function zoomed(this: E, event: any, d: Data) {
-            const transform = event.transform;
-
-            select("main")
-                .attr("transform", transform) //  "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")");
+            selection.attr("transform", event.transform.toString()) //  "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")");
         }
 
         return zoom<E, Data>()
