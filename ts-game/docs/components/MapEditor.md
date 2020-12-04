@@ -1,3 +1,3 @@
-# MapEditor
+# GameMapEditor
 ----
 Documentation coming soon...

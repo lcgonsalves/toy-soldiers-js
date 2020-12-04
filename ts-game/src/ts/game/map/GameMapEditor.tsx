@@ -1,19 +1,21 @@
 import React, {Component} from 'react';
 
 
-import "../../css/DirectedGraph.css";
-import "../../css/Editor.css"
+import "../../../css/DirectedGraph.css";
+import "../../../css/Editor.css"
 
 import {BaseType, Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
-import {drag, DragBehavior, DraggedElementBaseType, SubjectPosition} from "d3-drag";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import Tooltip from "../ui/Tooltip";
+import Tooltip from "../../ui/Tooltip";
 import {Interval} from "ts-shared/build/geometry/Interval";
 import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
+import {DragConfig, GameMapHelpers} from "./GameMapHelpers";
+
+const {NodeDragBehavior, GraphZoomBehavior} = GameMapHelpers;
 
 // todo: move state to props
 interface GameMainProps {
@@ -30,7 +32,7 @@ interface GameMainState {
 // type shorthand for ease of reading
 type ReactSVGRef = React.RefObject<SVGSVGElement>;
 
-class MapEditor extends Component<GameMainProps, GameMainState> {
+class GameMapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
     private graph: DirectedGraph = new DirectedGraph();
     private svgElement: ReactSVGRef = React.createRef();
@@ -97,10 +99,10 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 
         // defines extents of background
         const bgCoords = {
-            topL: new Coordinate(gridCoords.topL.x  - 150, gridCoords.topL.y - 150),
-            topR: new Coordinate(gridCoords.topR.x  + 150, gridCoords.topR.y - 150),
-            bottomL: new Coordinate(gridCoords.bottomL.x  - 150, gridCoords.bottomL.y + 150),
-            bottomR: new Coordinate(gridCoords.bottomR.x  + 150, gridCoords.bottomR.y + 150)
+            topL: new Coordinate(gridCoords.topL.x - 150, gridCoords.topL.y - 150),
+            topR: new Coordinate(gridCoords.topR.x + 150, gridCoords.topR.y - 150),
+            bottomL: new Coordinate(gridCoords.bottomL.x - 150, gridCoords.bottomL.y + 150),
+            bottomR: new Coordinate(gridCoords.bottomR.x + 150, gridCoords.bottomR.y + 150)
         };
 
 
@@ -120,8 +122,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .append("g")
             .attr("id", "main");
 
-        const zoom = this.initZoomHandlers<SVGRectElement, any, SVGGElement>(bgCoords, 20, mainGroup);
-        backgroundElement.call(zoom);
+        backgroundElement.call(GraphZoomBehavior(bgCoords, mainGroup));
 
         // draw grid
         const gridGroup = mainGroup.append("g")
@@ -150,87 +151,36 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
             .attr("id", "nodes")
             .classed("node", true);
 
-        // append add-node icon svg group
-        mainGroup.append("g")
-            .attr("id", "add-nodes");
+
+        // append menu
+        const bottomMenu = select(this.svgElement.current)
+            .append("g")
+            .attr("id", "bottom-menu");
+        this.initBottomMenu(bottomMenu);
 
     }
 
+    /** Constructs and mounts bottom menu */
+    private initBottomMenu(selection: Selection<any, unknown, null, undefined>): void {
+        // todo: make generic for types and content of buttons
 
-    /** Generates a drag function for a given element, with all handlers assigned */
-    private initDragHandlers<E extends DraggedElementBaseType, N extends Node>(): DragBehavior<E, N, SubjectPosition | N> {
-        const updateNodeArray = () => this.setState({nodes: this.graph.nodes});
+        // todo: add boxes
+        // main container
+        selection.append("rect")
+            .attr("x", 5)
+            .attr("y", 85)
+            .attr("width", 90)
+            .attr("height", 100 - 85 - 2)
+            .attr("fill", "white")
+            .attr("stroke", "black")
+            .attr("stroke-width", "0.4")
+            .attr("rx", "0.2")
 
-        // sets node to active
-        function onStart(this: E, evt: any, dataPoint: N) {
-            select(this).classed("grabbed", true);
-        }
+        // todo: dragging within box will snap back to source location
 
-        const step = this.graph.step;
+        // todo: drag node from box transforms it to the appropriate size
 
-        // changes the element's location
-        function onDrag(this: E, evt: any, dataPoint: N) {
-            let {x, y} = evt;
-
-            const snapCore = DirectedGraph.snapToGrid(x, y);
-            const fractionOfStep = step * 0.04;
-            const snapZone = {
-                x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
-                y: new Interval(snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
-            };
-
-            x = snapZone.x.contains(x) ? snapCore.x : x;
-            y = snapZone.y.contains(y) ? snapCore.y : y;
-
-            select(this)
-                .selectAll("circle")
-                .attr("cx", x)
-                .attr("cy", y);
-
-            select(this)
-                .selectAll("text")
-                .attr("x", x + dataPoint.radius + 1)
-                .attr("y", y);
-
-        }
-
-        // deactivates node, updates real value
-        function onEnd(this: E, evt: any, coordinate: N) {
-            const {x, y} = DirectedGraph.snapToGrid(evt.x, evt.y)
-
-            select(this).classed("grabbed", false);
-            coordinate.moveTo(x, y);
-            updateNodeArray();
-        }
-
-        return drag<E, N>()
-            .on("start", onStart)
-            .on("drag", onDrag)
-            .on("end", onEnd);
-    }
-
-    /** initializes zoom function
-     * @param {Object} extent object that defines topL and bottomL `Coordinate`s for the size of the zoom
-     * @param {number} buffer Buffer to the translation extent */
-    private initZoomHandlers<E extends ZoomedElementBaseType, Data, ElementToTransform extends BaseType>(
-        extent: {
-            topL: ICoordinate,
-            bottomR: ICoordinate
-        },
-        buffer: number = 25,
-        selection: Selection<ElementToTransform, Data, null, undefined>
-    ): ZoomBehavior<E, Data> {
-        function zoomed(this: E, event: any, d: Data) {
-            selection.attr("transform", event.transform.toString()) //  "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")");
-        }
-
-        return zoom<E, Data>()
-            .scaleExtent([0.5, 2])
-            .translateExtent([
-                [extent.topL.x - buffer, extent.topL.y - buffer],
-                [extent.bottomR.x + buffer, extent.bottomR.y + buffer]
-            ])
-            .on("zoom", zoomed);
+        // todo: dropping node in graph adds it to graph, disconnected
     }
 
     /** draws a line connecting two nodes given an edge */
@@ -297,6 +247,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 
     /** renders nodes in state */
     private renderNodes() {
+
         // select nodes
         const graphNodes = select(this.svgElement.current)
             .select("#nodes")
@@ -316,7 +267,14 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
         const nodeG = graphNodes.enter()
             .append("g")
             .classed("node-container", true)
-            .call(this.initDragHandlers<SVGGElement, Node>());
+            .call(NodeDragBehavior<SVGGElement, Node>(
+                () => {
+                },
+                () => {
+                },
+                () => this.setState({nodes: this.graph.nodes}),
+                new DragConfig(this.graph.step, DragConfig.default.snapRadius)
+            ));
 
         nodeG.append("circle")
             .classed("node-circle", true)
@@ -347,7 +305,7 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 
         return (
             <div
-                className={MapEditor.cssClass}
+                className={GameMapEditor.cssClass}
             >
                 <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000}/>
                 <svg
@@ -363,4 +321,4 @@ class MapEditor extends Component<GameMainProps, GameMainState> {
 }
 
 
-export default MapEditor;
+export default GameMapEditor;

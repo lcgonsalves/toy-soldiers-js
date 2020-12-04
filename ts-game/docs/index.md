@@ -8,4 +8,4 @@ rendering game elements, reacting to server I/O, displaying game information to 
 
 Component | Description | Documentation
 ------------ | ------------- | ------------
-`MapEditor` | Contains logic for rendering nodes and edges, dragging them around and interacting with the map. | [MapEditor.tsx](./components/MapEditor.md)
+`GameMapEditor` | Contains logic for rendering nodes and edges, dragging them around and interacting with the map. | [GameMapEditor.tsx](./components/MapEditor.md)
