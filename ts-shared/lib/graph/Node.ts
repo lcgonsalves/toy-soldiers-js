@@ -47,6 +47,12 @@ export default class Node implements ICoordinate {
         return this;
     }
 
+    /** reassigns this Node's coordinate to the value of another coordinate */
+    public moveToCoord(other: ICoordinate): Node {
+        this.coord.moveToCoord(other);
+        return this;
+    }
+
     /** Converts the node and its immediate connections to a string */
     public toStringComplex(): string {
         const destinations = this._edges.map(e => e.to.toStringSimple());

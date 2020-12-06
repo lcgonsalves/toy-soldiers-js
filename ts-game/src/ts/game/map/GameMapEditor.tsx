@@ -4,18 +4,16 @@ import React, {Component} from 'react';
 import "../../../css/DirectedGraph.css";
 import "../../../css/Editor.css"
 
-import {BaseType, Selection, select} from "d3-selection";
+import {Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
 import Node from "ts-shared/build/graph/Node";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Tooltip from "../../ui/Tooltip";
-import {Interval} from "ts-shared/build/geometry/Interval";
-import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
-import {DragConfig, GameMapHelpers} from "./GameMapHelpers";
+import {GameMapConfig, GameMapHelpers} from "./GameMapHelpers";
 
-const {NodeDragBehavior, GraphZoomBehavior} = GameMapHelpers;
+const {GraphZoomBehavior} = GameMapHelpers;
 
 // todo: move state to props
 interface GameMainProps {
@@ -251,7 +249,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
         // select nodes
         const graphNodes = select(this.svgElement.current)
             .select("#nodes")
-            .selectAll<SVGCircleElement, Node>("g")
+            .selectAll<SVGGElement, Node>("g")
             .data<Node>(this.state.nodes, _ => _.id);
 
         // update nodes with their current position
@@ -267,14 +265,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
         const nodeG = graphNodes.enter()
             .append("g")
             .classed("node-container", true)
-            .call(NodeDragBehavior<SVGGElement, Node>(
-                () => {
-                },
-                () => {
-                },
-                () => this.setState({nodes: this.graph.nodes}),
-                new DragConfig(this.graph.step, DragConfig.default.snapRadius)
-            ));
+            // .call(/* init node drag behavior */);
 
         nodeG.append("circle")
             .classed("node-circle", true)

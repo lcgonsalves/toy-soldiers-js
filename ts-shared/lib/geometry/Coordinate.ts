@@ -37,6 +37,11 @@ export interface ICoordinate extends IComparable {
     /** adds values to given coordinate */
     moveBy(x: number, y: number): ICoordinate;
 
+    /** Changes value of current coordinate to given x-y value */
+    moveToCoord(other: ICoordinate): ICoordinate;
+
+    /** adds values to given coordinate */
+
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 
@@ -98,6 +103,10 @@ export class Coordinate implements ICoordinate {
         this.x = x;
         this.y = y;
         return this;
+    }
+
+    moveToCoord(other: ICoordinate): ICoordinate {
+        return this.moveTo(other.x, other.y);
     }
 
     overlaps(other: ICoordinate): boolean {
