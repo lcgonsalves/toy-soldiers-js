@@ -12,6 +12,7 @@ import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Tooltip from "../../ui/Tooltip";
 import {GameMapConfig, GameMapHelpers} from "./GameMapHelpers";
+import LocationNodeUnit from "../units/LocationNodeUnit";
 
 const {GraphZoomBehavior} = GameMapHelpers;
 
@@ -34,6 +35,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
     private graph: DirectedGraph = new DirectedGraph();
     private svgElement: ReactSVGRef = React.createRef();
+    private lnus: LocationNodeUnit<Node>[] = [];
     public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
@@ -211,7 +213,6 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
     private updateGraph(): void {
 
         this.renderEdges();
-        this.renderNodes();
 
     }
 
@@ -243,53 +244,31 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
         return graphEdgeContainer;
     }
 
-    /** renders nodes in state */
-    private renderNodes() {
-
-        // select nodes
-        const graphNodes = select(this.svgElement.current)
-            .select("#nodes")
-            .selectAll<SVGGElement, Node>("g")
-            .data<Node>(this.state.nodes, _ => _.id);
-
-        // update nodes with their current position
-        graphNodes.selectAll<SVGCircleElement, Node>("circle")
-            .attr("cx", node => node.x)
-            .attr("cy", node => node.y);
-
-        graphNodes.selectAll<SVGTextElement, Node>("text")
-            .attr("x", node => node.x + node.radius + 1)
-            .attr("y", node => node.y);
-
-        // add newly added nodes if any
-        const nodeG = graphNodes.enter()
-            .append("g")
-            .classed("node-container", true)
-            // .call(/* init node drag behavior */);
-
-        nodeG.append("circle")
-            .classed("node-circle", true)
-            .attr("cx", node => node.x)
-            .attr("cy", node => node.y)
-            .attr("r", node => node.radius);
-
-        nodeG.append("text")
-            .classed("node-label", true)
-            .attr("x", node => node.x + node.radius + 1)
-            .attr("y", node => node.y)
-            .text(node => node.id);
-
-        // remove nodes that don't exist anymore
-        graphNodes.exit().remove();
-    }
-
     componentDidMount(): void {
         this.initializeGraph();
-        this.updateGraph();
+
+        const d3ReactAnchor = this.svgElement.current
+
+
+        if (d3ReactAnchor) {
+            const nodeContainer = select<SVGGElement, Node>(d3ReactAnchor)
+                .select<SVGGElement>("#nodes");
+
+            const conf = new GameMapConfig(this.graph.step);
+
+            // mount units
+            this.lnus = this.state.nodes.map(n => {
+                let lnu = new LocationNodeUnit(n, nodeContainer, true, conf);
+                lnu.onDragEnd((_ =>  this.setState({nodes: this.graph.nodes})))
+                return lnu;
+            });
+
+        }
+
     }
 
     componentDidUpdate(prevProps: Readonly<GameMainProps>, prevState: Readonly<GameMainState>, snapshot?: any): void {
-        this.updateGraph();
+        // this.lnus.forEach(_ => _.refresh());
     }
 
     public render() {

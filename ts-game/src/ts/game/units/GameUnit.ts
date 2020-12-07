@@ -1,6 +1,7 @@
 import {Coordinate} from "ts-shared/build/geometry/Coordinate";
-import {BaseType, EnterElement, select, Selection} from "d3-selection";
-import {SVGTags as SVGTags} from "../../util/SVGHelper";
+import {BaseType, EnterElement, Selection} from "d3-selection";
+import SVGAttrs from "../../util/SVGAttrs";
+import SVGTags from "../../util/SVGTags";
 
 /**
  * @author Léo Gonsalves
@@ -25,7 +26,7 @@ export default abstract class GameUnit<
     /** The string representation of the GameUnit.
      * i.e. ClassName -> class_name
      * Should be overridden by each implementation */
-    protected _tag: string = "game_unit";
+    protected readonly _tag: string;
 
     /** Shorthand Types */
 
@@ -34,21 +35,23 @@ export default abstract class GameUnit<
         x: number,
         y: number,
         datum: AssociatedDatum,
-        anchor: Selection<any, AssociatedDatum, any, any>
+        anchor: Selection<any, any, any, any>,
+        tag: string = "game_unit"
     ) {
         super(x, y);
 
         this._id = id;
+        this._tag = tag;
 
-        this.anchor = anchor.select<AssociatedElement>(this.id)
-            .append<AssociatedElement>(SVGTags.SVGGElement)
-            .attr("id", this.id)
+        this.anchor = anchor.append<AssociatedElement>(SVGTags.SVGGElement);
+        this.anchor.attr(SVGAttrs.id, this.id)
             .classed(this.css, true);
 
         this.datum = datum;
 
-        // join data
+        // join data & render
         this.updateReference();
+
     }
 
     /**
@@ -59,34 +62,39 @@ export default abstract class GameUnit<
      * @returns {Selection<SVGGElement, AssociatedNode, any, any>} selection after data join
      * @protected */
     protected updateReference(): Selection<AssociatedElement, AssociatedDatum, ParentElement, ParentDatum> {
-        const s = this.anchor.datum(this.datum);
-        this.updateDepiction(s);
-        this.renderDepiction(s.enter())
-        this.removeDepiction(s.exit())
-        return this.anchor = s;
+        this.renderDepiction();
+        return this.current;
     }
-
 
     /**
      * @abstract
      * @protected
      *
      * Upon a data join with unchanged associated data, updates depiction of game unit. */
-    protected abstract updateDepiction(joinedSelection?: Selection<AssociatedElement, AssociatedDatum, ParentElement, ParentDatum>): void;
+    protected abstract updateDepiction(): void;
 
     /**
      * @abstract
      * @protected
      *
-     * Upon a data join with re-associated data, updates depiction of game unit. */
-    protected abstract renderDepiction(enterSelection?: Selection<EnterElement, AssociatedDatum, ParentElement, ParentDatum>): void;
+     * Upon */
+    protected abstract renderDepiction(): void;
 
     /**
      * @abstract
      * @protected
      *
      * Upon a data join with removed associated data, updates depiction of game unit. */
-    protected abstract removeDepiction(exitSelection?: Selection<AssociatedElement, AssociatedDatum, ParentElement, ParentDatum>): void;
+    protected abstract removeDepiction(): void;
+
+    /**
+     * @abstract
+     * @protected
+     *
+     * Executes internal updates by mapping AssociatedDatum to internal variables, if needed. For example, if AssociatedDatum
+     * is a Node in a graph, this function would update this.x and this.y to represent the current version of this.datum.
+     */
+    protected abstract propagateDatumUpdate(): void;
 
 
     /**
@@ -108,17 +116,18 @@ export default abstract class GameUnit<
      * Defines the CSS id of the Game Unit. It is ideally composed of a combination of the
      * tag and the _id of the Unit.
      */
-    public get id(): string { return `#${this.tag}_${this._id}`; }
+    public get id(): string { return `${this.tag}_${this._id}`; }
 
-    /** Anchor selection with the most recent datum joined */
+    /**  Propagates current state of datum internally and returns Anchor selection with the most recent datum joined. */
     public get current():
         Selection<AssociatedElement, AssociatedDatum, ParentElement, ParentDatum> {
-        return this.anchor.datum(this.datum);
+        this.propagateDatumUpdate();
+        return this.anchor.datum<AssociatedDatum>(this.datum);
     }
 
     /** Re-triggers rendering with the same AssociatedData reference. Chainable. */
     public refresh(): GameUnit<AssociatedDatum, AssociatedElement, ParentElement, ParentDatum> {
-        this.updateDepiction(this.anchor);
+        this.updateDepiction();
         return this;
     }
 
@@ -134,12 +143,12 @@ export default abstract class GameUnit<
     public remove(): Promise<null> {
         return new Promise<null>(((resolve) => {
             this.anchor.datum(null);
-            resolve();
+            resolve(null);
         }));
     }
 
 }
 
 /** Defines any additional css classes used in this game unit */
-const enum css {}
+enum css {}
 

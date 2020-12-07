@@ -46,7 +46,7 @@ export abstract class GameMapHelpers {
     public static snapIfWithinRadius = (coordinate: ICoordinate, config: GameMapConfig): ICoordinate => {
         let {x,y} = coordinate;
         const {step, snapRadius} = config;
-        const snapCore = DirectedGraph.snapToGrid(x, y);
+        const snapCore = GameMapHelpers.snap(coordinate);
         const fractionOfStep = step * snapRadius;
         const snapZone = {
             x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
@@ -57,6 +57,8 @@ export abstract class GameMapHelpers {
         y = snapZone.y.contains(y) ? snapCore.y : y;
         return new Coordinate(x,y);
     }
+
+    public static snap = (coordinate: ICoordinate): ICoordinate => DirectedGraph.snapCoordinateToGrid(coordinate)
 
 
 }

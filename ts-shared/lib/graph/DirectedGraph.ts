@@ -145,6 +145,8 @@ export default class DirectedGraph implements IComparable {
 
     }
 
+    public static snapCoordinateToGrid(coord: ICoordinate): ICoordinate { return DirectedGraph.snapToGrid(coord.x, coord.y) }
+
     /**
      * Adds a pair of nodes to the graph and connects them. If either of the nodes already
      * exists, it will be connected to the other. If both already exist, they will be connected to each other.
