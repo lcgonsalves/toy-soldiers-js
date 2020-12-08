@@ -1,9 +1,14 @@
 import GameUnit from "./GameUnit";
 import Node from "ts-shared/build/graph/Node";
 import {select, Selection} from "d3-selection";
+import {path} from "d3-path";
 import {drag, DragBehavior, SubjectPosition} from "d3-drag";
 import {GameMapConfig, GameMapHelpers} from "../map/GameMapHelpers";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
+import SVGAttrs from "../../util/SVGAttrs";
+import SVGTags from "../../util/SVGTags";
+import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 
 /**
  * Represents a graph node game unit. Can represent location, or a position. Can represent
@@ -20,14 +25,26 @@ export default abstract class AbstractNodeUnit<
     /** D3.zoom() reference */
     protected dragBehavior: DragBehavior<AssociatedElement, AssociatedNode, SubjectPosition | AssociatedNode> | undefined;
     /** Drag configuration parameters */
-    private _dragConfig: GameMapConfig | undefined;
+    private _config: GameMapConfig | undefined;
+
+    // drag callback references
     private _extendedOnDrag: (evt: any, n: AssociatedNode, coords: ICoordinate) => void;
     private _extendedOnDragStart: (evt: any, n: AssociatedNode, coords: ICoordinate) => void
     private _extendedOnDragEnd: (evt: any, n: AssociatedNode, coords: ICoordinate) => void;
 
+    // transition definitions
+
+    /** Selection containing the edges from this node */
+    protected edgeSelection: Selection<SVGGElement, AssociatedNode, SVGElement, any>;
+    protected readonly edgeContainerID: string = `${this.id}_edges`;
+
+    /** Geographical Context reference */
+    protected readonly graph: DirectedGraph;
+
     /** Returns associated node */
     get node(): AssociatedNode { return this.datum }
 
+    // drag callbacks
     protected get extendedOnDragEnd(): (evt: any, n: AssociatedNode, coords: ICoordinate) => void {
         return this._extendedOnDragEnd;
     }
@@ -37,12 +54,13 @@ export default abstract class AbstractNodeUnit<
     protected get extendedOnDrag(): (evt: any, n: AssociatedNode, coords: ICoordinate) => void {
         return this._extendedOnDrag;
     }
-    protected get dragConfig(): GameMapConfig | undefined {
-        return this._dragConfig;
+    protected get config(): GameMapConfig | undefined {
+        return this._config;
     }
 
     protected constructor(
         node: AssociatedNode,
+        graph: DirectedGraph,
         anchor: Selection<any, AssociatedNode, any, any>,
         draggable: boolean = false,
         dragConfig: GameMapConfig | undefined = draggable ? GameMapConfig.default : undefined,
@@ -57,8 +75,18 @@ export default abstract class AbstractNodeUnit<
             tag
         );
 
+        this.graph = graph.contains(node) ? graph : NodeNotInGraphError.default(node);
+
+        // append edge group container
+        this.edgeSelection = this.current
+            .append<SVGGElement>(SVGTags.SVGGElement)
+            .attr(SVGAttrs.id, this.edgeContainerID);
+
+        // must initialize it here
+        this.renderEdgeDepiction();
+
         this.dragBehavior = draggable ? drag<AssociatedElement, AssociatedNode>() : undefined;
-        this._dragConfig = dragConfig;
+        this._config = dragConfig;
         this._extendedOnDrag = function (){};
         this._extendedOnDragEnd = function (){};
         this._extendedOnDragStart = function (){};
@@ -69,6 +97,15 @@ export default abstract class AbstractNodeUnit<
         }
 
     }
+
+    /** Append entered edge elements to the graph */
+    protected abstract renderEdgeDepiction(): void;
+
+    /** Update edge elements to the graph */
+    protected abstract updateEdgeDepiction(): void;
+
+    /** Remove exited elements to the graph */
+    protected abstract removeEdgeDepiction(): void;
 
     /**
      * Associates default drag behavior to the node. This includes automatically associating a
@@ -115,6 +152,16 @@ export default abstract class AbstractNodeUnit<
     }
 
     /**
+     * Returns the css #id of the given edge for selection.
+     *
+     * @param e
+     * @protected
+     */
+    protected getEdgeCSSIdentifier<E extends DirectedEdge>(e: E) {
+        return `${this.id}_edge_to_${e.to.id}`
+    }
+
+    /**
      * Creates a callback function to NodeUnit being in the middle of a drag event. Implementations
      * must update the locations of the svg elements used in the depiction.
      *
@@ -123,7 +170,7 @@ export default abstract class AbstractNodeUnit<
      * @protected
      */
     protected defaultOnDragGrabbed<E extends AssociatedElement>(): (this: AssociatedElement, evt: any, n: AssociatedNode) => void {
-        const config = this.dragConfig ? this.dragConfig : GameMapConfig.default;
+        const config = this.config ? this.config : GameMapConfig.default;
 
         const updateDepiction = this.updateDepiction.bind(this);
         const {extendedOnDrag} = this;
@@ -150,7 +197,7 @@ export default abstract class AbstractNodeUnit<
      */
     protected defaultOnDragEnd<E extends AssociatedElement>(): (this: AssociatedElement, evt: any, n: AssociatedNode) => void {
         // use this space to access the "this" context -- thanks d3
-        const config = this.dragConfig ? this.dragConfig : GameMapConfig.default;
+        const config = this.config ? this.config : GameMapConfig.default;
 
         const updateDepiction = this.updateDepiction.bind(this);
         const {extendedOnDragEnd} = this;
@@ -200,10 +247,60 @@ export default abstract class AbstractNodeUnit<
         else this._extendedOnDragStart = handler;
     }
 
+    /** Returns recently joined edges of node (path elements) */
+    protected get currentEdgePathSelection(): Selection<SVGPathElement, DirectedEdge, SVGGElement, AssociatedNode> {
+        return this.edgeSelection
+            .selectAll<SVGPathElement, DirectedEdge>(SVGTags.SVGPathElement)
+            .data<DirectedEdge>(this.datum.edges, _ => _.id);
+    }
+
+    /** Returns recently joined edges of node (parent group for each edge) */
+    protected get currentEdgeGroupSelection(): Selection<SVGGElement, DirectedEdge, SVGElement, any> {
+        return this.edgeSelection.data<DirectedEdge>(this.datum.edges, _ => _.id);
+    }
+
+    /** Draws path. Path can currently dodge 1 intersecting node */
+    protected drawEdgePath(e: DirectedEdge): string {
+        const p = path();
+        debugger
+
+        // TODO: handle more than 1 intersecting node, maybe?
+        const intersectingNode = this.graph.getNodesIntersectingWith(e)[0];
+        const {from, to} = e;
+
+        p.moveTo(from.x, from.y);
+
+        // curve around intersecting node
+        if (intersectingNode) {
+            const tangentPoint = e.getArcToTangentPoint(intersectingNode);
+            p.arcTo(tangentPoint.x, tangentPoint.y, e.to.x, e.to.y, e.getCurveRadius(intersectingNode));
+        }
+
+        p.lineTo(to.x, to.y);
+
+        return p.toString();
+    }
+
+}
+
+export class NodeNotInGraphError extends Error {
+
+    static defaultMessage<N extends Node = Node>(node: N): string {
+        return `Cannot associate Node ${node.id} at (${node.x}, ${node.y}) to graph which doesn't contain it.`
+    }
+
+    static default<N extends Node = Node>(node: N): never {
+        throw new NodeNotInGraphError(NodeNotInGraphError.defaultMessage(node))
+    }
+
 }
 
 export enum css {
-    grabbed = "grabbed"
+    grabbed = "grabbed",
+    nodecircle = "node_circle",
+    nodelabel = "node_label",
+    edge = "node_edge",
+    edgepath = "node_edge_path"
 }
 
 // supported events

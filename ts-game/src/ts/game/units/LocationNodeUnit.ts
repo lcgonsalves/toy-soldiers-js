@@ -1,42 +1,52 @@
 import Node from "ts-shared/build/graph/Node";
 import {Selection} from "d3-selection";
-import AbstractNodeUnit from "./AbstractNodeUnit";
+import AbstractNodeUnit, {css} from "./AbstractNodeUnit";
 import SVGAttrs from "../../util/SVGAttrs";
 import SVGTags from "../../util/SVGTags";
 import {GameMapConfig} from "../map/GameMapHelpers";
+import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
+import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
+import {DefaultGameUnitTransitions} from "./GameUnit";
 
-export default class LocationNodeUnit<AssociatedNode extends Node = Node> extends AbstractNodeUnit<AssociatedNode> {
+export default class LocationNodeUnit<N extends Node = Node> extends AbstractNodeUnit<N> {
 
     constructor(
-        node: AssociatedNode,
-        anchor: Selection<any, AssociatedNode, any, any>,
+        node: N,
+        graph: DirectedGraph,
+        anchor: Selection<any, N, any, any>,
         draggable: boolean = false,
         dragConfig: GameMapConfig | undefined = draggable ? GameMapConfig.default : undefined
     ) {
         const tag = "location_node_unit";
 
-        super(node, anchor, draggable, dragConfig, tag);
+        super(node, graph, anchor, draggable, dragConfig, tag);
 
     }
 
     protected renderDepiction(): void {
         const s = this.current;
 
+        // circle
         s.append<SVGCircleElement>(SVGTags.SVGCircleElement)
             .attr(SVGAttrs.cx, node => node.x)
             .attr(SVGAttrs.cy, node => node.y)
             .attr(SVGAttrs.r, node => node.radius)
-            .classed(css.NodeCircle, true);
+            .classed(css.nodecircle, true);
 
+        // id
         s.append<SVGTextElement>(SVGTags.SVGTextElement)
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
             .text(node => node.id)
-            .classed(css.NodeLabel, true);
+            .classed(css.nodelabel, true);
     }
 
     protected removeDepiction(): void {
+
+        this.removeEdgeDepiction();
+
         this.current.remove();
+
     }
 
     protected updateDepiction(): void {
@@ -52,11 +62,34 @@ export default class LocationNodeUnit<AssociatedNode extends Node = Node> extend
             .attr(SVGAttrs.y, node => node.y)
             .text(node => node.id);
 
+        this.updateEdgeDepiction();
+
     }
 
-}
+    protected renderEdgeDepiction() {
 
-enum css {
-    NodeCircle = "node_circle",
-    NodeLabel = "node_label"
+        this.edgeSelection
+            .selectAll<SVGGElement, DirectedEdge>(SVGTags.SVGPathElement)
+            .data<DirectedEdge>(this.datum.edges, _ => _.id)
+            .enter()
+            .append<SVGGElement>(SVGTags.SVGGElement) // select and append 1 group per edge
+            .classed(css.edge, true)
+            .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
+            .classed(css.edgepath, true)
+            .attr(SVGAttrs.d, e => this.drawEdgePath(e)); // draw path for the first time
+
+    }
+
+    protected removeEdgeDepiction() {
+
+        this.currentEdgeGroupSelection.exit().remove();
+
+    }
+
+    protected updateEdgeDepiction() {
+
+        this.currentEdgePathSelection.attr(SVGAttrs.d, e => this.drawEdgePath(e));
+
+    }
+
 }

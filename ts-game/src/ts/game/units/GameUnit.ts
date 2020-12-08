@@ -1,7 +1,9 @@
 import {Coordinate} from "ts-shared/build/geometry/Coordinate";
-import {BaseType, EnterElement, Selection} from "d3-selection";
+import {BaseType, Selection} from "d3-selection";
+import {Transition, transition} from "d3-transition";
 import SVGAttrs from "../../util/SVGAttrs";
 import SVGTags from "../../util/SVGTags";
+import {easeExpIn} from "d3-ease";
 
 /**
  * @author Léo Gonsalves
@@ -77,14 +79,14 @@ export default abstract class GameUnit<
      * @abstract
      * @protected
      *
-     * Upon */
+     * Upon first time join with associated data, append depiction of game unit. */
     protected abstract renderDepiction(): void;
 
     /**
      * @abstract
      * @protected
      *
-     * Upon a data join with removed associated data, updates depiction of game unit. */
+     * Upon a data removal or re-association, remove the depiction of the game unit. */
     protected abstract removeDepiction(): void;
 
     /**
@@ -134,6 +136,7 @@ export default abstract class GameUnit<
     /** Re associates data with new reference and re-triggers rendering of GameUnit. Chainable. */
     public update(newDatumRef: AssociatedDatum): GameUnit<AssociatedDatum, AssociatedElement, ParentElement, ParentDatum> {
         this.datum = newDatumRef;
+        this.removeDepiction();
         this.updateReference();
         return this;
     }
@@ -152,3 +155,15 @@ export default abstract class GameUnit<
 /** Defines any additional css classes used in this game unit */
 enum css {}
 
+/** Defines some useful transition presets */
+export abstract class DefaultGameUnitTransitions {
+
+    private static snapIntoPlace: Transition<any, any, any, any> = transition()
+        .duration(400)
+        .ease(easeExpIn);
+
+    static get SnapIntoPlace(): Transition<any, any, any, any> {
+        return DefaultGameUnitTransitions.snapIntoPlace;
+    }
+
+}

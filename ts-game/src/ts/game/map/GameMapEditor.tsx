@@ -258,7 +258,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
 
             // mount units
             this.lnus = this.state.nodes.map(n => {
-                let lnu = new LocationNodeUnit(n, nodeContainer, true, conf);
+                let lnu = new LocationNodeUnit(n, this.graph, nodeContainer, true, conf);
                 lnu.onDragEnd((_ =>  this.setState({nodes: this.graph.nodes})))
                 return lnu;
             });
