@@ -6,8 +6,8 @@ import IComparable from "../util/IComparable";
  * between them.
  */
 export interface ICoordinate extends IComparable {
-    x: number;
-    y: number;
+    readonly x: number;
+    readonly y: number;
 
     /**
      * Returns the midpoint between two point-like items.
@@ -46,17 +46,24 @@ export interface ICoordinate extends IComparable {
     overlaps(other: ICoordinate): boolean;
 
     /** converts coordinate to a d3 friendly format */
-    toArray(): [number, number];
+    toTuple(): [number, number];
 
 }
 
 export class Coordinate implements ICoordinate {
-    x: number;
-    y: number;
+    public get y(): number {
+        return this._y;
+    }
+    public get x(): number {
+        return this._x;
+    }
+
+    private _x: number;
+    private _y: number;
 
     constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
+        this._x = x;
+        this._y = y;
     }
 
     /**
@@ -64,7 +71,7 @@ export class Coordinate implements ICoordinate {
      * @param other
      */
     equals(other: ICoordinate): boolean {
-        return (this.x === other.x) && (this.y === other.y);
+        return (this._x === other.x) && (this._y === other.y);
     }
 
     /**
@@ -72,7 +79,7 @@ export class Coordinate implements ICoordinate {
      * @param other
      */
     midpoint(other: ICoordinate): ICoordinate {
-        return new Coordinate((this.x + other.x) / 2, (this.y + other.y) / 2);
+        return new Coordinate((this._x + other.x) / 2, (this._y + other.y) / 2);
     }
 
     /**
@@ -82,8 +89,8 @@ export class Coordinate implements ICoordinate {
     distance(other: ICoordinate): number {
 
         return Math.sqrt(
-            Math.pow(this.x - other.x, 2) +
-            Math.pow(this.y - other.y, 2)
+            Math.pow(this._x - other.x, 2) +
+            Math.pow(this._y - other.y, 2)
         )
 
     }
@@ -93,15 +100,15 @@ export class Coordinate implements ICoordinate {
      * @param other
      */
     vectorTo(other: ICoordinate): Vector {
-        const x = other.x - this.x;
-        const y = other.y - this.y;
+        const x = other.x - this._x;
+        const y = other.y - this._y;
 
         return new Vector([x, y]);
     }
 
     moveTo(x: number, y: number): ICoordinate {
-        this.x = x;
-        this.y = y;
+        this._x = x;
+        this._y = y;
         return this;
     }
 
@@ -110,27 +117,27 @@ export class Coordinate implements ICoordinate {
     }
 
     overlaps(other: ICoordinate): boolean {
-        return this.x === other.x && this.y === other.y;
+        return this._x === other.x && this._y === other.y;
     }
 
     perpendicularVector(other: ICoordinate, ccw: boolean = true): Vector {
         let x, y;
 
-        x = -(this.y - other.y);
-        y = this.x - other.x;
+        x = -(this._y - other.y);
+        y = this._x - other.x;
 
         const v = new Vector([x, y]);
         return ccw ? v : v.scale(-1);
     }
 
     moveBy(x: number, y: number): ICoordinate {
-        this.x += x;
-        this.y += y;
+        this._x += x;
+        this._y += y;
         return this;
     }
 
-    toArray(): [number, number] {
-        return [this.x, this.y];
+    toTuple(): [number, number] {
+        return [this._x, this._y];
     }
 
 }
