@@ -10,6 +10,15 @@ import SVGAttrs from "../../util/SVGAttrs";
 import SVGTags from "../../util/SVGTags";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
 
+export enum css {
+    GRABBED = "grabbed",
+    NODE_CIRCLE = "node_circle",
+    NODE_LABEL = "node_label",
+    EDGE = "node_edge",
+    EDGEPATH = "node_edge_path",
+    EDGE_CONTAINER = "edge_container"
+}
+
 /**
  * Represents a graph node game unit. Can represent location, or a position. Can represent
  * players or other actors. It's abstract. I don't know what else to put down at time of writing.
@@ -36,7 +45,7 @@ export default abstract class AbstractNodeUnit<
 
     /** Selection containing the edges from this node */
     protected edgeSelection: Selection<SVGGElement, AssociatedNode, SVGElement, any>;
-    protected readonly edgeContainerID: string = `${this.id}_edges`;
+    public static edgeContainerID: string = css.EDGE_CONTAINER
 
     /** Geographical Context reference */
     protected readonly graph: DirectedGraph;
@@ -72,18 +81,16 @@ export default abstract class AbstractNodeUnit<
             node.y,
             node,
             anchor,
-            tag
+            tag,
+            s => s.append<SVGGElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, css.EDGE_CONTAINER)
         );
 
         this.graph = graph.contains(node) ? graph : NodeNotInGraphError.default(node);
 
-        // append edge group container
-        this.edgeSelection = this.current
-            .append<SVGGElement>(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, this.edgeContainerID);
+        // reselect after super.constructor appends
+        this.edgeSelection = this.current.select(`#${css.EDGE_CONTAINER}`);
 
-        // must initialize it here
-        this.renderEdgeDepiction();
+        // this.renderEdgeDepiction();
 
         this.dragBehavior = draggable ? drag<AssociatedElement, AssociatedNode>() : undefined;
         this._config = dragConfig;
@@ -121,9 +128,9 @@ export default abstract class AbstractNodeUnit<
      * @private
      */
     private initializeDefaultDragBehavior(): DragBehavior<AssociatedElement, AssociatedNode, SubjectPosition | AssociatedNode> | undefined {
-        this.dragBehavior?.on(event.start, this.defaultOnDragStart())
-            .on(event.drag, this.defaultOnDragGrabbed())
-            .on(event.end, this.defaultOnDragEnd());
+        this.dragBehavior?.on(event.START, this.defaultOnDragStart())
+            .on(event.DRAG, this.defaultOnDragGrabbed())
+            .on(event.END, this.defaultOnDragEnd());
 
         return this.dragBehavior;
     }
@@ -145,7 +152,7 @@ export default abstract class AbstractNodeUnit<
         const {extendedOnDragEnd} = this;
 
         return function (this: AssociatedElement, evt: any, n: AssociatedNode) {
-            select(this).classed(css.grabbed, true);
+            select(this).classed(css.GRABBED, true);
 
             extendedOnDragEnd(evt, n, new Coordinate(evt.x, evt.y))
         };
@@ -206,7 +213,7 @@ export default abstract class AbstractNodeUnit<
             const {x, y} = evt;
             let coords = new Coordinate(x, y);
 
-            select(this).classed(css.grabbed, false)
+            select(this).classed(css.GRABBED, false)
 
             coords = config?.snapOnEnd? n.moveToCoord(GameMapHelpers.snap(coords)) : n.moveToCoord(coords);
 
@@ -265,7 +272,7 @@ export default abstract class AbstractNodeUnit<
         debugger
 
         // TODO: handle more than 1 intersecting node, maybe?
-        const intersectingNode = this.graph.getNodesIntersectingWith(e)[0];
+        const intersectingNode = this.graph?.getNodesIntersectingWith(e)[0];
         const {from, to} = e;
 
         p.moveTo(from.x, from.y);
@@ -295,17 +302,15 @@ export class NodeNotInGraphError extends Error {
 
 }
 
-export enum css {
-    grabbed = "grabbed",
-    nodecircle = "node_circle",
-    nodelabel = "node_label",
-    edge = "node_edge",
-    edgepath = "node_edge_path"
-}
-
 // supported events
 enum event {
-    start = "start",
-    drag = "drag",
-    end = "end"
+    START = "start",
+    DRAG = "drag",
+    END = "end"
+}
+
+export enum msg {
+    NO_EDGE_SELECTION = "Edge Selection is undefined.",
+    CANNOT_INITIALIZE_DEPICTION = "Cannot append depiction at this time.",
+    CANNOT_RETURN_SELECTION = "Cannot perform this operation at this time."
 }

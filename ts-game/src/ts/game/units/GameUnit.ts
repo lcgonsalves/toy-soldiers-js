@@ -1,4 +1,4 @@
-import {Coordinate} from "ts-shared/build/geometry/Coordinate";
+import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {BaseType, Selection} from "d3-selection";
 import {Transition, transition} from "d3-transition";
 import SVGAttrs from "../../util/SVGAttrs";
@@ -11,6 +11,25 @@ import {easeExpIn} from "d3-ease";
  * Describes an individual, physical, abstract game unit. Game units are the building blocks of Toy Soldiers. These are
  * used to represent, on the board, locations, players, paths, and others. They describe interfaces for the most basic
  * interactions between units, as well as instantiation in the Game Map and transformations within the grid.
+ *
+ * How to use:
+ *
+ * Extend this class and implement the abstract methods:
+ *  - renderDepiction -> append elements to the existing groups
+ *  - updateDepiction -> update attr's according to datum
+ *  - removeDepiction -> remove appended elements
+ *
+ * Order of rendering can be manipulated by passing a custom "preprocess(s: Selection): void" function
+ * to the constructor, where you can append other groups in the order that you'd like.
+ *
+ * After instantiating the extended class, you must manually call "render()" to append
+ * the svg elements for the first time.
+ *
+ * If the contents of the AssociatedDatum change, you must call "refresh()" to update
+ * the attributes of the associated elements according to your implementation.
+ *
+ * If the GameUnit is removed, call "remove()"
+ *
  */
 export default abstract class GameUnit<
     AssociatedDatum,
@@ -33,26 +52,36 @@ export default abstract class GameUnit<
     /** Shorthand Types */
 
     protected constructor(
+        // unique identifier for the associated datum / representation of this unit
         id: string,
+        // coordinates
         x: number,
         y: number,
+        // set of properties that define how the game unit is rendered / reacts
         datum: AssociatedDatum,
+        // d3 selection in which anchor will be appended to
         anchor: Selection<any, any, any, any>,
-        tag: string = "game_unit"
+        // string that represents the name of the unit in general
+        tag: string = "game_unit",
+        // callback that allows initializer to append elements before regular rendering cycle
+        preprocess?: (unprocessedAnchor: Selection<AssociatedElement, AssociatedDatum, ParentElement, ParentDatum>) => void
     ) {
         super(x, y);
 
         this._id = id;
         this._tag = tag;
 
-        this.anchor = anchor.append<AssociatedElement>(SVGTags.SVGGElement);
-        this.anchor.attr(SVGAttrs.id, this.id)
+        const a = anchor.append<AssociatedElement>(SVGTags.SVGGElement);
+        a.attr(SVGAttrs.id, this.id)
             .classed(this.css, true);
 
         this.datum = datum;
 
-        // join data & render
-        this.updateReference();
+        // preprocess if needed
+        if (preprocess) preprocess(a);
+
+        // associate it here to avoid a `this` reference in the preprocess callback
+        this.anchor = a;
 
     }
 
@@ -133,6 +162,11 @@ export default abstract class GameUnit<
         return this;
     }
 
+    /** Appends svg elements to the DOM. Should only be called once per instance. */
+    public render(): void {
+        this.renderDepiction();
+    }
+
     /** Re associates data with new reference and re-triggers rendering of GameUnit. Chainable. */
     public update(newDatumRef: AssociatedDatum): GameUnit<AssociatedDatum, AssociatedElement, ParentElement, ParentDatum> {
         this.datum = newDatumRef;
@@ -146,6 +180,7 @@ export default abstract class GameUnit<
     public remove(): Promise<null> {
         return new Promise<null>(((resolve) => {
             this.anchor.datum(null);
+            this.removeDepiction();
             resolve(null);
         }));
     }

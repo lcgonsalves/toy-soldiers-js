@@ -51,8 +51,8 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
 
         this.graph.isSnappingNodesToGrid = true;
         this.graph.addAndConnect(p1, p2)
-            .addAndConnect(p3, p2);
-        // .addAndConnect(p1, p4)
+            .addAndConnect(p3, p2)
+            .addAndConnect(p2, p3)
         // .addAndConnect(p4, p5, true)
         // .addAndConnect(p2, p5, true)
         // .addAndConnect(p5, p3)
@@ -259,9 +259,11 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
             // mount units
             this.lnus = this.state.nodes.map(n => {
                 let lnu = new LocationNodeUnit(n, this.graph, nodeContainer, true, conf);
-                lnu.onDragEnd((_ =>  this.setState({nodes: this.graph.nodes})))
+                lnu.onDragEnd((_ =>  this.setState({nodes: this.graph.nodes})));
                 return lnu;
             });
+
+            this.lnus.forEach(node => node.render())
 
         }
 

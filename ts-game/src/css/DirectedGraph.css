@@ -22,7 +22,7 @@
     stroke-width: 0.2;
 }
 
-.edge {
+.node_edge {
     fill: none;
     stroke: gold;
     stroke-width: 3;

@@ -13,22 +13,6 @@
     cursor: copy;
 }
 
-.node-add-helper-circle {
-    stroke: darkgreen;
-    stroke-width: 1px;
-    fill: white;
-}
-
-.node-add-helper-plus-small {
-    fill: darkgreen;
-    font-size: 2px;
-}
-
-.node-add-helper-plus-large {
-    fill: darkgreen;
-    font-size: 4px;
-}
-
 /* SVG GROUPS */
 #background {
     cursor: move;

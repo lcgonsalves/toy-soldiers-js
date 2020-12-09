@@ -1,12 +1,11 @@
 import Node from "ts-shared/build/graph/Node";
 import {Selection} from "d3-selection";
-import AbstractNodeUnit, {css} from "./AbstractNodeUnit";
+import AbstractNodeUnit, {css, msg} from "./AbstractNodeUnit";
 import SVGAttrs from "../../util/SVGAttrs";
 import SVGTags from "../../util/SVGTags";
 import {GameMapConfig} from "../map/GameMapHelpers";
 import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
 import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
-import {DefaultGameUnitTransitions} from "./GameUnit";
 
 export default class LocationNodeUnit<N extends Node = Node> extends AbstractNodeUnit<N> {
 
@@ -31,14 +30,16 @@ export default class LocationNodeUnit<N extends Node = Node> extends AbstractNod
             .attr(SVGAttrs.cx, node => node.x)
             .attr(SVGAttrs.cy, node => node.y)
             .attr(SVGAttrs.r, node => node.radius)
-            .classed(css.nodecircle, true);
+            .classed(css.NODE_CIRCLE, true);
 
         // id
         s.append<SVGTextElement>(SVGTags.SVGTextElement)
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
             .text(node => node.id)
-            .classed(css.nodelabel, true);
+            .classed(css.NODE_LABEL, true);
+
+        this.renderEdgeDepiction();
     }
 
     protected removeDepiction(): void {
@@ -64,6 +65,7 @@ export default class LocationNodeUnit<N extends Node = Node> extends AbstractNod
 
         this.updateEdgeDepiction();
 
+
     }
 
     protected renderEdgeDepiction() {
@@ -73,9 +75,9 @@ export default class LocationNodeUnit<N extends Node = Node> extends AbstractNod
             .data<DirectedEdge>(this.datum.edges, _ => _.id)
             .enter()
             .append<SVGGElement>(SVGTags.SVGGElement) // select and append 1 group per edge
-            .classed(css.edge, true)
+            .classed(css.EDGE, true)
             .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
-            .classed(css.edgepath, true)
+            .classed(css.EDGEPATH, true)
             .attr(SVGAttrs.d, e => this.drawEdgePath(e)); // draw path for the first time
 
     }
