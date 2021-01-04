@@ -115,43 +115,58 @@ export class Interval implements IComparable {
     /** Clamps the number and snaps it to the closest step */
     public snap(num: number): number {
         let out = this.clamp(num);
+        const absOut = Math.abs(out);
 
         if (out === this.min || out === this.max) return out;
 
-        out = Math.round(out);
-        const remainder: number = out % this.step;
+        const roundedOut = Math.round(out);
+        const remainder: number = roundedOut % this.step;
         const correctedRemainderSign = remainder < this.step / 2 ? -remainder : this.step - remainder;
 
-        return remainder === 0 ? out : out + correctedRemainderSign;
+        const suggestedSnapValue = remainder === 0 ? roundedOut : roundedOut + correctedRemainderSign;
+
+        const diffMax = Math.abs(absOut - Math.abs(this.max));
+        const diffMin = Math.abs(absOut - Math.abs(this.min));
+
+        const closestEdge = diffMax < diffMin ? this.max : this.min;
+
+        const diffSuggest = Math.abs(absOut - Math.abs(suggestedSnapValue));
+        const diffClosestEdge = Math.abs(absOut - Math.abs(closestEdge));
+
+        // compare out with suggested snap and 
+        return diffSuggest < diffClosestEdge ? suggestedSnapValue : closestEdge;
     }
 
     /** maps each number of this interval according to the middleware function */
-    public map<T>(middleware: (n: number) => T): T[] {
+    public map<T>(middleware: (n: number, index: number) => T): T[] {
 
         let out: T[] = [];
 
-        this.forEach(n => out.push(middleware(n)));
+        this.forEach((n, i) => out.push(middleware(n, i)));
 
         return out;
 
     }
 
     /** iterates over the interval and applies the callback to each value */
-    public forEach<T>(callback: (n: number) => T): void {
+    public forEach<T>(callback: (n: number, index: number) => T): void {
         // apply on first
         const {min, max, step} = this;
+        let index = 0;
 
-        callback(min);
+        callback(min, index);
+
+        index++;
 
         let start = min < 0 ? Math.ceil(min) : Math.floor(min);
 
         // iterate over others, starting from second item and stopping before last
-        for (let i = start + step; i < max; i += step) {
-            callback(i);
+        for (let i = start + step; i < max; i += step, index++) {
+            callback(i, index);
         }
 
-        // applu on last
-        callback(max);
+        // apply on last
+        callback(max, index);
 
     }
 

@@ -1,23 +1,23 @@
-import IComparable from "../util/IComparable";
-import Node from "./Node";
-import {Interval} from "../geometry/Interval";
-import {Coordinate, ICoordinate} from "../geometry/Coordinate";
-import DirectedEdge from "./DirectedEdge";
+import IComparable from "../../util/IComparable";
+import DeprecatedNode from "./DeprecatedNode";
+import {Interval} from "../../geometry/Interval";
+import {Coordinate, ICoordinate} from "../../geometry/Coordinate";
+import DeprecatedDirectedEdge from "./DeprecatedDirectedEdge";
 
-export default class DirectedGraph implements IComparable {
+export default class DeprecatedDirectedGraph implements IComparable {
     private readonly _nodes: {
-        [id: string]: Node | undefined
+        [id: string]: DeprecatedNode | undefined
     } = {};
     private _isSnappingNodesToGrid: boolean = false;
     private static readonly xDomain: Interval = new Interval(-100, 100);
     private static readonly yDomain: Interval = new Interval(-100, 100);
     private static readonly step: number = 10;
 
-    constructor(...nodes: Node[]) {
+    constructor(...nodes: DeprecatedNode[]) {
         nodes.forEach(n => this._nodes[n.id] = n);
     }
 
-    get nodes(): Node[] { return Object.values(this._nodes).filter(_ => !!_) }
+    get nodes(): DeprecatedNode[] { return Object.values(this._nodes).filter(_ => !!_) }
     get isSnappingNodesToGrid(): boolean { return this._isSnappingNodesToGrid; }
     set isSnappingNodesToGrid(value: boolean) { this._isSnappingNodesToGrid = value; }
     get domain(): {
@@ -25,11 +25,11 @@ export default class DirectedGraph implements IComparable {
         y: Interval
     } {
         return {
-            x: DirectedGraph.xDomain,
-            y: DirectedGraph.yDomain
+            x: DeprecatedDirectedGraph.xDomain,
+            y: DeprecatedDirectedGraph.yDomain
         };
     }
-    get step(): number { return DirectedGraph.step }
+    get step(): number { return DeprecatedDirectedGraph.step }
 
     public toString(): string {
         return this.nodes.map(n => n.toString()).reduce( (acc, cur) => acc + "\n" + cur );
@@ -38,11 +38,11 @@ export default class DirectedGraph implements IComparable {
     /**
      * Returns true if graph contains a given node.
      *
-     * @param {Node | string} n a node or a string representing its ID
+     * @param {DeprecatedNode | string} n a node or a string representing its ID
      */
-    public contains(n: Node | string): boolean {
-        const node = n instanceof Node ? this._nodes[n.id] : this._nodes[n];
-        const nodesEqual = node && n instanceof Node && n.equals(node);
+    public contains(n: DeprecatedNode | string): boolean {
+        const node = n instanceof DeprecatedNode ? this._nodes[n.id] : this._nodes[n];
+        const nodesEqual = node && n instanceof DeprecatedNode && n.equals(node);
         const idsEqual = node && typeof n === "string" && n === node.id;
 
         return ( nodesEqual || idsEqual );
@@ -52,10 +52,10 @@ export default class DirectedGraph implements IComparable {
      * Returns given node if it exists in the graph. If node doesn't
      * exist, an error is thrown.
      *
-     * @param {Node | string} n either a node or a string representing its id
+     * @param {DeprecatedNode | string} n either a node or a string representing its id
      */
-    public get(n: Node | string): Node {
-        if (this.contains(n)) return n instanceof Node ? this._nodes[n.id] : this._nodes[n];
+    public get(n: DeprecatedNode | string): DeprecatedNode {
+        if (this.contains(n)) return n instanceof DeprecatedNode ? this._nodes[n.id] : this._nodes[n];
         else throw new Error("Node is not contained in the graph!");
     }
 
@@ -66,7 +66,7 @@ export default class DirectedGraph implements IComparable {
      * @param n
      * @param fallbackValue
      */
-    public getOrElse<T>(n: Node, fallbackValue: T): Node | T {
+    public getOrElse<T>(n: DeprecatedNode, fallbackValue: T): DeprecatedNode | T {
         if (!this.contains(n)) return fallbackValue;
         else return this.get(n);
     }
@@ -77,14 +77,14 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n
      */
-    public addNode(...n: Node[]): DirectedGraph {
+    public addNode(...n: DeprecatedNode[]): DeprecatedDirectedGraph {
         n.forEach(node => {
             if (this._isSnappingNodesToGrid) {
-                const {x, y} = DirectedGraph.snapToGrid(node.x, node.y);
-                node.moveTo(x,y);
+                const {x, y} = DeprecatedDirectedGraph.snapToGrid(node.x, node.y);
+                node.translateTo(x,y);
             }
 
-            if ( !DirectedGraph.xDomain.contains(node.x) || !DirectedGraph.yDomain.contains(node.y) )
+            if ( !DeprecatedDirectedGraph.xDomain.contains(node.x) || !DeprecatedDirectedGraph.yDomain.contains(node.y) )
                 throw new Error("Node does not fit in the coordinate system!");
 
             !this.contains(node) ? this._nodes[node.id] = node : this.findAndUpdateEdges(node)
@@ -97,10 +97,10 @@ export default class DirectedGraph implements IComparable {
      * @param {number} x
      * @param {number} y
      * @param {string} id optional identifier for the point. if no identifier is passed, one will be generated.
-     * @returns {Node} the newly added node
+     * @returns {DeprecatedNode} the newly added node
      */
-    public addNodeAt(x: number, y: number, id: string): Node {
-        const n = new Node(id, x, y);
+    public addNodeAt(x: number, y: number, id: string): DeprecatedNode {
+        const n = new DeprecatedNode(id, x, y);
         this.addNode(n);
         return n;
     }
@@ -111,7 +111,7 @@ export default class DirectedGraph implements IComparable {
      *
      * @param n the node
      */
-    private findAndUpdateEdges(n: Node): Node {
+    private findAndUpdateEdges(n: DeprecatedNode): DeprecatedNode {
         return this.get(n).updateEdges(n);
     }
 
@@ -120,11 +120,11 @@ export default class DirectedGraph implements IComparable {
         let snappedX: number = Math.round(x),
             snappedY: number = Math.round(y);
 
-        let remainderX: number = snappedX % DirectedGraph.step,
-            remainderY: number = snappedY % DirectedGraph.step;
+        let remainderX: number = snappedX % DeprecatedDirectedGraph.step,
+            remainderY: number = snappedY % DeprecatedDirectedGraph.step;
 
         // local helpers
-        const correctRemainderSign = rem => rem < DirectedGraph.step / 2 ? -rem : DirectedGraph.step - rem;
+        const correctRemainderSign = rem => rem < DeprecatedDirectedGraph.step / 2 ? -rem : DeprecatedDirectedGraph.step - rem;
         function snap(domain: Interval, snapped: number, remainder: number) {
             if (domain.contains(snapped)) {
                 snapped = remainder === 0 ? snapped : snapped + correctRemainderSign(remainder);
@@ -138,26 +138,26 @@ export default class DirectedGraph implements IComparable {
             return snapped;
         }
 
-        snappedX = snap(DirectedGraph.xDomain, snappedX, remainderX);
-        snappedY = snap(DirectedGraph.yDomain, snappedY, remainderY);
+        snappedX = snap(DeprecatedDirectedGraph.xDomain, snappedX, remainderX);
+        snappedY = snap(DeprecatedDirectedGraph.yDomain, snappedY, remainderY);
 
         return new Coordinate(snappedX, snappedY);
 
     }
 
-    public static snapCoordinateToGrid(coord: ICoordinate): ICoordinate { return DirectedGraph.snapToGrid(coord.x, coord.y) }
+    public static snapCoordinateToGrid(coord: ICoordinate): ICoordinate { return DeprecatedDirectedGraph.snapToGrid(coord.x, coord.y) }
 
     /**
      * Adds a pair of nodes to the graph and connects them. If either of the nodes already
      * exists, it will be connected to the other. If both already exist, they will be connected to each other.
      *
-     * @param {Node} n1 Starting node if unidirectional
-     * @param {Node} n2 Ending node if unidirectional
+     * @param {DeprecatedNode} n1 Starting node if unidirectional
+     * @param {DeprecatedNode} n2 Ending node if unidirectional
      * @param {boolean} bidirectional false if unidirectional
-     * @returns {Node} the second node, or ending node if unidirectional
+     * @returns {DeprecatedNode} the second node, or ending node if unidirectional
      */
-    public addAndConnect(n1: Node, n2: Node, bidirectional: boolean = false): DirectedGraph {
-        let firstNode: Node, secondNode: Node;
+    public addAndConnect(n1: DeprecatedNode, n2: DeprecatedNode, bidirectional: boolean = false): DeprecatedDirectedGraph {
+        let firstNode: DeprecatedNode, secondNode: DeprecatedNode;
 
         firstNode = this.getOrElse(n1, n1);
         secondNode = this.getOrElse(n2, n2);
@@ -169,9 +169,9 @@ export default class DirectedGraph implements IComparable {
     }
 
     /** given a node or node id, removes nodes */
-    public removeAndDisconnect(nodeOrID: Node | string): DirectedGraph {
+    public removeAndDisconnect(nodeOrID: DeprecatedNode | string): DeprecatedDirectedGraph {
         if (this.contains(nodeOrID)) {
-            const n = nodeOrID instanceof Node ? nodeOrID : new Node(nodeOrID, 0, 0);
+            const n = nodeOrID instanceof DeprecatedNode ? nodeOrID : new DeprecatedNode(nodeOrID, 0, 0);
 
             // remove from dictionary
             this._nodes[n.id] = undefined;
@@ -184,13 +184,13 @@ export default class DirectedGraph implements IComparable {
     }
 
     /** returns an array of nodes whose position intersects with the given edge */
-    public getNodesIntersectingWith(edge: DirectedEdge): Node[] {
+    public getNodesIntersectingWith(edge: DeprecatedDirectedEdge): DeprecatedNode[] {
         return this.nodes.filter(n => (
             !(n.equals(edge.from) || n.equals(edge.to)) && edge.intersects(n)
         ));
     }
 
-    equals(other: DirectedGraph): boolean {
+    equals(other: DeprecatedDirectedGraph): boolean {
         return Object.values(this._nodes).every(other.contains);
     }
 

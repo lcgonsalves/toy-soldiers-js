@@ -21,7 +21,7 @@ This project is organized into 3 main parts:
    * The React application, front end code 
    * Makes use of the shared game logic, and other concepts
 * `Server`
-   * Node app, works the websocket transmissions between clients, and multiplayer logic
+   * DeprecatedNode app, works the websocket transmissions between clients, and multiplayer logic
    * Makes use of some shared game logic and other concepts
 * `Shared`
    * Bulk of the mechanics. Where shared abstractions are defined (Game Objects, Coordinates, etc)

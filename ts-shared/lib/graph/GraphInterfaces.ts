@@ -1,7 +1,8 @@
 import {ICoordinate} from "../geometry/Coordinate";
-import Vector from "../util/Vector";
 import {ILine} from "../geometry/Line";
 import IComparable from "../util/IComparable";
+import Domain from "../geometry/Domain";
+import Vector from "../util/Vector";
 
 /**
  * Generically describes items that have graph node properties. They can be
@@ -15,16 +16,18 @@ import IComparable from "../util/IComparable";
 export interface IGraphNode
     extends ICoordinate, IComparable {
 
+    // attributes and getters
+
     /** returns edges of this node */
     readonly edges: IGraphEdge<IGraphNode, IGraphNode>[];
     /** returns nodes accessible from this node */
-    readonly adjacent: IGraphNode;
+    readonly adjacent: IGraphNode[];
     /** returns unique identifier of this node */
     readonly id: string;
-    /** edge to string conversion */
-    readonly toString: string;
     /** the physical size of this node */
     radius: number;
+
+    // methods
 
     /**
      * Connects this GraphNode to other GraphNode.
@@ -51,6 +54,10 @@ export interface IGraphNode
      * @param {IGraphNode} other node to be compared.
      */
     isAdjacent(other: IGraphNode): boolean;
+
+    /** corresponding string representation */
+    toString(): string;
+
 }
 
 /**
@@ -58,6 +65,8 @@ export interface IGraphNode
  */
 export interface IGraphEdge<FromNode extends IGraphNode, ToNode extends IGraphNode>
     extends ILine, IComparable {
+
+    // attributes and getters
 
     /** source node */
     readonly from: FromNode;
@@ -73,21 +82,117 @@ export interface IGraphEdge<FromNode extends IGraphNode, ToNode extends IGraphNo
     readonly midpoint: ICoordinate;
     /** size of a vector from the source to the destination node */
     readonly size: number;
-    /** edge to string conversion */
-    readonly toString: string;
+
+    // methods
+
+    /** corresponding string representation */
+    toString(): string;
+
 
 }
+
+export type EdgeInstantiator<
+    FN extends IGraphNode,
+    TN extends IGraphNode,
+    E extends IGraphEdge<FN, TN>
+    > = (FN, TN) => E;
 
 /**
  * Defines a set of nodes and some helpers.
  */
-export interface IGraph<
-    Node extends IGraphNode
-    > extends IComparable {
+export interface IGraph<Node extends IGraphNode>
+    extends IComparable {
+
+    // attributes and getters
 
     /** set of nodes contained in graph */
     readonly nodes: Node[];
+    /** the values of x & y allowed for nodes */
+    readonly domain: Domain;
 
+    // methods
+
+    /**
+     * Returns true if the graph contains the given node or a node
+     * with the given ID.
+     *
+     * @param {DeprecatedNode | string} target a string representing the node ID or a reference to the node.
+     */
+    contains(target: Node | string): boolean;
+
+    /**
+     * Returns the graph node with the given ID if the graph contains the node, or
+     * undefined if it doesn't contain the node.
+     *
+     * @param {string} id the ID of the node to be retrieved.
+     */
+    get(id: string): Node | undefined;
+
+    /**
+     * Returns node with given ID if it exists in the graph. If node doesn't
+     * exist, fallbackValue is returned.
+     *
+     * @param n
+     * @param fallbackValue
+     */
+    getOrElse<T>(id: string, fallbackValue: T): Node | T;
+
+    /**
+     * Adds node(s) to the graph if not yet contained. If a node is already contained,
+     * no action will be performed.
+     *
+     * @param {DeprecatedNode[]} n the node or nodes to be added.
+     * @returns {IGraph} instance of the graph, for chaining.
+     */
+    add(...n: Node[]): IGraph<Node>;
+
+    /**
+     * Replaces existing node in the graph with given node. ID must be the same.
+     * If graph doesn't contain a node with equivalent ID, node will simply be added to the
+     * graph. Existing connections to the node-to-be-replaced will be deleted.
+     *
+     * @param {DeprecatedNode} n The node to be replaced.
+     * @param {boolean} reconnect When true, existing nodes that were connected with the previous node
+     *                              will be reconnected to the new node.
+     */
+    replace(n: Node, reconnect?: boolean): IGraph<Node>;
+
+    /**
+     * Retrieves all nodes located inside a circle centered at `center` and within
+     * a projected circle of radius `radius`. If no nodes are in the vicinity, return an empty array.
+     *
+     * @param {ICoordinate} center
+     * @param {number} radius
+     */
+    getNodesInVicinity(center: ICoordinate, radius: number): Node[];
+
+    /**
+     * Returns true if there are nodes located inside a circle centered at `center` and within
+     * a projected circle of radius `radius`.
+     *
+     * @param {ICoordinate} center
+     * @param {number} radius
+     */
+    containsNodesInVicinity(center: ICoordinate, radius: number): boolean;
+
+    /**
+     * Retrieves node at a given coordinate, if one exists. Otherwise returns undefined.
+     *
+     * @param {ICoordinate} location
+     */
+    getNodeAtPosition(location: ICoordinate): Node | undefined;
+
+    /** returns true if there is a node at a given location */
+    containsNodeAtLocation(location: ICoordinate): boolean;
+
+    /**
+     * If "from" is connected to "to", returns any nodes that are
+     * intersecting with the edge. Otherwise returns an empty array.
+     *
+     * @param {DeprecatedNode} from
+     * @param {DeprecatedNode} to
+     */
+    getNodesIntersecting(from: Node, to: Node): Node[];
 
 }
 

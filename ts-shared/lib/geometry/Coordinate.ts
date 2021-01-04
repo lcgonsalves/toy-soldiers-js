@@ -32,21 +32,22 @@ export interface ICoordinate extends IComparable {
     perpendicularVector(other: ICoordinate, ccw: boolean): Vector;
 
     /** Changes value of current coordinate to given x-y value */
-    moveTo(x: number, y: number): ICoordinate;
+    translateTo(x: number, y: number): ICoordinate;
 
     /** adds values to given coordinate */
-    moveBy(x: number, y: number): ICoordinate;
+    translateBy(x: number, y: number): ICoordinate;
 
     /** Changes value of current coordinate to given x-y value */
-    moveToCoord(other: ICoordinate): ICoordinate;
-
-    /** adds values to given coordinate */
+    translateToCoord(other: ICoordinate): ICoordinate;
 
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 
     /** converts coordinate to a d3 friendly format */
     toTuple(): [number, number];
+
+    /** corresponding string representation */
+    toString(): string;
 
 }
 
@@ -57,6 +58,7 @@ export class Coordinate implements ICoordinate {
     public get x(): number {
         return this._x;
     }
+    static get origin(): ICoordinate { return new Coordinate(0,0); }
 
     private _x: number;
     private _y: number;
@@ -106,14 +108,14 @@ export class Coordinate implements ICoordinate {
         return new Vector([x, y]);
     }
 
-    moveTo(x: number, y: number): ICoordinate {
+    translateTo(x: number, y: number): ICoordinate {
         this._x = x;
         this._y = y;
         return this;
     }
 
-    moveToCoord(other: ICoordinate): ICoordinate {
-        return this.moveTo(other.x, other.y);
+    translateToCoord(other: ICoordinate): ICoordinate {
+        return this.translateTo(other.x, other.y);
     }
 
     overlaps(other: ICoordinate): boolean {
@@ -130,7 +132,7 @@ export class Coordinate implements ICoordinate {
         return ccw ? v : v.scale(-1);
     }
 
-    moveBy(x: number, y: number): ICoordinate {
+    translateBy(x: number, y: number): ICoordinate {
         this._x += x;
         this._y += y;
         return this;
@@ -138,6 +140,10 @@ export class Coordinate implements ICoordinate {
 
     toTuple(): [number, number] {
         return [this._x, this._y];
+    }
+
+    toString(): string {
+        return `(${this.x}, ${this.y})`;
     }
 
 }

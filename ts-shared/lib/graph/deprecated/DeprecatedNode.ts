@@ -1,17 +1,17 @@
-import DirectedEdge from "./DirectedEdge";
-import {Coordinate, ICoordinate} from "../geometry/Coordinate";
-import Vector from "../util/Vector";
+import DeprecatedDirectedEdge from "./DeprecatedDirectedEdge";
+import {Coordinate, ICoordinate} from "../../geometry/Coordinate";
+import Vector from "../../util/Vector";
 
-export default class Node implements ICoordinate {
+export default class DeprecatedNode implements ICoordinate {
     private readonly _coordinate: ICoordinate;
     private readonly _id: string;
-    private _edges: DirectedEdge[];
+    private _edges: DeprecatedDirectedEdge[];
     private _radius: number = 2.5;
     private _bufferRadius: number = 1.5;
 
     get y(): number { return this._coordinate.y; }
     get x(): number { return this._coordinate.x; }
-    get edges(): DirectedEdge[] { return this._edges; }
+    get edges(): DeprecatedDirectedEdge[] { return this._edges; }
     get coord(): ICoordinate { return this._coordinate; }
     get id(): string { return this._id; }
     get radius(): number { return this._radius; }
@@ -20,7 +20,7 @@ export default class Node implements ICoordinate {
     get bufferRadius(): number { return this._bufferRadius; }
     set bufferRadius(value: number) { this._bufferRadius = value; }
 
-    constructor(id: string, x: number, y: number, edges: DirectedEdge[] = []) {
+    constructor(id: string, x: number, y: number, edges: DeprecatedDirectedEdge[] = []) {
         this._id = id;
         this._coordinate = new Coordinate(x, y);
         this._edges = edges;
@@ -42,14 +42,14 @@ export default class Node implements ICoordinate {
     }
 
     /** reassigns this Node's coordinate to a new value */
-    public moveTo(x: number, y: number): Node {
-        this._coordinate.moveTo(x, y);
+    public translateTo(x: number, y: number): DeprecatedNode {
+        this._coordinate.translateTo(x, y);
         return this;
     }
 
     /** reassigns this Node's coordinate to the value of another coordinate */
-    public moveToCoord(other: ICoordinate): Node {
-        this.coord.moveToCoord(other);
+    public translateToCoord(other: ICoordinate): DeprecatedNode {
+        this.coord.translateToCoord(other);
         return this;
     }
 
@@ -68,12 +68,12 @@ export default class Node implements ICoordinate {
     }
 
     /** Returns true if the node has the same coordinates. */
-    public equals(other: Node): boolean {
+    public equals(other: DeprecatedNode): boolean {
         return this._id === other._id;
     }
 
     /** Updates edges of this node to be the same as a template. Template must pass _.equals() validation */
-    public updateEdges(template: Node): Node {
+    public updateEdges(template: DeprecatedNode): DeprecatedNode {
         if (!template.equals(this))
             throw new Error("Cannot update edges from a different Node! Nodes must .equals() each other.");
 
@@ -88,26 +88,26 @@ export default class Node implements ICoordinate {
      * O(edges.length)
      *
      */
-    isAdjacent(other: Node): boolean {
+    isAdjacent(other: DeprecatedNode): boolean {
         return !!this._edges.find(edge => edge.to.equals(other));
     }
 
     /** Gets all the nodes immediately adjacent to this. */
-    getAdjacent(): Node[] {
+    getAdjacent(): DeprecatedNode[] {
         return this._edges.map(edge => edge.to);
     }
 
     /**
      * Connects this node to other node.
      *
-     * @param {Node} other target node
+     * @param {DeprecatedNode} other target node
      * @param {boolean} bidirectional optional – whether the connection should work both ways
-     * @returns {Node} this node (for chaining connections)
+     * @returns {DeprecatedNode} this node (for chaining connections)
      */
-    connectTo(other: Node, bidirectional: boolean = false): Node {
+    connectTo(other: DeprecatedNode, bidirectional: boolean = false): DeprecatedNode {
         if (bidirectional) other.connectTo(this);
         if (!this.isAdjacent(other)) {
-            this._edges.push(new DirectedEdge(this, other));
+            this._edges.push(new DeprecatedDirectedEdge(this, other));
         }
 
         return this;
@@ -122,13 +122,13 @@ export default class Node implements ICoordinate {
         return this.coord.perpendicularVector(other, ccw);
     }
 
-    moveBy(x: number, y: number): Node {
-        this.coord.moveBy(x,y);
+    translateBy(x: number, y: number): DeprecatedNode {
+        this.coord.translateBy(x,y);
         return this;
     }
 
     /** if node is connected to @param node, then the conenction is removed */
-    disconnectFrom(node: Node): Node {
+    disconnectFrom(node: DeprecatedNode): DeprecatedNode {
         // filter edges where destination is given node
         this._edges = this._edges.filter(e => !e.to.equals(node));
         return this;
