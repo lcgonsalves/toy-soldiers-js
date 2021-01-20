@@ -6,15 +6,15 @@ import "../../../css/Editor.css"
 
 import {Selection, select} from "d3-selection";
 import {path, Path} from "d3-path";
-import Node from "ts-shared/build/graph/Node";
-import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
-import DirectedEdge from "ts-shared/build/graph/DirectedEdge";
-import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+
 import Tooltip from "../../ui/Tooltip";
 import {GameMapConfig, GameMapHelpers} from "./GameMapHelpers";
-import LocationNodeUnit from "../units/LocationNodeUnit";
+import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
+import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import LocationNode from "ts-shared/build/lib/graph/LocationNode";
+import {MapEditorMap} from "./internal/MapEditorMap";
+import LocationUnit from "../units/LocationUnit";
 
-const {GraphZoomBehavior} = GameMapHelpers;
 
 // todo: move state to props
 interface GameMainProps {
@@ -22,10 +22,9 @@ interface GameMainProps {
 }
 
 interface GameMainState {
-    nodes: Node[],
-    displayTooltip: boolean,
-    tooltipLocation: ICoordinate,
-    cursorLocation: ICoordinate | undefined
+    displayTooltip: boolean;
+    tooltipLocation: ICoordinate;
+    cursorLocation: ICoordinate | undefined;
 }
 
 // type shorthand for ease of reading
@@ -33,33 +32,31 @@ type ReactSVGRef = React.RefObject<SVGSVGElement>;
 
 class GameMapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
-    private graph: DirectedGraph = new DirectedGraph();
+    nodeContext: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(10);
     private svgElement: ReactSVGRef = React.createRef();
-    private lnus: LocationNodeUnit<Node>[] = [];
     public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
         super(props);
 
-        // init nodes
-        let p1, p2, p3, p4, p5;
-        p1 = new Node("P1", 20, 40);
-        p2 = new Node("P2", 40, 60);
-        p3 = new Node("P3", 30, 50);
-        p4 = new Node("P4", 40, 50);
-        p5 = new Node("P5", 87, 67);
+        // conversion from LocationNode to LocationUnit will occur in the websocket util
+        const a = new LocationUnit("Location A", "a", new Coordinate(10, 10),2);
+        const b = new LocationUnit("Location B", "b", new Coordinate(20, 10),2);
+        const c = new LocationUnit("Location C", "c", new Coordinate(10, 20),2);
+        const d = new LocationUnit("Location D", "d", new Coordinate(44, 37),2);
 
-        this.graph.isSnappingNodesToGrid = true;
-        this.graph.addAndConnect(p1, p2)
-            .addAndConnect(p3, p2)
-            .addAndConnect(p2, p3)
-        // .addAndConnect(p4, p5, true)
-        // .addAndConnect(p2, p5, true)
-        // .addAndConnect(p5, p3)
-        // .addAndConnect(p3, p1);
+        a.connectTo(b);
+
+        const locations = [
+            a,
+            b,
+            c,
+            d
+        ];
+
+        this.nodeContext.add(...locations);
 
         this.state = {
-            nodes: this.graph.nodes,
             displayTooltip: false,
             tooltipLocation: new Coordinate(0, 0),
             cursorLocation: undefined
@@ -70,15 +67,15 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
     /** Once HTML elements have loaded, this method is run to initialize the SVG elements using D3. */
     private initializeGraph(): void {
         const drawGrid = (context: Path): Path => {
-            const xDomain = this.graph.domain.x,
-                yDomain = this.graph.domain.y;
+            const xDomain = this.nodeContext.domain.x,
+                yDomain = this.nodeContext.domain.y;
 
-            for (let col = xDomain.min; xDomain.contains(col); col += this.graph.step) {
+            for (let col = xDomain.min; xDomain.contains(col); col += xDomain.step) {
                 context.moveTo(col, yDomain.min);
                 context.lineTo(col, yDomain.max);
             }
 
-            for (let row = yDomain.min; yDomain.contains(row); row += this.graph.step) {
+            for (let row = yDomain.min; yDomain.contains(row); row += yDomain.step) {
                 context.moveTo(xDomain.min, row);
                 context.lineTo(xDomain.max, row);
             }
@@ -89,74 +86,39 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
         const updateCursorLocation = (x: number, y: number): void => this.setState({cursorLocation: new Coordinate(x, y)});
 
 
-        // defines extents of grid
-        const gridCoords = {
-            topL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.min),
-            topR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.min),
-            bottomL: new Coordinate(this.graph.domain.x.min, this.graph.domain.y.max),
-            bottomR: new Coordinate(this.graph.domain.x.max, this.graph.domain.y.max)
-        }
-
-        // defines extents of background
-        const bgCoords = {
-            topL: new Coordinate(gridCoords.topL.x - 150, gridCoords.topL.y - 150),
-            topR: new Coordinate(gridCoords.topR.x + 150, gridCoords.topR.y - 150),
-            bottomL: new Coordinate(gridCoords.bottomL.x - 150, gridCoords.bottomL.y + 150),
-            bottomR: new Coordinate(gridCoords.bottomR.x + 150, gridCoords.bottomR.y + 150)
-        };
-
-
-        // background for event tracking
-        const backgroundElement = select(this.svgElement.current)
-            .append("g")
-            .attr("id", "background")
-            .append("rect")
-            .attr("x", bgCoords.topL.x)
-            .attr("y", bgCoords.topL.y)
-            .attr("width", bgCoords.topL.distance(bgCoords.topR))
-            .attr("height", bgCoords.topL.distance(bgCoords.bottomL))
-            .attr("fill", "#bcbcbc")
-
-
-        const mainGroup = select(this.svgElement.current)
-            .append("g")
-            .attr("id", "main");
-
-        backgroundElement.call(GraphZoomBehavior(bgCoords, mainGroup));
-
         // draw grid
-        const gridGroup = mainGroup.append("g")
-            .attr("id", "grid")
-            .attr("pointer-events", "none");
-
-
-        gridGroup.append("rect")
-            .attr("x", gridCoords.topL.x)
-            .attr("y", gridCoords.topL.y)
-            .attr("height", gridCoords.topL.distance(gridCoords.bottomL))
-            .attr("width", gridCoords.topL.distance(gridCoords.topR))
-            .attr("fill", "#dedede");
-
-
-        gridGroup.append("path")
-            .classed("grid", true)
-            .attr("d", drawGrid(path()).toString());
+        // const gridGroup = mainGroup.append("g")
+        //     .attr("id", "grid")
+        //     .attr("pointer-events", "none");
+        //
+        //
+        // gridGroup.append("rect")
+        //     .attr("x", gridCoords.topL.x)
+        //     .attr("y", gridCoords.topL.y)
+        //     .attr("height", gridCoords.topL.distance(gridCoords.bottomL))
+        //     .attr("width", gridCoords.topL.distance(gridCoords.topR))
+        //     .attr("fill", "#dedede");
+        //
+        //
+        // gridGroup.append("path")
+        //     .classed("grid", true)
+        //     .attr("d", drawGrid(path()).toString());
 
         // append edges svg group
-        mainGroup.append("g")
-            .attr("id", "edges");
-
-        // append nodes svg group
-        mainGroup.append("g")
-            .attr("id", "nodes")
-            .classed("node", true);
-
-
-        // append menu
-        const bottomMenu = select(this.svgElement.current)
-            .append("g")
-            .attr("id", "bottom-menu");
-        this.initBottomMenu(bottomMenu);
+        // mainGroup.append("g")
+        //     .attr("id", "edges");
+        //
+        // // append nodes svg group
+        // mainGroup.append("g")
+        //     .attr("id", "nodes")
+        //     .classed("node", true);
+        //
+        //
+        // // append menu
+        // const bottomMenu = select(this.svgElement.current)
+        //     .append("g")
+        //     .attr("id", "bottom-menu");
+        // this.initBottomMenu(bottomMenu);
 
     }
 
@@ -184,65 +146,65 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
     }
 
     /** draws a line connecting two nodes given an edge */
-    private drawEdge(edge: DirectedEdge, context: Path, curved?: boolean): Path {
-        const drawStraightEdge = (edge: DirectedEdge, context: Path): Path => {
-            const {from, to} = edge;
-
-            context.moveTo(from.x, from.y);
-            context.lineTo(to.x, to.y);
-
-            return context;
-        };
-        const drawCurvedEdge = (edge: DirectedEdge, context: Path, intersectingNode: Node): Path => {
-            const tangentPoint = edge.getArcToTangentPoint(intersectingNode);
-            context.moveTo(edge.from.x, edge.from.y);
-            context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, edge.getCurveRadius(intersectingNode));
-            context.lineTo(edge.to.x, edge.to.y);
-            return context;
-        };
-
-        // todo: handle more than 1 inter
-        const intersectingNode = this.graph.getNodesIntersectingWith(edge)[0];
-
-        // drawStraightEdge(edge, context);
-        if (intersectingNode) return drawCurvedEdge(edge, context, intersectingNode);
-        else return drawStraightEdge(edge, context);
-    }
+    // private drawEdge(edge: DirectedEdge, context: Path, curved?: boolean): Path {
+    //     const drawStraightEdge = (edge: DirectedEdge, context: Path): Path => {
+    //         const {from, to} = edge;
+    //
+    //         context.moveTo(from.x, from.y);
+    //         context.lineTo(to.x, to.y);
+    //
+    //         return context;
+    //     };
+    //     const drawCurvedEdge = (edge: DirectedEdge, context: Path, intersectingNode: Node): Path => {
+    //         const tangentPoint = edge.getArcToTangentPoint(intersectingNode);
+    //         context.moveTo(edge.from.x, edge.from.y);
+    //         context.arcTo(tangentPoint.x, tangentPoint.y, edge.to.x, edge.to.y, edge.getCurveRadius(intersectingNode));
+    //         context.lineTo(edge.to.x, edge.to.y);
+    //         return context;
+    //     };
+    //
+    //     // todo: handle more than 1 inter
+    //     const intersectingNode = this.graph.getNodesIntersectingWith(edge)[0];
+    //
+    //     // drawStraightEdge(edge, context);
+    //     if (intersectingNode) return drawCurvedEdge(edge, context, intersectingNode);
+    //     else return drawStraightEdge(edge, context);
+    // }
 
     /** re-evaluates data and renders graph */
     private updateGraph(): void {
 
-        this.renderEdges();
+        // this.renderEdges();
 
     }
 
     /** renders edges contained by each node */
-    private renderEdges() {
-        const graphEdgeContainer = select(this.svgElement.current)
-            .select("#edges");
-
-        const graphEdges = graphEdgeContainer
-            .selectAll<SVGPathElement, Node>("path")
-            .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
-
-        // add new edges
-        const edgeGroupOnEnter = graphEdges.enter()
-            .append("g")
-            .attr("class", ".directed-graph-edge");
-
-        // remove old unused edges
-        graphEdges.exit().remove();
-
-        // update path of unchanged edges
-        graphEdges.attr("d", edge => this.drawEdge(edge, path(), true).toString())
-
-        // draw new edges
-        edgeGroupOnEnter.append("path")
-            .classed("edge", true)
-            .attr("d", edge => this.drawEdge(edge, path(), true).toString());
-
-        return graphEdgeContainer;
-    }
+    // private renderEdges() {
+    //     const graphEdgeContainer = select(this.svgElement.current)
+    //         .select("#edges");
+    //
+    //     const graphEdges = graphEdgeContainer
+    //         .selectAll<SVGPathElement, Node>("path")
+    //         .data<DirectedEdge>(this.state.nodes.flatMap(_ => _.edges), _ => _.id);
+    //
+    //     // add new edges
+    //     const edgeGroupOnEnter = graphEdges.enter()
+    //         .append("g")
+    //         .attr("class", ".directed-graph-edge");
+    //
+    //     // remove old unused edges
+    //     graphEdges.exit().remove();
+    //
+    //     // update path of unchanged edges
+    //     graphEdges.attr("d", edge => this.drawEdge(edge, path(), true).toString())
+    //
+    //     // draw new edges
+    //     edgeGroupOnEnter.append("path")
+    //         .classed("edge", true)
+    //         .attr("d", edge => this.drawEdge(edge, path(), true).toString());
+    //
+    //     return graphEdgeContainer;
+    // }
 
     componentDidMount(): void {
         this.initializeGraph();
@@ -251,19 +213,16 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
 
 
         if (d3ReactAnchor) {
-            const nodeContainer = select<SVGGElement, Node>(d3ReactAnchor)
-                .select<SVGGElement>("#nodes");
 
-            const conf = new GameMapConfig(this.graph.step);
+            const conf = {
+                backgroundColor: "#dbdbdb",
+                foregroundColor: "#c4c4c4",
+                gridStroke: "#545454",
+                zoomBuffer: 25,
+            };
 
-            // mount units
-            this.lnus = this.state.nodes.map(n => {
-                let lnu = new LocationNodeUnit(n, this.graph, nodeContainer, true, conf);
-                lnu.onDragEnd((_ =>  this.setState({nodes: this.graph.nodes})));
-                return lnu;
-            });
+            new MapEditorMap(this.nodeContext, d3ReactAnchor, conf);
 
-            this.lnus.forEach(node => node.render())
 
         }
 

@@ -1,10 +1,7 @@
 import {D3DragEvent, DraggedElementBaseType} from "d3-drag";
-import Node from "ts-shared/build/graph/Node";
 import {BaseType, Selection} from "d3-selection";
 import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
-import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import DirectedGraph from "ts-shared/build/graph/DirectedGraph";
-import {Interval} from "ts-shared/build/geometry/Interval";
+import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 
 // shorthand types
 export type NodeDragHandler<E extends DraggedElementBaseType, N extends Node> = (elem: E, evt: D3DragEvent<E, N, any>, dataPoint: N) => void
@@ -38,27 +35,27 @@ export abstract class GameMapHelpers {
 
     }
 
-    /**
-     * Given a coordinate and a map configuration
-     * @param coordinate
-     * @param config
-     */
-    public static snapIfWithinRadius = (coordinate: ICoordinate, config: GameMapConfig): ICoordinate => {
-        let {x,y} = coordinate;
-        const {step, snapRadius} = config;
-        const snapCore = GameMapHelpers.snap(coordinate);
-        const fractionOfStep = step * snapRadius;
-        const snapZone = {
-            x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
-            y: new Interval(snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
-        };
-
-        x = snapZone.x.contains(x) ? snapCore.x : x;
-        y = snapZone.y.contains(y) ? snapCore.y : y;
-        return new Coordinate(x,y);
-    }
-
-    public static snap = (coordinate: ICoordinate): ICoordinate => DirectedGraph.snapCoordinateToGrid(coordinate)
+    // /**
+    //  * Given a coordinate and a map configuration
+    //  * @param coordinate
+    //  * @param config
+    //  */
+    // public static snapIfWithinRadius = (coordinate: ICoordinate, config: GameMapConfig): ICoordinate => {
+    //     let {x,y} = coordinate;
+    //     const {step, snapRadius} = config;
+    //     const snapCore = GameMapHelpers.snap(coordinate);
+    //     const fractionOfStep = step * snapRadius;
+    //     const snapZone = {
+    //         x: new Interval(snapCore.x - fractionOfStep, snapCore.x + fractionOfStep),
+    //         y: new Interval(snapCore.y - fractionOfStep, snapCore.y + fractionOfStep)
+    //     };
+    //
+    //     x = snapZone.x.contains(x) ? snapCore.x : x;
+    //     y = snapZone.y.contains(y) ? snapCore.y : y;
+    //     return new Coordinate(x,y);
+    // }
+    //
+    // public static snap = (coordinate: ICoordinate): ICoordinate => DirectedGraph.snapCoordinateToGrid(coordinate)
 
 
 }

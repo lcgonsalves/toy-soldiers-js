@@ -29,7 +29,7 @@ export interface ICoordinate extends IComparable {
     vectorTo(other: ICoordinate): Vector;
 
     /** Returns a vector perpendicular to the vector between this coordinate and other */
-    perpendicularVector(other: ICoordinate, ccw: boolean): Vector;
+    perpendicularVector(other: ICoordinate, ccw?: boolean): Vector;
 
     /** Changes value of current coordinate to given x-y value */
     translateTo(x: number, y: number): ICoordinate;

@@ -3,6 +3,7 @@ import {ICoordinate} from "../geometry/Coordinate";
 import {ILine, Line} from "../geometry/Line";
 import Vector from "../util/Vector";
 import IComparable from "../util/IComparable";
+import DeprecatedNode from "./deprecated/DeprecatedNode";
 
 export default class SimpleDirectedEdge<
     FromNode extends IGraphNode,
@@ -54,6 +55,19 @@ export default class SimpleDirectedEdge<
 
     shortestDistanceBetween(point: ICoordinate): number {
         return Line.from(this.from, this.to).shortestDistanceBetween(point);
+    }
+
+    /** determines if a given Node is collinear (intersects, collides) with a straight line between
+     * the nodes of this edge */
+    intersects(node: IGraphNode, bufferRadius?: number): boolean {
+        const distanceToEdge = this.shortestDistanceBetween(node);
+        const distanceToA = this.from.distance(node);
+        const distanceToB = this.to.distance(node);
+
+        const radius = bufferRadius? bufferRadius : 0;
+        const intersectsLine = distanceToEdge <= node.radius + radius;
+
+        return intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
     }
 
 }

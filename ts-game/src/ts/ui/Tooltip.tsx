@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 
 interface TooltipProps {
     position: ICoordinate,

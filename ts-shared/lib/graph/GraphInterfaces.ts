@@ -3,6 +3,8 @@ import {ILine} from "../geometry/Line";
 import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
 import Vector from "../util/Vector";
+import {Interval} from "../geometry/Interval";
+import DeprecatedNode from "./deprecated/DeprecatedNode";
 
 /**
  * Generically describes items that have graph node properties. They can be
@@ -87,7 +89,9 @@ export interface IGraphEdge<FromNode extends IGraphNode, ToNode extends IGraphNo
 
     /** corresponding string representation */
     toString(): string;
-
+    /** determines if a given Node is collinear (intersects, collides) with a straight line between
+     * the nodes of this edge */
+    intersects(node: IGraphNode): boolean;
 
 }
 
@@ -106,7 +110,7 @@ export interface IGraph<Node extends IGraphNode>
     // attributes and getters
 
     /** set of nodes contained in graph */
-    readonly nodes: Node[];
+    readonly nodes: Map<string, IGraphNode>;
     /** the values of x & y allowed for nodes */
     readonly domain: Domain;
 
@@ -146,6 +150,9 @@ export interface IGraph<Node extends IGraphNode>
      */
     add(...n: Node[]): IGraph<Node>;
 
+    /** removes nodes with given ID(s) */
+    rm(...n: string[]): IGraph<Node>;
+
     /**
      * Replaces existing node in the graph with given node. ID must be the same.
      * If graph doesn't contain a node with equivalent ID, node will simply be added to the
@@ -180,7 +187,7 @@ export interface IGraph<Node extends IGraphNode>
      *
      * @param {ICoordinate} location
      */
-    getNodeAtPosition(location: ICoordinate): Node | undefined;
+    getNodesAtPosition(location: ICoordinate): Node[];
 
     /** returns true if there is a node at a given location */
     containsNodeAtLocation(location: ICoordinate): boolean;
@@ -192,7 +199,6 @@ export interface IGraph<Node extends IGraphNode>
      * @param {DeprecatedNode} from
      * @param {DeprecatedNode} to
      */
-    getNodesIntersecting(from: Node, to: Node): Node[];
+    getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): IGraphNode[];
 
 }
-

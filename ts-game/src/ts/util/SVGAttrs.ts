@@ -8,6 +8,10 @@ export default abstract class SVGAttrs {
     public static readonly y: string = "y";
     public static readonly d: string = "d";
     public static readonly id: string = "id";
+    public static readonly width: string = "width";
+    public static readonly height: string = "height";
+    public static readonly fill: string = "fill";
+    public static readonly pointerEvents: string = "pointer-events";
 
 }
 
