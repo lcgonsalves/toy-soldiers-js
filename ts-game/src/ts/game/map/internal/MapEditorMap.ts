@@ -124,8 +124,27 @@ export class MapEditorMap {
 
         // attach nodes in context to group
         nodeContext.nodes.forEach((n: LocationUnit) => {
+            // attach depictions
             n.attachDepictionTo(nodeContainer);
             n.attachEdgeDepictionTo(edgeContainer);
+
+            const action = {
+                key: "refresh_edge_endpoints",
+                apply: function () {
+
+                    nodeContext.nodes.forEach(nodeInContext => {
+
+                        if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
+
+                    });
+
+                }
+            }
+
+            // detect when nodes move and react to it
+            n.onDrag(action.key, action.apply)
+            n.onDragEnd(action.key, action.apply)
+
         });
         
     }

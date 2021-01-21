@@ -7,6 +7,9 @@ export interface IGameUnit {
 
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;
+    /** refreshes depiction to reflect any changes in this Unit's content */
+    refresh(): void;
+
 }
 
 export interface INodeUnit extends IGameUnit {

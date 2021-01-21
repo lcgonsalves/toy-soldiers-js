@@ -151,28 +151,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     translateToCoord(other: ICoordinate): ICoordinate {
 
         super.translateToCoord(other);
-
-        if (this.anchor && this.edgeAnchor) {
-
-            const node = this.anchor.datum(this);
-            const edges = this.edgeAnchor.selectAll<SVGPathElement, Edge>(SVGTags.SVGPathElement)
-                .data<Edge>(this.edges, _ => _.id);
-
-
-            node.select(SVGTags.SVGCircleElement)
-                .attr(SVGAttrs.cx, node => node.x)
-                .attr(SVGAttrs.cy, node => node.y)
-                .attr(SVGAttrs.r, node => node.radius);
-
-            node.select(SVGTags.SVGTextElement)
-                .attr(SVGAttrs.x, node => node.x + node.radius + 1)
-                .attr(SVGAttrs.y, node => node.y)
-                .text(node => node.id);
-
-            edges.attr(SVGAttrs.d, this.drawEdgePath);
-
-
-        }
+        this.refresh();
 
         return this;
     }
@@ -201,7 +180,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             this.dragHandlers.set(
                 "default",
                 function (elem: SVGGElement, evt: any) {
-                    // debugger
                     const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
                     config.snapWhileDragging ?
                         selfRef.translateToCoord(worldContext.domain.snap(eventCoordinate)) :
@@ -221,22 +199,21 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 });
 
 
-            d.on(DragEvents.START, function (this: SVGGElement, thisUnit: LocationUnit, coords: ICoordinate): void {
+            d.on(DragEvents.START, function (this: SVGGElement, event: any, coords: ICoordinate): void {
 
-                // debugger
-                dragStartHandlers.forEach((action: DragHandler) => action(this, thisUnit, coords));
-
-            });
-
-            d.on(DragEvents.DRAG, function (this: SVGGElement, thisUnit: LocationUnit, coords: ICoordinate): void {
-
-                dragHandlers.forEach((action: DragHandler) => action(this, thisUnit, coords));
+                dragStartHandlers.forEach((action: DragHandler) => action(this, event, coords));
 
             });
 
-            d.on(DragEvents.END, function (this: SVGGElement, thisUnit: LocationUnit, coords: ICoordinate): void {
+            d.on(DragEvents.DRAG, function (this: SVGGElement, event: any, coords: ICoordinate): void {
 
-                dragEndHandlers.forEach((action: DragHandler) => action(this, thisUnit, coords));
+                dragHandlers.forEach((action: DragHandler) => action(this, event, coords));
+
+            });
+
+            d.on(DragEvents.END, function (this: SVGGElement, event: any, coords: ICoordinate): void {
+
+                dragEndHandlers.forEach((action: DragHandler) => action(this, event, coords));
 
             });
 
@@ -284,6 +261,46 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     removeOnDragStart(actionName: string): boolean {
         return this.dragStartHandlers.delete(actionName);
+    }
+
+    refresh(): void {
+
+        if (this.anchor) {
+
+            const node = this.anchor.datum(this);
+
+            // node update
+            node.select(SVGTags.SVGCircleElement)
+                .attr(SVGAttrs.cx, node => node.x)
+                .attr(SVGAttrs.cy, node => node.y)
+                .attr(SVGAttrs.r, node => node.radius);
+
+            node.select(SVGTags.SVGTextElement)
+                .attr(SVGAttrs.x, node => node.x + node.radius + 1)
+                .attr(SVGAttrs.y, node => node.y)
+                .text(node => node.id);
+
+        }
+
+        this.refreshEdgeDepiction();
+
+    }
+
+    /** refresh just edges
+     * Useful if you moved a node somewhere in the graph, and need to update its connections.
+     * */
+    refreshEdgeDepiction(): void {
+
+        if (this.edgeAnchor) {
+
+            const edges = this.edgeAnchor.selectAll<SVGPathElement, Edge>(SVGTags.SVGPathElement)
+                .data<Edge>(this.edges, _ => _.id);
+
+            // edge update
+            edges.attr(SVGAttrs.d, this.drawEdgePath);
+
+        }
+
     }
 
 

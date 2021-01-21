@@ -90,7 +90,11 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): Node[] {
         const {from, to} = e;
         return this.nodeArr().filter(n => {
-            !(n.equals(from) || n.equals(to)) &&
+            const isNotFromNode = !n.equals(from);
+            const isNotToNode = !n.equals(to);
+
+            return isNotFromNode &&
+            isNotToNode &&
             e.intersects(n)
         });
     }

@@ -2,6 +2,7 @@ import {IGraphNode} from "../../lib/graph/GraphInterfaces";
 import LocationNode from "../../lib/graph/LocationNode";
 import {Coordinate} from "../../lib/geometry/Coordinate";
 import * as assert from "assert";
+import {LocationContext} from "../../lib/mechanics/Location";
 
 describe("Baseline Node Functionality", function () {
 
@@ -76,3 +77,26 @@ describe("Baseline Node Functionality", function () {
     });
 
 });
+
+describe("Generic edge implementation with location node", function () {
+
+    const a: LocationNode = new LocationNode("a", 10, 10, 10);
+    const b: LocationNode = new LocationNode("b", 10, 20, 10);
+    const c: LocationNode = new LocationNode("c", 10, 30, 10);
+
+    a.connectTo(c);
+
+    const ctx = new LocationContext<LocationNode>();
+
+    ctx.add(a, b, c);
+
+    it("should detect that B is intersecting with the edge", function () {
+
+        const edge = a.edges[0]
+        const intersectingNodes = ctx.getNodesIntersecting(edge);
+
+        assert.strictEqual(intersectingNodes[0].equals(b), true, `Out of all intersecting nodes (${intersectingNodes}), the one at index 0 is ${intersectingNodes[0]} and should be ${b}`)
+
+    });
+
+})

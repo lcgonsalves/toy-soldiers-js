@@ -3,7 +3,6 @@ import {ICoordinate} from "../geometry/Coordinate";
 import {ILine, Line} from "../geometry/Line";
 import Vector from "../util/Vector";
 import IComparable from "../util/IComparable";
-import DeprecatedNode from "./deprecated/DeprecatedNode";
 
 export default class SimpleDirectedEdge<
     FromNode extends IGraphNode,
@@ -67,7 +66,11 @@ export default class SimpleDirectedEdge<
         const radius = bufferRadius? bufferRadius : 0;
         const intersectsLine = distanceToEdge <= node.radius + radius;
 
-        return intersectsLine && !(distanceToA > this.size || distanceToB > this.size);
+
+        const aIsOutside = distanceToA > this.size;
+        const bIsOutside = distanceToB > this.size;
+
+        return intersectsLine && !(aIsOutside || bIsOutside);
     }
 
 }
