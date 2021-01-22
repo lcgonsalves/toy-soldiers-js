@@ -4,6 +4,8 @@ import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 export interface IGameUnit {
     /** the class of the outer container */
     readonly cls: string;
+    /** sets the game unit to display debug information */
+    debugMode: boolean;
 
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;

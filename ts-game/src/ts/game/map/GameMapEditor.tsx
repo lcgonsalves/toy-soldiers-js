@@ -41,8 +41,8 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
 
         // conversion from LocationNode to LocationUnit will occur in the websocket util
         const a = new LocationUnit("Location A", "a", new Coordinate(10, 10),2);
-        const b = new LocationUnit("Location B", "b", new Coordinate(20, 10),2);
-        const c = new LocationUnit("Location C", "c", new Coordinate(10, 20),2);
+        const b = new LocationUnit("Location B", "b", new Coordinate(40, 40),2);
+        const c = new LocationUnit("Location C", "c", new Coordinate(20, 20),2);
         const d = new LocationUnit("Location D", "d", new Coordinate(44, 37),2);
 
         a.connectTo(b);

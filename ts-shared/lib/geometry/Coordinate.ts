@@ -143,7 +143,7 @@ export class Coordinate implements ICoordinate {
     }
 
     toString(): string {
-        return `(${this.x}, ${this.y})`;
+        return `(${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
     }
 
 }

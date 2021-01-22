@@ -29,7 +29,11 @@ export enum css {
     NODE_LABEL = "node_label",
     EDGE = "node_edge",
     EDGEPATH = "node_edge_path",
-    EDGE_CONTAINER = "edge_container"
+    EDGE_CONTAINER = "edge_container",
+    DEBUG = "debug",
+    DEBUG_NODE = "debug_node",
+    DEBUG_EDGE = "debug_edge",
+    DEBUG_TEXT = "debug_text"
 }
 
 export default class LocationUnit extends LocationNode implements INodeUnit, IDraggable {
@@ -37,10 +41,44 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected readonly name: string;
     protected anchor: LocationUnitSelection<LocationUnit> | undefined;
     protected edgeAnchor: LocationUnitSelection<Edge> | undefined;
+    protected debugAnchor:LocationUnitSelection<LocationUnit> | undefined;
     protected config: GameMapConfig = GameMapConfig.default
     protected readonly dragStartHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragEndHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
+
+    private _debugMode: boolean = false;
+
+
+    get debugMode(): boolean {
+        return this._debugMode;
+    }
+
+    set debugMode(turnOn: boolean) {
+        this._debugMode = turnOn;
+
+        if (!turnOn) {
+
+            console.log("Turning off debug mode, removing all debug elements associated with this unit.");
+            this.debugAnchor?.selectAll("*").remove();
+
+        } else if (this.debugAnchor === undefined) {
+
+            if (this.anchor === undefined) {
+                console.error("Unable to attach debug anchor when unit has no anchor. Please run attachDepictionTo() in order to render debug elements.");
+            } else {
+
+                console.log("No debug anchor found, appending debug `g` element.");
+                this.debugAnchor = this.anchor.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, css.DEBUG_NODE);
+                console.log("Turning on debug mode, ready to render debug elements...");
+            }
+
+        } else {
+
+            console.log("Turning on debug mode, ready to render debug elements...");
+
+        }
+    }
 
     get edges(): Edge[] {
         return [ ...this._edges.values() ] as Edge[];
@@ -78,6 +116,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
      */
     attachDepictionTo(d3selection: AnySelection): void {
         const anchor = d3selection.append<ContainerElement>(SVGTags.SVGGElement);
+        this.initDebug(anchor);
 
         // set attrs
         anchor.attr(SVGAttrs.id, this.id)
@@ -103,6 +142,8 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         this.initializeDrag();
 
+        setTimeout(() => this.debugMode = true, 3000)
+
     }
 
     /**
@@ -121,7 +162,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .classed(css.EDGE, true)
             .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
             .classed(css.EDGEPATH, true)
-            .attr(SVGAttrs.d, e => this.drawEdgePath(e)); // draw path for the first time
+            .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
 
 
         this.edgeAnchor = anchor;
@@ -132,16 +173,31 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected drawEdgePath(e: Edge): string {
         const p = path();
 
+
         // TODO: handle more than 1 intersecting node, maybe?
         // no
-        const intersectingNode = this.worldContext?.getNodesIntersecting(e)[0];
+        const intersectingNodes = this.worldContext?.getNodesIntersecting(e);
+        const intersectingNode = intersectingNodes ? intersectingNodes[0] : undefined;
         const {from, to} = e;
 
         p.moveTo(from.x, from.y);
 
         // curve around intersecting node
         const tangentPoint = getArcToTangentPoint(e, intersectingNode, 5);
-        p.arcTo(tangentPoint.x, tangentPoint.y, e.to.x, e.to.y, getCurveRadius(e, intersectingNode));
+        p.arcTo(tangentPoint.x, tangentPoint.y, e.to.x, e.to.y, getCurveRadius(e, intersectingNode, 5));
+
+        if (intersectingNodes !== undefined) {
+
+            // todo: remove debug
+            this.renderDebugHelpers(
+                [
+                    ...intersectingNodes,
+                    new LocationNode("tangent_point", 1, tangentPoint.x, tangentPoint.y)
+                ],
+                []
+            )
+
+        }
 
         p.lineTo(to.x, to.y);
 
@@ -270,12 +326,12 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             const node = this.anchor.datum(this);
 
             // node update
-            node.select(SVGTags.SVGCircleElement)
+            node.select("." + css.NODE_CIRCLE)
                 .attr(SVGAttrs.cx, node => node.x)
                 .attr(SVGAttrs.cy, node => node.y)
                 .attr(SVGAttrs.r, node => node.radius);
 
-            node.select(SVGTags.SVGTextElement)
+            node.select("." + css.NODE_LABEL)
                 .attr(SVGAttrs.x, node => node.x + node.radius + 1)
                 .attr(SVGAttrs.y, node => node.y)
                 .text(node => node.id);
@@ -297,11 +353,127 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 .data<Edge>(this.edges, _ => _.id);
 
             // edge update
-            edges.attr(SVGAttrs.d, this.drawEdgePath);
+            edges.attr(SVGAttrs.d, this.drawEdgePath.bind(this));
 
         }
 
     }
 
+    // DEBUGGING METHODS
+
+    renderDebugHelpers(
+        points: IGraphNode[],
+        lines: IGraphEdge<IGraphNode, IGraphNode>[]
+    ): void {
+
+        if (this.debugAnchor !== undefined && this.debugMode) {
+
+            const debugPathAnchor = this.debugAnchor
+                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + css.DEBUG_EDGE)
+                .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
+
+            const debugPathTextAnchor = this.debugAnchor
+                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + css.DEBUG_TEXT + css.DEBUG_EDGE)
+                .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
+
+            const debugCircleAnchor = this.debugAnchor
+                .selectAll<SVGGElement, IGraphNode>("." + css.DEBUG_NODE)
+                .data<IGraphNode>(points, _ => _.id);
+
+            const debugCircleTextAnchor = this.debugAnchor
+                .selectAll<SVGGElement, IGraphNode>("." + css.DEBUG_TEXT + css.DEBUG_NODE)
+                .data<IGraphNode>(points, _ => _.id);
+
+            debugPathAnchor.enter()
+                .append(SVGTags.SVGPathElement)
+                .classed(css.DEBUG_NODE, true)
+                .attr(SVGAttrs.id, _ => _.id)
+                .attr(SVGAttrs.d, (edge: IGraphEdge<IGraphNode, IGraphNode>) => {
+                    const ctx = path();
+
+                    ctx.moveTo(edge.from.x, edge.from.y);
+                    ctx.lineTo(edge.to.x, edge.to.y);
+
+                    return ctx.toString();
+                })
+                .each( e => {
+
+                    const selfRef = `[${this.name}, id: ${this.id}] `
+                    console.log(`${selfRef} ${e.id}: 
+                    midpoint = ${e.midpoint}
+                    size = ${e.size}`);
+
+                });
+
+
+            debugPathAnchor.attr(SVGAttrs.d, (edge: IGraphEdge<IGraphNode, IGraphNode>) => {
+                const ctx = path();
+
+                ctx.moveTo(edge.from.x, edge.from.y);
+                ctx.lineTo(edge.to.x, edge.to.y);
+
+                return ctx.toString();
+            });
+
+            debugPathAnchor.exit().remove();
+
+            debugPathTextAnchor.enter()
+                .append(SVGTags.SVGTextElement)
+                .classed(css.DEBUG_TEXT + css.DEBUG_EDGE, true)
+                .attr(SVGAttrs.x, _ => _.midpoint.x)
+                .attr(SVGAttrs.y, _ => _.midpoint.y)
+                .text(e => e.id + "_debug");
+
+            debugPathTextAnchor
+                .attr(SVGAttrs.x, _ => _.midpoint.x)
+                .attr(SVGAttrs.y, _ => _.midpoint.y);
+
+            debugPathTextAnchor.exit().remove();
+
+            debugCircleAnchor.enter()
+                .append(SVGTags.SVGCircleElement)
+                .classed(css.DEBUG_NODE, true)
+                .attr(SVGAttrs.cx, n => n.x)
+                .attr(SVGAttrs.cy, n => n.y)
+                .attr(SVGAttrs.r, n => n.radius)
+                .each(n => {
+
+                    const selfRef = `[${this.name}, id: ${this.id}] `
+                    console.log(`${selfRef} ${n.id}: ${n.toString()} 
+                    radius = ${n.radius}`);
+
+                });
+
+            debugCircleAnchor
+                .attr(SVGAttrs.cx, n => n.x)
+                .attr(SVGAttrs.cy, n => n.y)
+                .attr(SVGAttrs.r, n => n.radius);
+
+            debugCircleAnchor.exit().remove();
+
+            debugCircleTextAnchor.enter()
+                .append(SVGTags.SVGTextElement)
+                .classed(css.DEBUG_TEXT + css.DEBUG_NODE, true)
+                .attr(SVGAttrs.x, _ => _.x + _.radius + 0.8)
+                .attr(SVGAttrs.y, _ => _.y + (_.radius / 3))
+                .text(n => ` ${n.toString()} ${n.id}_debug`);
+
+            debugCircleTextAnchor
+                .attr(SVGAttrs.x, _ => _.x + _.radius + 0.8)
+                .attr(SVGAttrs.y, _ => _.y + (_.radius / 3));
+
+            debugCircleTextAnchor.exit().remove();
+
+
+        }
+
+    }
+
+    initDebug(d3selection: AnySelection): void {
+        if (!this.debugAnchor && this.debugMode)
+            this.debugAnchor =
+                d3selection.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, css.DEBUG_NODE);
+
+    }
 
 }
