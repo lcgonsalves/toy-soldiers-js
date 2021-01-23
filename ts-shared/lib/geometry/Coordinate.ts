@@ -8,6 +8,7 @@ import IComparable from "../util/IComparable";
 export interface ICoordinate extends IComparable {
     readonly x: number;
     readonly y: number;
+    readonly copy: ICoordinate;
 
     /**
      * Returns the midpoint between two point-like items.
@@ -58,6 +59,10 @@ export class Coordinate implements ICoordinate {
     public get x(): number {
         return this._x;
     }
+    public get copy(): Coordinate {
+        return new Coordinate(this.x, this.y);
+    }
+
     static get origin(): ICoordinate { return new Coordinate(0,0); }
 
     private _x: number;

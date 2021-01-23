@@ -1,6 +1,6 @@
 import IComparable from "../util/IComparable";
 import {Interval} from "./Interval";
-import {ICoordinate} from "./Coordinate";
+import {Coordinate, ICoordinate} from "./Coordinate";
 
 /**
  * Defines abstracts the concept of two dimensional intervals
@@ -31,16 +31,13 @@ export default class Domain implements IComparable {
     }
 
     /**
-     * Moves given coordinate to a position that is coherent with
+     * Returns a new coordinate moved to a position that is coherent with
      * the domain.
      *
      * @param {ICoordinate} coord the given coordinate
      */
-    public snap(coord: ICoordinate) {
-        const x = this.x.snap(coord.x);
-        const y = this.y.snap(coord.y);
-
-        return coord.translateTo(x,y);
+    public snap<CoordinateLike extends ICoordinate>(coord: CoordinateLike): ICoordinate {
+        return coord.copy;
     }
 
 }

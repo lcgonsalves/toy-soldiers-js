@@ -1,5 +1,6 @@
 import SimpleDirectedGraph from "../graph/SimpleDirectedGraph";
 import {IGraphNode} from "../graph/GraphInterfaces";
+import {ICoordinate} from "../geometry/Coordinate";
 
 /**
  *  Map container. Coordinates node interaction.
@@ -20,6 +21,12 @@ export default abstract class WorldContext<Unit extends IGraphNode> extends Simp
         this.associatedContexts.push(otherContext);
         // todo: impl relationship
     }
+
+    /**
+     * Snaps given coordinate to a valid coordinate, according to the rules of the particular world context.
+     * @param coordinate
+     */
+    public abstract snap(coordinate: ICoordinate): ICoordinate;
 
 }
 

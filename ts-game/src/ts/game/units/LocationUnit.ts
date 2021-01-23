@@ -142,8 +142,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         this.initializeDrag();
 
-        setTimeout(() => this.debugMode = true, 3000)
-
     }
 
     /**
@@ -186,19 +184,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         const tangentPoint = getArcToTangentPoint(e, intersectingNode, 5);
         p.arcTo(tangentPoint.x, tangentPoint.y, e.to.x, e.to.y, getCurveRadius(e, intersectingNode, 5));
 
-        if (intersectingNodes !== undefined) {
-
-            // todo: remove debug
-            this.renderDebugHelpers(
-                [
-                    ...intersectingNodes,
-                    new LocationNode("tangent_point", 1, tangentPoint.x, tangentPoint.y)
-                ],
-                []
-            )
-
-        }
-
         p.lineTo(to.x, to.y);
 
         return p.toString();
@@ -238,7 +223,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 function (elem: SVGGElement, evt: any) {
                     const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
                     config.snapWhileDragging ?
-                        selfRef.translateToCoord(worldContext.domain.snap(eventCoordinate)) :
+                        selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
                         selfRef.translateToCoord(eventCoordinate);
 
                 });
@@ -249,7 +234,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
                     const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
                     config.snapOnEnd ?
-                        selfRef.translateToCoord(worldContext.domain.snap(eventCoordinate)) :
+                        selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
                         selfRef.translateToCoord(eventCoordinate);
 
                 });
