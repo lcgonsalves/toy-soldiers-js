@@ -80,7 +80,11 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
             const pt = [...points.values()].sort((a, b) => a.distance(coordinate) - b.distance(coordinate));
 
-            for (let i = 0; i < pt.length; i++) if (!this.containsNodeAtLocation(pt[i])) return pt[i];
+            for (let i = 0; i < pt.length; i++) {
+                const nodeAtPoint = this.getNodeAtPosition(pt[i]);
+
+                if (!nodeAtPoint || nodeAtPoint.equals(coordinate)) return pt[i];
+            }
             // if all are occupied, return undefined
             return undefined;
 

@@ -84,6 +84,11 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
         return out;
     }
 
+    getNodeAtPosition(location: ICoordinate): Node | undefined {
+        for (let node of this.nodes.values()) if (node.distance(location) === 0) return node;
+        return undefined;
+    }
+
     getNodesInVicinity(center: ICoordinate, radius: number): Node[] {
         return this.nodeArr().filter((n): boolean => n.distance(center) <= radius);
     }

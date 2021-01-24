@@ -181,11 +181,18 @@ export interface IGraph<Node extends IGraphNode>
     containsNodesInVicinity(center: ICoordinate, radius: number): boolean;
 
     /**
-     * Retrieves node at a given coordinate, if one exists. Otherwise returns undefined.
+     * Retrieves nodes at a given coordinate, if they exists.
      *
      * @param {ICoordinate} location
      */
     getNodesAtPosition(location: ICoordinate): Node[];
+
+    /**
+     * Retrieves node at a given coordinate, if one exists. Otherwise returns undefined.
+     *
+     * @param {ICoordinate} location
+     */
+    getNodeAtPosition(location: ICoordinate): Node | undefined;
 
     /** returns true if there is a node at a given location */
     containsNodeAtLocation(location: ICoordinate): boolean;

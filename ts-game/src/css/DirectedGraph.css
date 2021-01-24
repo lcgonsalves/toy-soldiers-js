@@ -9,7 +9,7 @@
     stroke: #222222;
 }
 
-.location_node_unit:hover {
+.LocationNodeUnit:hover {
     fill: #a9a959;
     cursor: grab;
     stroke-width: 0.15;
