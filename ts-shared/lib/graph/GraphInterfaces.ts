@@ -3,8 +3,6 @@ import {ILine} from "../geometry/Line";
 import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
 import Vector from "../util/Vector";
-import {Interval} from "../geometry/Interval";
-import DeprecatedNode from "./deprecated/DeprecatedNode";
 
 /**
  * Generically describes items that have graph node properties. They can be

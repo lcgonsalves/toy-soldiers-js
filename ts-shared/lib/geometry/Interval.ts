@@ -170,4 +170,13 @@ export class Interval implements IComparable {
 
     }
 
+    public flatMap<T>(middleware: (n: number, index: number) => T[]): T[] {
+
+        let out: T[] = [];
+
+        this.forEach((n, i) => out.push(...middleware(n, i)));
+
+        return out;
+
+    }
 }

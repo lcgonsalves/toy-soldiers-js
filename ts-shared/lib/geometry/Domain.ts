@@ -30,14 +30,17 @@ export default class Domain implements IComparable {
         return this.x.equals(other.x) && this.y.equals(other.y);
     }
 
+    contains(other: ICoordinate): boolean {
+        return this.x.contains(other.x) && this.y.contains(other.y);
+    }
+
     /**
-     * Returns a new coordinate moved to a position that is coherent with
-     * the domain.
+     * Snaps coordinate to appropriate position by translating it to the nearest valid combination of x and y values.
      *
      * @param {ICoordinate} coord the given coordinate
      */
     public snap<CoordinateLike extends ICoordinate>(coord: CoordinateLike): ICoordinate {
-        return coord.copy;
+        return coord.translateTo(this.x.snap(coord.x), this.y.snap(coord.y));
     }
 
 }

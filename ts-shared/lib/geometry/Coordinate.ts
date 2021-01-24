@@ -23,6 +23,17 @@ export interface ICoordinate extends IComparable {
     distance(other: ICoordinate): number;
 
     /**
+     * Returns the distance between two point-like items, separated into
+     * the x and y component, such that applying translateBy() using the output
+     * of this function would result in the same transformation as calling translateToCoord().
+     * @param other
+     */
+    distanceInComponents(other: ICoordinate): {
+        x: number,
+        y: number
+    };
+
+    /**
      * Returns a vector calculated between this coordinate
      * and another given coordinate.
      * @param other
@@ -53,6 +64,7 @@ export interface ICoordinate extends IComparable {
 }
 
 export class Coordinate implements ICoordinate {
+
     public get y(): number {
         return this._y;
     }
@@ -95,9 +107,14 @@ export class Coordinate implements ICoordinate {
      */
     distance(other: ICoordinate): number {
 
+        if (
+            other.x === this.x
+        ) return Math.abs(other.y - this.y);
+        else if (other.y === this.y)
+            return Math.abs(other.x - this.x);
         return Math.sqrt(
-            Math.pow(this._x - other.x, 2) +
-            Math.pow(this._y - other.y, 2)
+            Math.pow(other.x - this.x, 2) +
+            Math.pow(other.y - this.y, 2)
         )
 
     }
@@ -117,6 +134,12 @@ export class Coordinate implements ICoordinate {
         this._x = x;
         this._y = y;
         return this;
+    }
+
+    distanceInComponents(other: ICoordinate): { x: number; y: number } {
+        const v = this.vectorTo(other);
+
+        return {x: v.at(0), y: v.at(1)};
     }
 
     translateToCoord(other: ICoordinate): ICoordinate {

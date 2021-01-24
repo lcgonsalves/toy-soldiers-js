@@ -39,7 +39,8 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     containsNodeAtLocation(location: ICoordinate): boolean {
 
         for (let node of this.nodeArr()) {
-            if (node.distance(location) === 0) return true;
+            if (node.distance(location) === 0)
+                return true;
         }
 
         return false;
