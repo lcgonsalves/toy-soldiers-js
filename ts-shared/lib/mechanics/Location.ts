@@ -23,10 +23,9 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
      *
      * @param coordinate
      */
-    snap(coordinate: ICoordinate): ICoordinate {
+    snap(coordinate: N): ICoordinate {
 
         const errorMessage = "Somehow I fucked up the math. If you see this error, you fucked up the math. Go fix the code";
-        const hardCapOnSizeOfGuesses = 4;
 
         // make a copy
         const c = this.domain.snap(coordinate.copy);
@@ -63,7 +62,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
             // all available points in the square are defined within the following domain
             const domain = new Domain(
-                new Interval(square.topLeft.x, square.topLeft.x, this.domain.x.step),
+                new Interval(square.topLeft.x, square.topRight.x, this.domain.x.step),
                 new Interval(square.topLeft.y, square.bottomLeft.y, this.domain.y.step)
             );
 
@@ -72,12 +71,16 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
             // since this function is only called after the call on the previous depth failed, we can skip the inner squares
             // i.e. we just check the outer points on the square
             domain.x.forEach(x => {
-                points.set(`[${x}, ${domain.y.min}]`, new Coordinate(x, domain.y.min))
-                points.set(`[${x}, ${domain.y.max}]`, new Coordinate(x, domain.y.max))
+                const top = new Coordinate(x, domain.y.min);
+                const bottom = new Coordinate(x, domain.y.max);
+                points.set(top.toString(), top);
+                points.set(bottom.toString(), bottom);
             });
             domain.y.forEach(y => {
-                points.set(`[${domain.x.min}, ${y}]`, new Coordinate(domain.x.min, y))
-                points.set(`[${domain.x.max}, ${y}]`, new Coordinate(domain.x.max, y))
+                const left = new Coordinate(domain.x.min, y);
+                const right = new Coordinate(domain.x.max, y);
+                points.set(left.toString(), left);
+                points.set(right.toString(), right);
             });
 
             const pt = [...points.values()].sort((a, b) => a.distance(coordinate) - b.distance(coordinate));
@@ -87,6 +90,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
                 if (!nodeAtPoint || nodeAtPoint.equals(coordinate)) return pt[i];
             }
+
             // if all are occupied, return undefined
             return undefined;
 
@@ -113,7 +117,8 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         // somehow none of the starting squares contains the original coord...
         if (!startingSquare) throw new Error(errorMessage);
         else {
-            return findClosestAvailableCoordinateRec(startingSquare);
+            const finalCoord = findClosestAvailableCoordinateRec(startingSquare);
+            return coordinate.translateToCoord(finalCoord);
         }
 
     }

@@ -1,4 +1,4 @@
-import {Coordinate} from "../geometry/Coordinate";
+import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
 import {Edge} from "./SimpleDirectedEdge";
 import WorldContext from "../mechanics/WorldContext";
@@ -33,6 +33,9 @@ export default abstract class AbstractNode
         this._worldContext = value;
     }
 
+    equals(other: ICoordinate): boolean {
+        return super.equals(other) && other instanceof AbstractNode && other.id === this.id;
+    }
 
     protected constructor(id: string, x: number, y: number, radius: number) {
         super(x, y);

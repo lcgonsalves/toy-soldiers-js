@@ -319,7 +319,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
 
                 config.snapWhileDragging ?
-                    selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
+                    worldContext.snap(selfRef) :
                     selfRef.translateToCoord(eventCoordinate);
 
             });
