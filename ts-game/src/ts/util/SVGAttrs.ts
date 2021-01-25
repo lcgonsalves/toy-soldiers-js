@@ -12,6 +12,10 @@ export default abstract class SVGAttrs {
     public static readonly height: string = "height";
     public static readonly fill: string = "fill";
     public static readonly pointerEvents: string = "pointer-events";
+    public static readonly strokeWidth: string = "stroke-width";
+    public static readonly stroke: string = "stroke";
+    public static readonly rx: string = "rx";
+    public static readonly display: string = "display";
 
 }
 

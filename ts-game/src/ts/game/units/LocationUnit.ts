@@ -3,25 +3,22 @@
  */
 import LocationNode from "ts-shared/build/lib/graph/LocationNode";
 import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {BaseType, select, Selection} from "d3-selection";
+import {select, Selection} from "d3-selection";
 import SVGTags from "../../util/SVGTags";
-import DrawHelpers, {AnySelection} from "../../util/DrawHelpers";
+import {AnySelection, getArcToTangentPoint, getCurveRadius} from "../../util/DrawHelpers";
 import SVGAttrs from "../../util/SVGAttrs";
 import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
 import {path} from "d3-path";
-import {DragEvents, DragHandler, IDraggable, INodeUnit} from "./UnitInterfaces";
+import {DragEvents, DragHandler, Handler, IDraggable, INodeUnit} from "./UnitInterfaces";
 import {DestinationInvalidError} from "../../util/Errors";
-import {drag, DragBehavior, SubjectPosition} from "d3-drag";
+import {drag} from "d3-drag";
 import {GameMapConfig} from "../map/GameMapHelpers";
+import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
+import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
 
 type ContainerElement = SVGGElement;
 type LocationUnitSelection<Datum> = Selection<ContainerElement, Datum, any, any>;
 type Edge = IGraphEdge<LocationUnit, LocationUnit>;
-
-const {
-    getArcToTangentPoint,
-    getCurveRadius
-} = DrawHelpers;
 
 export enum css {
     GRABBED = "grabbed",
@@ -33,7 +30,9 @@ export enum css {
     DEBUG = "debug",
     DEBUG_NODE = "debug_node",
     DEBUG_EDGE = "debug_edge",
-    DEBUG_TEXT = "debug_text"
+    DEBUG_TEXT = "debug_text",
+    NONE = "none",
+    INLINE = "inline"
 }
 
 export default class LocationUnit extends LocationNode implements INodeUnit, IDraggable {
@@ -43,12 +42,19 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected edgeAnchor: LocationUnitSelection<Edge> | undefined;
     protected debugAnchor:LocationUnitSelection<LocationUnit> | undefined;
     protected config: GameMapConfig = GameMapConfig.default
+
+    // drag handlers
     protected readonly dragStartHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragEndHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
 
-    private _debugMode: boolean = false;
+    // hover handlers
+    protected readonly onMouseInHandlers: Map<string, Handler> = new Map<string, any>();
+    protected readonly onMouseOutHandlers: Map<string, Handler> = new Map<string, any>();
 
+    protected shouldDisplayLabel: boolean = false;
+
+    private _debugMode: boolean = false;
 
     get debugMode(): boolean {
         return this._debugMode;
@@ -120,7 +126,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         // set attrs
         anchor.attr(SVGAttrs.id, this.id)
-              .classed(this.cls, true);
+              .classed(this.cls, true)
+              .on("mouseenter", this.applyAllHandlers(this.onMouseInHandlers))
+              .on("mouseleave", this.applyAllHandlers(this.onMouseOutHandlers));
 
         // data join
 
@@ -137,8 +145,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.anchor.append<SVGTextElement>(SVGTags.SVGTextElement)
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
+            .attr(SVGAttrs.display, this.shouldDisplayLabel ? css.INLINE : css.NONE)
             .text(node => node.id)
-            .classed(css.NODE_LABEL, true);
+            .classed(css.NODE_LABEL, true)
 
         this.initializeDrag();
 
@@ -189,6 +198,13 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return p.toString();
     }
 
+    associate<Node extends AbstractNode, Context extends WorldContext<Node>>(worldContext: Context): AbstractNode {
+        // refresh default handlers because of association
+        this.setDefaultDragHandlers();
+
+        return super.associate(worldContext);
+    }
+
     translateToCoord(other: ICoordinate): ICoordinate {
 
         super.translateToCoord(other);
@@ -206,39 +222,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 dragStartHandlers,
                 dragHandlers,
                 dragEndHandlers,
-                config,
-                worldContext
             } = this;
 
-            const selfRef = this;
-
-            // default drag handlers
-            this.dragStartHandlers.set(
-                "default",
-                function (elem: SVGGElement, evt: any) {
-                    select(elem).classed(css.GRABBED, true);
-                });
-            this.dragHandlers.set(
-                "default",
-                function (elem: SVGGElement, evt: any) {
-                    const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
-                    config.snapWhileDragging ?
-                        selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
-                        selfRef.translateToCoord(eventCoordinate);
-
-                });
-            this.dragEndHandlers.set(
-                "default",
-                function (elem: SVGGElement, evt: any) {
-                    select(elem).classed(css.GRABBED, false);
-
-                    const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
-                    config.snapOnEnd ?
-                        selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
-                        selfRef.translateToCoord(eventCoordinate);
-
-                });
-
+            this.setDefaultDragHandlers();
 
             d.on(DragEvents.START, function (this: SVGGElement, event: any, coords: ICoordinate): void {
 
@@ -261,6 +247,48 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             this.anchor.call(d);
 
         }
+
+    }
+
+    setDefaultDragHandlers(): void {
+
+        const {
+            config,
+            worldContext
+        } = this;
+
+        this.dragStartHandlers.set(
+            "default",
+            function (elem: SVGGElement, evt: any) {
+                select(elem).classed(css.GRABBED, true);
+            });
+        this.dragHandlers.set(
+            "default",
+            function (elem: SVGGElement, evt: any) {
+
+                const selfRef = select<SVGGElement, LocationUnit>(elem).datum();
+                const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
+
+                config.snapWhileDragging ?
+                    selfRef.translateToCoord(worldContext.snap(eventCoordinate)) :
+                    selfRef.translateToCoord(eventCoordinate);
+
+            });
+        this.dragEndHandlers.set(
+            "default",
+            function (elem: SVGGElement, evt: any) {
+                select(elem).classed(css.GRABBED, false);
+
+                const selfRef = select<SVGGElement, LocationUnit>(elem).datum();
+                const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
+
+                console.log(worldContext)
+
+                config.snapOnEnd ?
+                    worldContext.snap(selfRef):
+                    selfRef.translateToCoord(eventCoordinate);
+
+            });
 
     }
 
@@ -302,6 +330,69 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     removeOnDragStart(actionName: string): boolean {
         return this.dragStartHandlers.delete(actionName);
+    }
+
+    onMouseIn(actionName: string, newAction: Handler): string {
+
+        this.onMouseInHandlers.set(actionName, newAction);
+
+        return actionName;
+
+    }
+
+    removeOnMouseIn(actionName: string): boolean {
+        return this.onMouseInHandlers.delete(actionName);
+    }
+
+    onMouseOut(actionName: string, newAction: Handler): string {
+
+        this.onMouseOutHandlers.set(actionName, newAction);
+
+        return actionName;
+
+    }
+
+    removeOnMouseOut(actionName: string): boolean {
+        return this.onMouseOutHandlers.delete(actionName);
+    }
+
+    applyAllHandlers(handlers: Map<string, Handler>): Handler {
+
+        return function (this: SVGGElement, event: any) {
+
+            // typescript doesn't like function "this" contexts
+            for (let handler of handlers.values()) {
+                // @ts-ignore
+                handler(this, event)
+            }
+
+        }
+
+    }
+
+    showLabel(): void {
+
+        this.shouldDisplayLabel = true;
+
+        this.anchor?.select("." + css.NODE_LABEL)
+            .attr(SVGAttrs.display, css.INLINE);
+
+    }
+
+    hideLabel(): void {
+
+        this.shouldDisplayLabel = false;
+
+        this.anchor?.select("." + css.NODE_LABEL)
+            .attr(SVGAttrs.display, css.NONE);
+
+    }
+
+    toggleLabel(): void {
+
+        if (this.shouldDisplayLabel) this.hideLabel();
+        else this.showLabel();
+
     }
 
     refresh(): void {

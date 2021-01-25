@@ -45,7 +45,7 @@ export default abstract class AbstractNode
      * cryptically. :D
      * @param worldContext
      */
-    associate(worldContext: WorldContext<IGraphNode>): AbstractNode {
+    associate<Node extends AbstractNode, Context extends WorldContext<Node>>(worldContext: Context): AbstractNode {
         this.worldContext = worldContext;
         return this;
     }

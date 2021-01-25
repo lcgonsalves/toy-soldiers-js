@@ -20,6 +20,7 @@ export interface INodeUnit extends IGameUnit {
 }
 
 export type DragHandler = (evt: any, n: IDraggable, coords: ICoordinate) => void
+export type Handler = (this: SVGGElement, event: any) => void
 
 export interface IDraggable extends ICoordinate {
 

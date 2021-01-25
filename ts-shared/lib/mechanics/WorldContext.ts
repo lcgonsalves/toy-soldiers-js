@@ -6,21 +6,6 @@ import {ICoordinate} from "../geometry/Coordinate";
  *  Map container. Coordinates node interaction.
  */
 export default abstract class WorldContext<Unit extends IGraphNode> extends SimpleDirectedGraph<Unit>{
-    // contains all interactions where the unit in this context is the actor
-    public readonly registeredInteractions: Array<Interaction<Unit, IGraphNode>>  = [];
-    // contains all interactions where this context is the actor
-    public readonly registeredContextInteractions: Array<ContextInteraction<Unit, IGraphNode>> = [];
-    // contexts that are bound to one another
-    public readonly associatedContexts: Array<WorldContext<IGraphNode>> = [];
-
-    public registerInteraction(interaction: Interaction<any, any>): void {
-        this.registeredInteractions.push(interaction);
-    }
-
-    public associate(otherContext: WorldContext<Unit>, relationship: Relationship): void {
-        this.associatedContexts.push(otherContext);
-        // todo: impl relationship
-    }
 
     /**
      * Snaps given coordinate to a valid coordinate, according to the rules of the particular world context.

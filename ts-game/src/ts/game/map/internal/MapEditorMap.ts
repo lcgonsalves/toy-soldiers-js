@@ -1,12 +1,19 @@
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
-import {Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {BaseType, select} from "d3-selection";
+import {C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {BaseType, select, Selection} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {GameMapHelpers} from "../GameMapHelpers";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
 import LocationUnit from "../../units/LocationUnit";
+import {AnySelection, rect, RectConfig} from "../../../util/DrawHelpers";
+import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
+import {IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
+import MenuContext from "./MenuContext";
+import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
+import LocationNode from "ts-shared/build/lib/graph/LocationNode";
 
 const {GraphZoomBehavior} = GameMapHelpers;
 
@@ -20,12 +27,14 @@ interface MapEditorMapConfig {
 enum mapEditorMapCSS {
     BG_ELEM_ID = "bg_elememnt",
     MAIN = "main_element",
+    BOTTOM_MENU = "bottom_menu",
     GRID_ID = "grid_element",
     GRID_CLS = "grid",
     NODE_CONTAINER_ID = "nodes",
     NODE_CONTAINER_CLS = "node",
     POINTER_EVENTS = "none",
     EDGE_CONTAINER_ID = "edges",
+    GAME_UNIT_BOX = "game_unit_box",
 }
 
 /**
@@ -35,6 +44,7 @@ export class MapEditorMap {
     // define here which contexts this map handles
     public readonly nodeContext: LocationContext<LocationUnit>;
 
+    // putting all of the boilerplate in here
     constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
         this.nodeContext = nodeContext;
 
@@ -117,6 +127,7 @@ export class MapEditorMap {
         const edgeContainer = mainGroup.append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, mapEditorMapCSS.EDGE_CONTAINER_ID);
 
+        // TODO: make this part available to reattach incoming nodes
         // append nodes svg group
         const nodeContainer = mainGroup.append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, mapEditorMapCSS.NODE_CONTAINER_ID)
@@ -128,7 +139,7 @@ export class MapEditorMap {
             n.attachDepictionTo(nodeContainer);
             n.attachEdgeDepictionTo(edgeContainer);
 
-            const action = {
+            const refreshEndpoints = {
                 key: "refresh_edge_endpoints",
                 apply: function () {
 
@@ -140,13 +151,72 @@ export class MapEditorMap {
 
                 }
             }
+            const toggleLabel = {
+                key: "toggle_label"
+            }
 
             // detect when nodes move and react to it
-            n.onDrag(action.key, action.apply)
-            n.onDragEnd(action.key, action.apply)
+            n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
+            n.onDrag(toggleLabel.key, () => n.showLabel());
+            n.onDragEnd(refreshEndpoints.key, () => refreshEndpoints.apply());
+            n.onMouseIn(toggleLabel.key, () => n.showLabel());
+            n.onMouseOut(toggleLabel.key, () => n.hideLabel());
 
         });
+
+        // append and instantiate all elements of the bottom menu
+        this.initBottomMenu(anchor);
         
+    }
+
+    /** Constructs and mounts bottom menu */
+    private initBottomMenu(anchor: SVGSVGElement): void {
+        // contains the nodes that can be added
+        const menuContext: MenuContext = new MenuContext();
+        menuContext.onNodeRemoval = (node: LocationUnit) => {
+            this.nodeContext.add(node);
+            // node.attachDepictionTo()
+        };
+
+        const selection = select(anchor)
+            .append(SVGTags.SVGGElement)
+            .classed(mapEditorMapCSS.BOTTOM_MENU, true);
+
+        // todo: make generic for types and content of buttons
+        const mainContainerProperties = new RectConfig(
+            C(5, 82),
+            90,
+            100 - 85
+        );
+
+        // main container
+        rect(selection, mainContainerProperties);
+        const gameUnitBox = selection.append(SVGTags.SVGGElement)
+            .classed(mapEditorMapCSS.GAME_UNIT_BOX, true);
+
+        // add boxes
+        const boxLength = mainContainerProperties.height / 2.5;
+        const prevBoxConfig = new RectConfig(mainContainerProperties.topLeft.copy.translateBy(1,1), boxLength, boxLength);
+        const boxSelection = rect(gameUnitBox, prevBoxConfig);
+        const temporaryNode = new LocationUnit(
+            "click_to_change_name",
+            "temp_node_" + this.nodeContext.nodes.size + 1,
+            Rectangle.fromCorners(
+                prevBoxConfig.topLeft,
+                prevBoxConfig.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
+            ),
+            prevBoxConfig.height * 0.35
+        );
+        menuContext.add(temporaryNode);
+        temporaryNode.attachDepictionTo(gameUnitBox);
+
+        rect(selection, new RectConfig(prevBoxConfig.topLeft.copy.translateBy(0, prevBoxConfig.height + 1), prevBoxConfig.width, prevBoxConfig.height));
+
+        // todo: dragging within box will snap back to source location
+
+        // todo: drag node from box transforms it to the appropriate size
+
+        // todo: dropping node in graph adds it to graph, disconnected
     }
     
 }

@@ -10,7 +10,9 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
     // all nodes in the location context must be associated with said context
     add(...n: N[]): LocationContext<N> {
         super.add(...n);
-        n.forEach(_ => _.associate(this));
+        n.forEach(_ => {
+            _.associate(this);
+        });
         return this;
     }
 
@@ -61,7 +63,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
             // all available points in the square are defined within the following domain
             const domain = new Domain(
-                new Interval(square.topLeft.x, square.topRight.x, this.domain.x.step),
+                new Interval(square.topLeft.x, square.topLeft.x, this.domain.x.step),
                 new Interval(square.topLeft.y, square.bottomLeft.y, this.domain.y.step)
             );
 

@@ -175,3 +175,11 @@ export class Coordinate implements ICoordinate {
     }
 
 }
+
+/**
+ * Shorthand for instantiating coordinates.
+ * @param x
+ * @param y
+ * @constructor
+ */
+export function C(x: number, y: number): ICoordinate { return new Coordinate(x,y) }
