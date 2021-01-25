@@ -181,6 +181,13 @@ export interface IGraph<Node extends IGraphNode>
     containsNodesInVicinity(center: ICoordinate, radius: number): boolean;
 
     /**
+     * Returns nodes in this graph who have an edge
+     * connecting to this node.
+     * @param nodeID
+     */
+    getNodesAdjacentTo(node: IGraphNode): Node[];
+
+    /**
      * Retrieves nodes at a given coordinate, if they exists.
      *
      * @param {ICoordinate} location

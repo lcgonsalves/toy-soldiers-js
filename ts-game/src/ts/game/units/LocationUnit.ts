@@ -247,6 +247,17 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return p.toString();
     }
 
+    protected shrinkEdgePath(e: Edge): string {
+
+        const p = path();
+
+        p.moveTo(e.from.x, e.from.y);
+        p.lineTo(e.from.x, e.from.y);
+
+        return p.toString();
+
+    }
+
     associate<Node extends AbstractNode, Context extends WorldContext<Node>>(worldContext: Context): AbstractNode {
         // refresh default handlers because of association
         this.setDefaultDragHandlers();
@@ -260,6 +271,14 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.refresh();
 
         return this;
+    }
+
+    disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
+
+        super.disconnectFrom(other, bidirectional);
+        this.refreshEdgeDepiction();
+        return this;
+
     }
 
     initializeDrag(): void {
@@ -492,8 +511,21 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             const edges = this.edgeAnchor.selectAll<SVGPathElement, Edge>(SVGTags.SVGPathElement)
                 .data<Edge>(this.edges, _ => _.id);
 
+            edges.enter()
+                .append<SVGGElement>(SVGTags.SVGGElement) // select and append 1 group per edge
+                .classed(LocationUnitCSS.EDGE, true)
+                .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
+                .classed(LocationUnitCSS.EDGEPATH, true)
+                .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
+
             // edge update
             edges.attr(SVGAttrs.d, this.drawEdgePath.bind(this));
+
+            edges.exit<Edge>()
+                .transition()
+                .duration(200)
+                .attr(SVGAttrs.d, this.shrinkEdgePath)
+                .remove();
 
         }
 

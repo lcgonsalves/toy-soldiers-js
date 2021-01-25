@@ -105,6 +105,12 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
         return intersects;
     }
 
+    getNodesAdjacentTo(node: IGraphNode): Node[] {
+
+        return this.nodeArr().filter(nodeInGraph => nodeInGraph.isAdjacent(node));
+
+    }
+
     getOrElse<T>(id: string, fallbackValue: T): Node | T {
         const node: Node = this.nodes.get(id);
         return !!node ? node : fallbackValue;

@@ -35,6 +35,12 @@
     opacity: 75%;
 }
 
+.tooltip_action_button {
+    font-family: "JetBrains Mono";
+    font-size: 2px;
+    cursor: pointer;
+}
+
 .debug_node {
     fill: none;
     stroke: #85001c;

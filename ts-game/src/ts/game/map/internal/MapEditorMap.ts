@@ -45,6 +45,7 @@ enum mapEditorMapCSS {
 
 /**
  * Basically tracks and renders contexts in the svg.
+ * AKA: dumping zone for stuff I have no clue where should be defined.
  */
 export class MapEditorMap {
     // contexts
@@ -276,6 +277,27 @@ export class MapEditorMap {
     /** instantiates the tooltip */
     private initializeTooltip(anchor: SVGSVGElement): void {
 
+        /** when remove button is clicked, this is what happens */
+        const removeNode = {
+            key: "remove_node",
+            apply: (n: LocationUnit) => {
+
+                this.nodeContext.rm(n.id);
+                const adj = this.nodeContext.getNodesAdjacentTo(n);
+
+                adj.forEach(adj => adj.disconnectFrom(n, true))
+
+                n.deleteDepiction();
+                n.deleteEdgeDepiction();
+
+                setCurrentNode(undefined);
+
+                hideTooltip.apply(0)();
+
+            },
+            btnColor: "red"
+        };
+
         const hideTooltip = {
             key: "hide_tooltip",
             apply: (delay: number = 1000) => () => {
@@ -294,21 +316,6 @@ export class MapEditorMap {
                 .delay(delay)
                 .duration(0)
                 .attr(SVGAttrs.display, LocationUnitCSS.INLINE)
-        };
-
-        const removeNode = {
-            key: "remove_node",
-            apply: (n: LocationUnit) => {
-
-                this.nodeContext.rm(n.id);
-                n.deleteDepiction();
-                n.deleteEdgeDepiction();
-                setCurrentNode(undefined);
-
-                hideTooltip.apply(0)();
-
-            },
-            btnColor: "red"
         };
 
         const moveTooltipToNode = {
@@ -458,10 +465,12 @@ export class MapEditorMap {
             key: string,
             btnColor: string
         }, any, any> = rect(actionButtons, properties.getConfigForAction(""));
+
+
         const actionBtnLabel = actionButtons
             .append(SVGTags.SVGTextElement)
             .text(action => action.key)
-            .attr(SVGAttrs.fontSize, 1.5)
+            // .attr(SVGAttrs.fontSize, 1.5)
             .attr(SVGAttrs.width, action => properties.getConfigForAction(action.key).width)
             .attr(SVGAttrs.height, action => properties.getConfigForAction(action.key).height);
 
