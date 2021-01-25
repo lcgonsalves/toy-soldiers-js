@@ -263,9 +263,17 @@ export class MapEditorMap {
     /** instantiates the tooltip */
     private initializeTooltip(anchor: SVGSVGElement): void {
 
+        const hideTooltip = {
+            key: "hide_tooltip",
+            apply: () => selection.transition(hideTooltip.key).delay(1000).attr(SVGAttrs.display, LocationUnitCSS.NONE)
+        }
+
         const selection = select(anchor)
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.TOOLTIP, true);
+            .classed(mapEditorMapCSS.TOOLTIP, true)
+            .attr(SVGAttrs.display, LocationUnitCSS.NONE)
+            .on("mouseover", () => selection.interrupt("hide_tooltip"))
+            .on("mouseleave", hideTooltip.apply);
 
         const actions = [
 
@@ -278,12 +286,10 @@ export class MapEditorMap {
         ).withFill("black");
 
         const rectangle = rect(selection, properties)
-            // .attr(SVGAttrs.display, LocationUnitCSS.NONE);
 
         // draw tip, starting from half - 5%, going down x units, up into half + 5%, close
         const tip = selection.append<SVGPathElement>(SVGTags.SVGPathElement)
             .attr(SVGAttrs.fill, properties.fill)
-            // .attr(SVGAttrs.display, LocationUnitCSS.NONE)
             .attr(SVGAttrs.d, () => {
                 const p = path();
 
@@ -298,18 +304,30 @@ export class MapEditorMap {
         // handle reactivity
         for (let node of this.nodeContext.nodeArr()) {
 
-            node.onMouseIn("display_tooltip", () => {
+            node.onMouseIn("move_tooltip_to_node", () => {
 
                 // move bounding square to node
                 properties.translateToCoord(new Coordinate(node.x, node.y - node.radius - 0.4));
 
                 // update attributes accordingly
-                rectangle.attr(SVGAttrs.x, properties.bounds.topLeft.x)
+                selection
+                    .interrupt(hideTooltip.key)
+                    .transition()
+                    .delay(400)
+                    .duration(0)
+                    .attr(SVGAttrs.display, LocationUnitCSS.INLINE);
+
+                rectangle
+                    .transition()
+                    .delay(400)
+                    .duration(0)
+                    .attr(SVGAttrs.x, properties.bounds.topLeft.x)
                     .attr(SVGAttrs.y, properties.bounds.topLeft.y);
 
-                console.log(properties.bounds.bottomLeft.y, properties.tip.y)
-
-                tip.attr(SVGAttrs.d, () => {
+                tip.transition()
+                    .delay(400)
+                    .duration(0)
+                    .attr(SVGAttrs.d, () => {
                     const p = path();
 
                     p.moveTo(properties.tipStart.x, properties.tipStart.y);
@@ -317,9 +335,11 @@ export class MapEditorMap {
                     p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
 
                     return p.toString();
-                })
+                });
 
             });
+
+            node.onMouseOut(hideTooltip.key, hideTooltip.apply);
 
         }
 
