@@ -71,7 +71,6 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
     }
 
-
     get(id: string): Node | undefined {
         return this.nodes.get(id);
     }

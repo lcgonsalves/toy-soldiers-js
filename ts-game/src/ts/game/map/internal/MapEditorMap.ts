@@ -36,6 +36,7 @@ enum mapEditorMapCSS {
     POINTER_EVENTS = "none",
     EDGE_CONTAINER_ID = "edges",
     GAME_UNIT_BOX = "game_unit_box",
+    TOOLTIP_ACTION_BUTTON = "tooltip_action_button"
 }
 
 /**
@@ -50,6 +51,7 @@ export class MapEditorMap {
     private readonly nodeContainer: AnySelection;
     private readonly mainGroup: AnySelection;
 
+    private readonly zoomHandlers: Map<string, (scale: number, x: number, y: number) => void> = new Map<string, (scale: number, x: number, y: number) => void>();
 
     // putting all of the boilerplate in here
     constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
@@ -94,7 +96,14 @@ export class MapEditorMap {
                     [bgCoords.topL.x - config.zoomBuffer, bgCoords.topL.y - config.zoomBuffer],
                     [bgCoords.bottomR.x + config.zoomBuffer, bgCoords.bottomR.y + config.zoomBuffer]
                 ])
-                .on("zoom", (event: any) => mainGroup.attr("transform", event.transform.toString()))
+                .on("zoom", (event: any) => {
+                    mainGroup.attr("transform", event.transform.toString());
+
+                    for (let handler of this.zoomHandlers.values()) {
+                        handler(event.transform.k, event.transform.x, event.transform.y);
+                    }
+
+                })
         );
 
         // draw grid
@@ -265,27 +274,119 @@ export class MapEditorMap {
 
         const hideTooltip = {
             key: "hide_tooltip",
-            apply: () => selection.transition(hideTooltip.key).delay(1000).attr(SVGAttrs.display, LocationUnitCSS.NONE)
+            apply: (delay: number = 1000) => () => {
+                // desociate node
+                targetNode = undefined;
+
+                selection.interrupt(showTooltip.key).transition(hideTooltip.key).delay(delay).attr(SVGAttrs.display, LocationUnitCSS.NONE);
+            }
+        };
+
+        const showTooltip = {
+            key: "show_tooltip",
+            apply: (delay: number = 1000) => () => selection
+                .interrupt(hideTooltip.key)
+                .transition(showTooltip.key)
+                .delay(delay)
+                .duration(0)
+                .attr(SVGAttrs.display, LocationUnitCSS.INLINE)
+        };
+
+        const removeNode = {
+            key: "remove_node",
+            apply: (n: LocationUnit) => this.nodeContext.rm(n.id),
+            btnColor: "red"
+        };
+
+        const moveTooltipToNode = {
+            key: "move_tooltip_to_node",
+            apply: (delay: number, node: LocationUnit) => () => {
+
+                // reverse transforms to place node in correct coordinate
+                const g: SVGGElement = this.mainGroup.node();
+                const hasTransforms = g.transform.baseVal.numberOfItems == 2;
+                const translation: {
+                    x: number,
+                    y: number
+                } = hasTransforms ? {
+                    x: g.transform.baseVal.getItem(0).matrix.e,
+                    y: g.transform.baseVal.getItem(0).matrix.f
+                } : {
+                    x: 0,
+                    y: 0
+                };
+                const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
+
+                // move bounding square to node
+                const target = new Coordinate(node.x, node.y - node.radius - 0.4);
+                // properties.translateToCoord(target);
+
+                properties.translateToCoord(target.translateTo(target.x * scale, target.y * scale));
+                properties.translateToCoord(target.translateBy(translation.x, translation.y));
+
+                // update attributes accordingly
+                showTooltip.apply(delay)()
+
+                mainTooltipContainer
+                    .transition()
+                    .delay(delay)
+                    .duration(0)
+                    .attr(SVGAttrs.x, properties.bounds.topLeft.x)
+                    .attr(SVGAttrs.y, properties.bounds.topLeft.y);
+
+                actionBtnRect
+                    .transition()
+                    .delay(delay)
+                    .duration(0)
+                    .attr(SVGAttrs.x, (action) => properties.getConfigForAction(action.key).bounds.topLeft.x)
+                    .attr(SVGAttrs.y, (action) => properties.getConfigForAction(action.key).bounds.topLeft.y)
+                    .attr(SVGAttrs.fill, (action) => action.btnColor);
+
+                tip.transition()
+                    .delay(delay)
+                    .duration(0)
+                    .attr(SVGAttrs.d, () => {
+                        const p = path();
+
+                        p.moveTo(properties.tipStart.x, properties.tipStart.y);
+                        p.lineTo(properties.tip.x, properties.tip.y);
+                        p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
+
+                        return p.toString();
+                    });
+
+            }
         }
 
-        const selection = select(anchor)
-            .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.TOOLTIP, true)
-            .attr(SVGAttrs.display, LocationUnitCSS.NONE)
-            .on("mouseover", () => selection.interrupt("hide_tooltip"))
-            .on("mouseleave", hideTooltip.apply);
+        // the node to which the tooltip refers to
+        let targetNode: LocationUnit | undefined = undefined;
+
+        // when graph zooms, move tooltip to node
+        this.zoomHandlers.set(hideTooltip.key, hideTooltip.apply(0))
 
         const actions = [
-
+            removeNode
         ];
 
         const properties = new TooltipConfig(
             C(0,2),
             8,
-            actions.length + 2
+            actions.map(_ => _.key)
         ).withFill("black");
 
-        const rectangle = rect(selection, properties)
+        const selection = select(anchor)
+            .append(SVGTags.SVGGElement)
+            .classed(mapEditorMapCSS.TOOLTIP, true)
+            .attr(SVGAttrs.display, LocationUnitCSS.NONE)
+            .on("mouseover", () => selection.interrupt(hideTooltip.key))
+            .on("mouseleave", hideTooltip.apply());
+
+        const mainTooltipContainer = rect(selection, properties);
+
+        // map each action to a button
+        const actionButtons = selection.selectAll("." + mapEditorMapCSS.TOOLTIP_ACTION_BUTTON)
+            .data(actions, (a: any) => a.key)
+            .enter();
 
         // draw tip, starting from half - 5%, going down x units, up into half + 5%, close
         const tip = selection.append<SVGPathElement>(SVGTags.SVGPathElement)
@@ -300,46 +401,23 @@ export class MapEditorMap {
                 return p.toString();
             });
 
+        const actionBtnRect: Selection<SVGRectElement, {
+            key: string,
+            btnColor: string
+        }, any, any> = rect(actionButtons, properties.getConfigForAction(""));
 
         // handle reactivity
         for (let node of this.nodeContext.nodeArr()) {
 
-            node.onMouseIn("move_tooltip_to_node", () => {
+            // assign local variable
 
-                // move bounding square to node
-                properties.translateToCoord(new Coordinate(node.x, node.y - node.radius - 0.4));
+            node.onMouseIn(moveTooltipToNode.key, moveTooltipToNode.apply(400, node));
 
-                // update attributes accordingly
-                selection
-                    .interrupt(hideTooltip.key)
-                    .transition()
-                    .delay(400)
-                    .duration(0)
-                    .attr(SVGAttrs.display, LocationUnitCSS.INLINE);
+            node.onMouseOut(hideTooltip.key, hideTooltip.apply());
 
-                rectangle
-                    .transition()
-                    .delay(400)
-                    .duration(0)
-                    .attr(SVGAttrs.x, properties.bounds.topLeft.x)
-                    .attr(SVGAttrs.y, properties.bounds.topLeft.y);
+            node.onDragStart(hideTooltip.key, hideTooltip.apply(0));
 
-                tip.transition()
-                    .delay(400)
-                    .duration(0)
-                    .attr(SVGAttrs.d, () => {
-                    const p = path();
-
-                    p.moveTo(properties.tipStart.x, properties.tipStart.y);
-                    p.lineTo(properties.tip.x, properties.tip.y);
-                    p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
-
-                    return p.toString();
-                });
-
-            });
-
-            node.onMouseOut(hideTooltip.key, hideTooltip.apply);
+            node.onDragEnd(moveTooltipToNode.key, moveTooltipToNode.apply(0, node));
 
         }
 

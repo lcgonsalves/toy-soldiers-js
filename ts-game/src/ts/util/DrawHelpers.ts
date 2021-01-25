@@ -61,15 +61,51 @@ export class TooltipConfig extends RectConfig {
     tip: ICoordinate;
     tipStart: ICoordinate;
     tipEnd: ICoordinate;
+    buttonWidth: number;
+    actions: string[];
+    horizontalMargin: number;
 
-    constructor(topLeft: ICoordinate, width: number, height: number, cls: string = "") {
-        super(topLeft, width, height, cls);
+    public static buttonHeight: number = 2.5;
+    public static verticalMargin: number = 0.25;
+
+    // todo: account for boxes inside tooltip
+
+    constructor(topLeft: ICoordinate, width: number, actions: string [], cls: string = "") {
+
+        super(
+            topLeft,
+            width,
+            // height is calculated as x button heights + button margin, + 1 margin to start
+            (actions.length * (TooltipConfig.buttonHeight + TooltipConfig.verticalMargin)) + TooltipConfig.verticalMargin,
+            cls
+        );
 
         this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.3, 0);
         this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.3), 0);
         this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
+        this.actions = actions;
+
+        // button should take 90% of container width
+        this.buttonWidth = this.width * 0.95;
+        this.horizontalMargin = (this.width - this.buttonWidth) / 2
 
     }
+
+    getConfigForAction(actionKey: string, color: string = this.fill): RectConfig {
+
+        const i = this.actions.indexOf(actionKey);
+        let index = i === -1 ? 0 : i;
+
+        return new RectConfig(
+            this.bounds.topLeft.copy.translateBy(
+                this.horizontalMargin,
+                TooltipConfig.verticalMargin + ((TooltipConfig.buttonHeight + TooltipConfig.verticalMargin) * index)),
+            this.buttonWidth,
+            TooltipConfig.buttonHeight
+        ).withFill(color).withStroke(this.stroke);
+
+    }
+
 
     /** translates bounds and tip representations to given coordinate */
     translateToCoord(c: ICoordinate): TooltipConfig {
