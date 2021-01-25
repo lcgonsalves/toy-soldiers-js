@@ -16,7 +16,7 @@ import {GameMapConfig} from "../map/GameMapHelpers";
 import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
 import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
 import {Transition, transition} from "d3-transition";
-import {easeLinear} from "d3-ease";
+import {easeCubicIn, easeExpIn, easeExpOut, easeLinear} from "d3-ease";
 
 type ContainerElement = SVGGElement;
 type LocationUnitSelection<Datum> = Selection<ContainerElement, Datum, any, any>;
@@ -427,8 +427,8 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         if (this.shouldDisplayLabel)
             this.anchor?.select("." + css.NODE_LABEL)
                 .transition()
-                .duration(150)
-                .ease(easeLinear)
+                .duration(210)
+                .ease(easeExpOut)
                 .attr(SVGAttrs.opacity, "1");
 
     }
@@ -437,8 +437,8 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         this.anchor?.select("." + css.NODE_LABEL)
             .transition()
-            .duration(1500)
-            .ease(easeLinear)
+            .duration(1000)
+            .ease(easeExpIn)
             .attr(SVGAttrs.opacity, "0");
 
     }
@@ -607,12 +607,4 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
-}
-
-const transitions: {
-    fadeIn: Transition<any, any, any, any>
-} = {
-    fadeIn: transition("fade-in")
-        .duration(150)
-        .ease(easeLinear)
 }

@@ -23,7 +23,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
      *
      * @param coordinate
      */
-    snap(coordinate: N): ICoordinate {
+    snap(coordinate: ICoordinate): ICoordinate {
 
         const errorMessage = "Somehow I fucked up the math. If you see this error, you fucked up the math. Go fix the code";
 

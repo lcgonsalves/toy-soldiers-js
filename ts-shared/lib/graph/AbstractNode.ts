@@ -33,6 +33,11 @@ export default abstract class AbstractNode
         this._worldContext = value;
     }
 
+    /**
+     * Shallow equals. A node's identity is not based upon the edges it is connected to, only its location
+     * and identification.
+     * @param other
+     */
     equals(other: ICoordinate): boolean {
         return super.equals(other) && other instanceof AbstractNode && other.id === this.id;
     }

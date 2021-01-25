@@ -37,7 +37,7 @@ describe("Rectangles", function () {
 
         // check that derived values are not nonsense
         compareCoords(square.bottomLeft, new Coordinate(0, 2), "bottom left");
-        compareCoords(square.topLeft, new Coordinate(2, 0), "top right");
+        compareCoords(square.topRight, new Coordinate(2, 0), "top right");
 
         // verify lengths
         assert.strictEqual(square.length.x, 2, `length X ${square.length.x} should be 2`);
@@ -68,7 +68,7 @@ describe("Rectangles", function () {
         square.translateBy(1, 0);
 
         compareCoords(square.topLeft, new Coordinate(1, 0), "top left");
-        compareCoords(square.topLeft, new Coordinate(3, 0), "top right");
+        compareCoords(square.topRight, new Coordinate(3, 0), "top right");
         compareCoords(square.bottomLeft, new Coordinate(1, 2), "bottom left");
         compareCoords(square.bottomRight, new Coordinate(3, 2), "bottom right");
 
@@ -96,14 +96,14 @@ describe("Rectangles", function () {
         const squareMovedToCorner = square.copy.translateToCoord(new Coordinate(2, 2));
 
         compareCoords(squareMovedToCorner.topLeft, new Coordinate(1, 1), "top left");
-        compareCoords(squareMovedToCorner.topLeft, new Coordinate(3, 1), "top right");
+        compareCoords(squareMovedToCorner.topRight, new Coordinate(3, 1), "top right");
         compareCoords(squareMovedToCorner.bottomLeft, new Coordinate(1, 3), "bottom left");
         compareCoords(squareMovedToCorner.bottomRight, new Coordinate(3, 3), "bottom right");
 
         const squareInNegativeCoords = square.copy.translateToCoord(Coordinate.origin);
 
         compareCoords(squareInNegativeCoords.topLeft, new Coordinate(-1, -1), "top left");
-        compareCoords(squareInNegativeCoords.topLeft, new Coordinate(1, -1), "top right");
+        compareCoords(squareInNegativeCoords.topRight, new Coordinate(1, -1), "top right");
         compareCoords(squareInNegativeCoords.bottomLeft, new Coordinate(-1, 1), "bottom left");
         compareCoords(squareInNegativeCoords.bottomRight, new Coordinate(1, 1), "bottom right");
 
@@ -185,7 +185,7 @@ describe("Rectangles", function () {
 
     });
 
-    const positionBeforeSnap = new Coordinate(1.00001, 1.00001);
+    const positionBeforeSnap = new LocationNode("pre", 1, 1.00001, 1.00001);
 
     function testPoints<N extends LocationNode>(ctx: LocationContext<N>, unacceptableCoordinates: N[], distance?: number) {
         // can't overlap any of the noes
@@ -198,7 +198,7 @@ describe("Rectangles", function () {
         // check that there are no coordinates within the domain that could be closer to original coordinate
         const possibleCandidates = ctx.domain.x
             .flatMap(x => ctx.domain.y.map(y => new Coordinate(x, y)))
-            .filter(candidate => unacceptableCoordinates.findIndex(unacceptable => unacceptable.equals(candidate)) === -1);
+            .filter(candidate => unacceptableCoordinates.findIndex(unacceptable => unacceptable.overlaps(candidate)) === -1);
 
         const acceptableCandidates = possibleCandidates.filter(candidate => (candidate.distance(positionBeforeSnap) < snapped.distance(positionBeforeSnap)));
 
