@@ -16,6 +16,7 @@ export default abstract class SVGAttrs {
     public static readonly stroke: string = "stroke";
     public static readonly rx: string = "rx";
     public static readonly display: string = "display";
+    public static readonly opacity: string = "opacity";
 
 }
 

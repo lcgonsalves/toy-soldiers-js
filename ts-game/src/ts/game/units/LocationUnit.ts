@@ -15,6 +15,8 @@ import {drag} from "d3-drag";
 import {GameMapConfig} from "../map/GameMapHelpers";
 import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
 import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
+import {Transition, transition} from "d3-transition";
+import {easeLinear} from "d3-ease";
 
 type ContainerElement = SVGGElement;
 type LocationUnitSelection<Datum> = Selection<ContainerElement, Datum, any, any>;
@@ -179,7 +181,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.anchor.append<SVGTextElement>(SVGTags.SVGTextElement)
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
-            .attr(SVGAttrs.display, this.shouldDisplayLabel ? css.INLINE : css.NONE)
+            .attr(SVGAttrs.opacity, this.shouldDisplayLabel ? "1" : "0")
             .text(node => node.id)
             .classed(css.NODE_LABEL, true)
 
@@ -299,6 +301,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
+    /** by default, on drag the position is updated and the node is applied a css.GRABBED class */
     setDefaultDragHandlers(): void {
 
         const {
@@ -311,6 +314,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             function (elem: SVGGElement, evt: any) {
                 select(elem).classed(css.GRABBED, true);
             });
+
         this.dragHandlers.set(
             "default",
             function (elem: SVGGElement, evt: any) {
@@ -323,6 +327,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                     selfRef.translateToCoord(eventCoordinate);
 
             });
+
         this.dragEndHandlers.set(
             "default",
             function (elem: SVGGElement, evt: any) {
@@ -419,13 +424,22 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     showLabel(): void {
 
-        if (this.shouldDisplayLabel) this.anchor?.select("." + css.NODE_LABEL).attr(SVGAttrs.display, css.INLINE);
+        if (this.shouldDisplayLabel)
+            this.anchor?.select("." + css.NODE_LABEL)
+                .transition()
+                .duration(150)
+                .ease(easeLinear)
+                .attr(SVGAttrs.opacity, "1");
 
     }
 
     hideLabel(): void {
 
-        this.anchor?.select("." + css.NODE_LABEL).attr(SVGAttrs.display, css.NONE);
+        this.anchor?.select("." + css.NODE_LABEL)
+            .transition()
+            .duration(1500)
+            .ease(easeLinear)
+            .attr(SVGAttrs.opacity, "0");
 
     }
 
@@ -593,4 +607,12 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
+}
+
+const transitions: {
+    fadeIn: Transition<any, any, any, any>
+} = {
+    fadeIn: transition("fade-in")
+        .duration(150)
+        .ease(easeLinear)
 }
