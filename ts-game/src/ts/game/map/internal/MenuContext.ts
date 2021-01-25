@@ -28,10 +28,6 @@ export default class MenuContext extends LocationContext<LocationUnit> {
         const closestBox = this.boxLocations.get(node.id);
         const menuBounds = this.config.mainContainer.bounds;
 
-        console.log("menu bounds", menuBounds);
-        console.log("node location", node.toString(), node.worldContext);
-        console.log(menuBounds.overlaps(node));
-
         if (closestBox && menuBounds.overlaps(node))
             return node.translateToCoord(closestBox);
         else {

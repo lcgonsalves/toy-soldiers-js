@@ -41,8 +41,14 @@ enum mapEditorMapCSS {
  * Basically tracks and renders contexts in the svg.
  */
 export class MapEditorMap {
-    // define here which contexts this map handles
+    // contexts
     public readonly nodeContext: LocationContext<LocationUnit>;
+
+    // anchors
+    private readonly edgeContainer: AnySelection;
+    private readonly nodeContainer: AnySelection;
+    private readonly mainGroup: AnySelection;
+
 
     // putting all of the boilerplate in here
     constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
@@ -77,6 +83,8 @@ export class MapEditorMap {
         const mainGroup = select(anchor)
             .append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, mapEditorMapCSS.MAIN);
+
+        this.mainGroup = mainGroup;
 
         backgroundElement.call(
             zoom<any, unknown>()
@@ -124,45 +132,16 @@ export class MapEditorMap {
 
 
         // append edges svg group first to respect rendering order
-        const edgeContainer = mainGroup.append(SVGTags.SVGGElement)
+        this.edgeContainer = mainGroup.append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, mapEditorMapCSS.EDGE_CONTAINER_ID);
 
-        // TODO: make this part available to reattach incoming nodes
         // append nodes svg group
-        const nodeContainer = mainGroup.append(SVGTags.SVGGElement)
+        this.nodeContainer = mainGroup.append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, mapEditorMapCSS.NODE_CONTAINER_ID)
             .classed(mapEditorMapCSS.NODE_CONTAINER_CLS, true);
 
-        // attach nodes in context to group
-        nodeContext.nodes.forEach((n: LocationUnit) => {
-            // attach depictions
-            n.attachDepictionTo(nodeContainer);
-            n.attachEdgeDepictionTo(edgeContainer);
-
-            const refreshEndpoints = {
-                key: "refresh_edge_endpoints",
-                apply: function () {
-
-                    nodeContext.nodes.forEach(nodeInContext => {
-
-                        if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
-
-                    });
-
-                }
-            }
-            const toggleLabel = {
-                key: "toggle_label"
-            }
-
-            // detect when nodes move and react to it
-            n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
-            n.onDrag(toggleLabel.key, () => n.showLabel());
-            n.onDragEnd(refreshEndpoints.key, () => refreshEndpoints.apply());
-            n.onMouseIn(toggleLabel.key, () => n.showLabel());
-            n.onMouseOut(toggleLabel.key, () => n.hideLabel());
-
-        });
+        // attach nodes already in context to group
+        nodeContext.nodes.forEach(n => this.initializeLocationNode(n));
 
         // append and instantiate all elements of the bottom menu
         this.initBottomMenu(anchor);
@@ -178,10 +157,54 @@ export class MapEditorMap {
             100 - 85
         );
 
+        const makeTemporaryNode = (): LocationUnit => {
+
+            const n = new LocationUnit(
+                "click_to_change_name",
+                "temp_node_" + (this.nodeContext.nodes.size + 1),
+                Rectangle.fromCorners(
+                    prevBoxConfig.bounds.topLeft,
+                    prevBoxConfig.bounds.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
+                ),
+                prevBoxConfig.height * 0.35
+            );
+
+            n.shouldDisplayLabel = false;
+
+            return n;
+        };
+
+
         const menuContext: MenuContext = new MenuContext(mainContainerProperties);
         menuContext.onNodeRemoval = (node: LocationUnit) => {
             this.nodeContext.add(node);
-            // node.attachDepictionTo()
+
+            // reverse transforms to place node in correct coordinate
+            const g: SVGGElement = this.mainGroup.node();
+            const hasTransforms = g.transform.baseVal.numberOfItems == 2;
+            const translation: {
+                x: number,
+                y: number
+            } = hasTransforms ? {
+                x: g.transform.baseVal.getItem(0).matrix.e,
+                y: g.transform.baseVal.getItem(0).matrix.f
+            } : {
+                x: 0,
+                y: 0
+            };
+            const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
+
+
+            node.translateBy(-(translation.x), -(translation.y));
+            node.translateTo(node.x / scale, node.y / scale);
+
+            this.initializeLocationNode(node);
+
+            // create new temporary node in its place
+            const temporaryNode = makeTemporaryNode();
+            menuContext.add(temporaryNode);
+            temporaryNode.attachDepictionTo(gameUnitBox);
+
         };
 
         const selection = select(anchor)
@@ -197,26 +220,40 @@ export class MapEditorMap {
         // add boxes
         const boxLength = mainContainerProperties.height / 2.5;
         const prevBoxConfig = new RectConfig(mainContainerProperties.bounds.topLeft.copy.translateBy(1,1), boxLength, boxLength);
+        prevBoxConfig.stroke = "none";
+        prevBoxConfig.fill = "#dbdbdb"
         const boxSelection = rect(gameUnitBox, prevBoxConfig);
-        const temporaryNode = new LocationUnit(
-            "click_to_change_name",
-            "temp_node_" + this.nodeContext.nodes.size + 1,
-            Rectangle.fromCorners(
-                prevBoxConfig.bounds.topLeft,
-                prevBoxConfig.bounds.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
-            ),
-            prevBoxConfig.height * 0.35
-        );
+        const temporaryNode = makeTemporaryNode();
         menuContext.add(temporaryNode);
         temporaryNode.attachDepictionTo(gameUnitBox);
 
-        rect(selection, new RectConfig(prevBoxConfig.bounds.topLeft.copy.translateBy(0, prevBoxConfig.height + 1), prevBoxConfig.width, prevBoxConfig.height));
+    }
 
-        // todo: dragging within box will snap back to source location
+    /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
+    private initializeLocationNode(n: LocationUnit): void {
 
-        // todo: drag node from box transforms it to the appropriate size
+        // attach depictions
+        n.attachDepictionTo(this.nodeContainer);
+        n.attachEdgeDepictionTo(this.edgeContainer);
+        n.shouldDisplayLabel = true;
 
-        // todo: dropping node in graph adds it to graph, disconnected
+        const refreshEndpoints = {
+            key: "refresh_edge_endpoints",
+            apply: () => {
+
+                this.nodeContext.nodes.forEach(nodeInContext => {
+
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
+
+                });
+
+            }
+        }
+
+        // detect when nodes move and react to it
+        n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
+        n.onDragEnd(refreshEndpoints.key, () => refreshEndpoints.apply());
+
     }
     
 }

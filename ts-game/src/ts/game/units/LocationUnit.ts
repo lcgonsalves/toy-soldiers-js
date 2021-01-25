@@ -35,6 +35,12 @@ export enum css {
     INLINE = "inline"
 }
 
+/**
+ * Most basic unit. Represents a location, can be connected to other locations.
+ *
+ * - Has simple drag mechanics that can be toggled.
+ * - Has a label that can be displayed or hidden on command.
+ */
 export default class LocationUnit extends LocationNode implements INodeUnit, IDraggable {
 
     protected readonly name: string;
@@ -52,9 +58,32 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected readonly onMouseInHandlers: Map<string, Handler> = new Map<string, any>();
     protected readonly onMouseOutHandlers: Map<string, Handler> = new Map<string, any>();
 
-    protected shouldDisplayLabel: boolean = false;
+    public shouldDisplayLabel: boolean = false;
 
     private _debugMode: boolean = false;
+
+    /** returns true if element is draggable (i.e. has default handlers in place) */
+    get draggable(): boolean {
+
+        const key = "default";
+        return this.dragStartHandlers.has(key) && this.dragHandlers.has(key) && this.dragEndHandlers.has(key);
+
+    }
+
+    /** setting this to true will assign default drag handlers that update the node's position, setting to false will disable them */
+    set draggable(val: boolean) {
+
+        const key = "default";
+
+        if (val) {
+            this.setDefaultDragHandlers();
+        } else {
+            this.dragStartHandlers.delete(key);
+            this.dragHandlers.delete(key);
+            this.dragEndHandlers.delete(key);
+        }
+
+    }
 
     get debugMode(): boolean {
         return this._debugMode;
@@ -124,14 +153,19 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         const anchor = d3selection.append<ContainerElement>(SVGTags.SVGGElement);
         this.initDebug(anchor);
 
+        // if there's a context associated, snap to value
+        this.worldContext?.snap(this);
+
         // set attrs
         anchor.attr(SVGAttrs.id, this.id)
               .classed(this.cls, true)
               .on("mouseenter", this.applyAllHandlers(this.onMouseInHandlers))
               .on("mouseleave", this.applyAllHandlers(this.onMouseOutHandlers));
 
-        // data join
+        // remove previous
+        if (this.anchor) this.anchor.remove();
 
+        // data join
         this.anchor = anchor.datum<LocationUnit>(this);
 
         // circle
@@ -150,6 +184,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .classed(css.NODE_LABEL, true)
 
         this.initializeDrag();
+        this.defaultDisplayLabelBehavior();
 
     }
 
@@ -171,7 +206,10 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .classed(css.EDGEPATH, true)
             .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
 
+        // // remove previous
+        // this.edgeAnchor?.remove();
 
+        // save anchor
         this.edgeAnchor = anchor;
 
     }
@@ -247,6 +285,17 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             this.anchor.call(d);
 
         }
+
+    }
+
+    /** by default displays label on hover and drag */
+    defaultDisplayLabelBehavior(): void {
+
+        const toggleLabel = "toggle_label";
+
+        this.onDrag(toggleLabel, () => this.showLabel());
+        this.onMouseIn(toggleLabel, () => this.showLabel());
+        this.onMouseOut(toggleLabel, () => this.hideLabel());
 
     }
 
@@ -370,26 +419,20 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     showLabel(): void {
 
-        this.shouldDisplayLabel = true;
-
-        this.anchor?.select("." + css.NODE_LABEL)
-            .attr(SVGAttrs.display, css.INLINE);
+        if (this.shouldDisplayLabel) this.anchor?.select("." + css.NODE_LABEL).attr(SVGAttrs.display, css.INLINE);
 
     }
 
     hideLabel(): void {
 
-        this.shouldDisplayLabel = false;
-
-        this.anchor?.select("." + css.NODE_LABEL)
-            .attr(SVGAttrs.display, css.NONE);
+        this.anchor?.select("." + css.NODE_LABEL).attr(SVGAttrs.display, css.NONE);
 
     }
 
     toggleLabel(): void {
 
-        if (this.shouldDisplayLabel) this.hideLabel();
-        else this.showLabel();
+        if (this.shouldDisplayLabel) this.showLabel();
+        else this.hideLabel();
 
     }
 
