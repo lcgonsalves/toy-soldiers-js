@@ -27,6 +27,69 @@ export class RectConfig {
         this.cls = cls;
     }
 
+    withStroke(s: string): this {
+
+        this.stroke = s;
+        return this;
+
+    }
+
+    withFill(f: string): this {
+
+        this.fill = f;
+        return this;
+
+    }
+
+    withStrokeWidth(sw: number): this {
+
+        this.strokeWidth = sw;
+        return this;
+
+    }
+
+    withRx(rx: number): this {
+
+        this.rx = rx;
+        return this;
+
+    }
+
+}
+
+export class TooltipConfig extends RectConfig {
+    tip: ICoordinate;
+    tipStart: ICoordinate;
+    tipEnd: ICoordinate;
+
+    constructor(topLeft: ICoordinate, width: number, height: number, cls: string = "") {
+        super(topLeft, width, height, cls);
+
+        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.3, 0);
+        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.3), 0);
+        this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
+
+    }
+
+    /** translates bounds and tip representations to given coordinate */
+    translateToCoord(c: ICoordinate): TooltipConfig {
+
+        // get distance from tip to target
+        const dist = this.tip.distanceInComponents(c);
+
+        // translate all other components by the parameters
+        [
+            this.tip,
+            this.tipStart,
+            this.tipEnd,
+            this.bounds
+        ].forEach(location => {
+                location.translateBy(dist.x, dist.y)
+        });
+
+        return this;
+    }
+
 }
 
 /** Returns coordinate of point (x1,y1) as defined in the usage of d3.path().arcTo() from a given curvature degree parameter */
@@ -63,7 +126,7 @@ export function getCurveRadius(edge: IGraphEdge<IGraphNode, IGraphNode>, interse
 }
 
 /** shorthand for drawing a rectangle in d3 */
-export function rect(selection: AnySelection, rectConfig: RectConfig): AnySelection {
+export function rect(selection: AnySelection, rectConfig: RectConfig): Selection<SVGRectElement, any, any, any> {
 
     const {
         bounds,
@@ -77,7 +140,7 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): AnySelect
 
     const {topLeft} = bounds;
 
-    return selection.append(SVGTags.SVGRectElement)
+    return selection.append<SVGRectElement>(SVGTags.SVGRectElement)
         .attr(SVGAttrs.x, topLeft.x)
         .attr(SVGAttrs.y, topLeft.y)
         .attr(SVGAttrs.width, width)

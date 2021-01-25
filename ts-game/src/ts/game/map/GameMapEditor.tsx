@@ -4,14 +4,8 @@ import React, {Component} from 'react';
 import "../../../css/DirectedGraph.css";
 import "../../../css/Editor.css"
 
-import {Selection, select} from "d3-selection";
-import {path, Path} from "d3-path";
-
-import Tooltip from "../../ui/Tooltip";
-import {GameMapConfig, GameMapHelpers} from "./GameMapHelpers";
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
 import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import LocationNode from "ts-shared/build/lib/graph/LocationNode";
 import {MapEditorMap} from "./internal/MapEditorMap";
 import LocationUnit from "../units/LocationUnit";
 
@@ -94,7 +88,6 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
             <div
                 className={GameMapEditor.cssClass}
             >
-                <Tooltip display={this.state.displayTooltip} position={this.state.tooltipLocation} cooldown={3000}/>
                 <svg
                     ref={this.svgElement}
                     height="100vh"

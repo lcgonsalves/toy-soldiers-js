@@ -22,7 +22,7 @@ type ContainerElement = SVGGElement;
 type LocationUnitSelection<Datum> = Selection<ContainerElement, Datum, any, any>;
 type Edge = IGraphEdge<LocationUnit, LocationUnit>;
 
-export enum css {
+export enum LocationUnitCSS {
     GRABBED = "grabbed",
     NODE_CIRCLE = "node_circle",
     NODE_LABEL = "node_label",
@@ -106,7 +106,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             } else {
 
                 console.log("No debug anchor found, appending debug `g` element.");
-                this.debugAnchor = this.anchor.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, css.DEBUG_NODE);
+                this.debugAnchor = this.anchor.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, LocationUnitCSS.DEBUG_NODE);
                 console.log("Turning on debug mode, ready to render debug elements...");
             }
 
@@ -138,7 +138,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     }
 
     get edgeContainerID(): string {
-        return `${css.EDGE_CONTAINER}_${this.name}_${this.id}`;
+        return `${LocationUnitCSS.EDGE_CONTAINER}_${this.name}_${this.id}`;
     }
 
     constructor(name: string, id: string, position: ICoordinate, size: number) {
@@ -175,7 +175,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .attr(SVGAttrs.cx, _ => _.x)
             .attr(SVGAttrs.cy, _ => _.y)
             .attr(SVGAttrs.r, _ => _.radius)
-            .classed(css.NODE_CIRCLE, true);
+            .classed(LocationUnitCSS.NODE_CIRCLE, true);
 
         // id
         this.anchor.append<SVGTextElement>(SVGTags.SVGTextElement)
@@ -183,7 +183,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .attr(SVGAttrs.y, node => node.y)
             .attr(SVGAttrs.opacity, this.shouldDisplayLabel ? "1" : "0")
             .text(node => node.id)
-            .classed(css.NODE_LABEL, true)
+            .classed(LocationUnitCSS.NODE_LABEL, true)
 
         this.initializeDrag();
         this.defaultDisplayLabelBehavior();
@@ -203,9 +203,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .data<Edge>(this.edges, e => e.id)
             .enter()
             .append<SVGGElement>(SVGTags.SVGGElement) // select and append 1 group per edge
-            .classed(css.EDGE, true)
+            .classed(LocationUnitCSS.EDGE, true)
             .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
-            .classed(css.EDGEPATH, true)
+            .classed(LocationUnitCSS.EDGEPATH, true)
             .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
 
         // // remove previous
@@ -312,7 +312,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.dragStartHandlers.set(
             "default",
             function (elem: SVGGElement, evt: any) {
-                select(elem).classed(css.GRABBED, true);
+                select(elem).classed(LocationUnitCSS.GRABBED, true);
             });
 
         this.dragHandlers.set(
@@ -331,7 +331,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.dragEndHandlers.set(
             "default",
             function (elem: SVGGElement, evt: any) {
-                select(elem).classed(css.GRABBED, false);
+                select(elem).classed(LocationUnitCSS.GRABBED, false);
 
                 const selfRef = select<SVGGElement, LocationUnit>(elem).datum();
                 const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
@@ -425,7 +425,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     showLabel(): void {
 
         if (this.shouldDisplayLabel)
-            this.anchor?.select("." + css.NODE_LABEL)
+            this.anchor?.select("." + LocationUnitCSS.NODE_LABEL)
                 .transition()
                 .duration(210)
                 .ease(easeExpOut)
@@ -435,7 +435,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     hideLabel(): void {
 
-        this.anchor?.select("." + css.NODE_LABEL)
+        this.anchor?.select("." + LocationUnitCSS.NODE_LABEL)
             .transition()
             .duration(1000)
             .ease(easeExpIn)
@@ -457,12 +457,12 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             const node = this.anchor.datum(this);
 
             // node update
-            node.select("." + css.NODE_CIRCLE)
+            node.select("." + LocationUnitCSS.NODE_CIRCLE)
                 .attr(SVGAttrs.cx, node => node.x)
                 .attr(SVGAttrs.cy, node => node.y)
                 .attr(SVGAttrs.r, node => node.radius);
 
-            node.select("." + css.NODE_LABEL)
+            node.select("." + LocationUnitCSS.NODE_LABEL)
                 .attr(SVGAttrs.x, node => node.x + node.radius + 1)
                 .attr(SVGAttrs.y, node => node.y)
                 .text(node => node.id);
@@ -500,24 +500,24 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         if (this.debugAnchor !== undefined && this.debugMode) {
 
             const debugPathAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + css.DEBUG_EDGE)
+                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + LocationUnitCSS.DEBUG_EDGE)
                 .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
 
             const debugPathTextAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + css.DEBUG_TEXT + css.DEBUG_EDGE)
+                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_EDGE)
                 .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
 
             const debugCircleAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphNode>("." + css.DEBUG_NODE)
+                .selectAll<SVGGElement, IGraphNode>("." + LocationUnitCSS.DEBUG_NODE)
                 .data<IGraphNode>(points, _ => _.id);
 
             const debugCircleTextAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphNode>("." + css.DEBUG_TEXT + css.DEBUG_NODE)
+                .selectAll<SVGGElement, IGraphNode>("." + LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_NODE)
                 .data<IGraphNode>(points, _ => _.id);
 
             debugPathAnchor.enter()
                 .append(SVGTags.SVGPathElement)
-                .classed(css.DEBUG_NODE, true)
+                .classed(LocationUnitCSS.DEBUG_NODE, true)
                 .attr(SVGAttrs.id, _ => _.id)
                 .attr(SVGAttrs.d, (edge: IGraphEdge<IGraphNode, IGraphNode>) => {
                     const ctx = path();
@@ -550,7 +550,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
             debugPathTextAnchor.enter()
                 .append(SVGTags.SVGTextElement)
-                .classed(css.DEBUG_TEXT + css.DEBUG_EDGE, true)
+                .classed(LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_EDGE, true)
                 .attr(SVGAttrs.x, _ => _.midpoint.x)
                 .attr(SVGAttrs.y, _ => _.midpoint.y)
                 .text(e => e.id + "_debug");
@@ -563,7 +563,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
             debugCircleAnchor.enter()
                 .append(SVGTags.SVGCircleElement)
-                .classed(css.DEBUG_NODE, true)
+                .classed(LocationUnitCSS.DEBUG_NODE, true)
                 .attr(SVGAttrs.cx, n => n.x)
                 .attr(SVGAttrs.cy, n => n.y)
                 .attr(SVGAttrs.r, n => n.radius)
@@ -584,7 +584,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
             debugCircleTextAnchor.enter()
                 .append(SVGTags.SVGTextElement)
-                .classed(css.DEBUG_TEXT + css.DEBUG_NODE, true)
+                .classed(LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_NODE, true)
                 .attr(SVGAttrs.x, _ => _.x + _.radius + 0.8)
                 .attr(SVGAttrs.y, _ => _.y + (_.radius / 3))
                 .text(n => ` ${n.toString()} ${n.id}_debug`);
@@ -603,7 +603,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     initDebug(d3selection: AnySelection): void {
         if (!this.debugAnchor && this.debugMode)
             this.debugAnchor =
-                d3selection.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, css.DEBUG_NODE);
+                d3selection.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, LocationUnitCSS.DEBUG_NODE);
 
     }
 

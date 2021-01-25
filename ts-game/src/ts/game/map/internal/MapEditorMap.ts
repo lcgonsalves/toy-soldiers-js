@@ -6,8 +6,8 @@ import SVGTags from "../../../util/SVGTags";
 import {GameMapHelpers} from "../GameMapHelpers";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
-import LocationUnit from "../../units/LocationUnit";
-import {AnySelection, rect, RectConfig} from "../../../util/DrawHelpers";
+import LocationUnit, {LocationUnitCSS} from "../../units/LocationUnit";
+import {AnySelection, rect, RectConfig, TooltipConfig} from "../../../util/DrawHelpers";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
 import {IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
@@ -28,6 +28,7 @@ enum mapEditorMapCSS {
     BG_ELEM_ID = "bg_elememnt",
     MAIN = "main_element",
     BOTTOM_MENU = "bottom_menu",
+    TOOLTIP = "tooltip",
     GRID_ID = "grid_element",
     GRID_CLS = "grid",
     NODE_CONTAINER_ID = "nodes",
@@ -145,6 +146,9 @@ export class MapEditorMap {
 
         // append and instantiate all elements of the bottom menu
         this.initBottomMenu(anchor);
+
+        // instantiate tooltip
+        this.initializeTooltip(anchor);
         
     }
 
@@ -253,6 +257,71 @@ export class MapEditorMap {
         // detect when nodes move and react to it
         n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
         n.onDragEnd(refreshEndpoints.key, () => refreshEndpoints.apply());
+
+    }
+
+    /** instantiates the tooltip */
+    private initializeTooltip(anchor: SVGSVGElement): void {
+
+        const selection = select(anchor)
+            .append(SVGTags.SVGGElement)
+            .classed(mapEditorMapCSS.TOOLTIP, true);
+
+        const actions = [
+
+        ];
+
+        const properties = new TooltipConfig(
+            C(0,2),
+            8,
+            actions.length + 2
+        ).withFill("black");
+
+        const rectangle = rect(selection, properties)
+            // .attr(SVGAttrs.display, LocationUnitCSS.NONE);
+
+        // draw tip, starting from half - 5%, going down x units, up into half + 5%, close
+        const tip = selection.append<SVGPathElement>(SVGTags.SVGPathElement)
+            .attr(SVGAttrs.fill, properties.fill)
+            // .attr(SVGAttrs.display, LocationUnitCSS.NONE)
+            .attr(SVGAttrs.d, () => {
+                const p = path();
+
+                p.moveTo(properties.tipStart.x, properties.tipStart.y);
+                p.lineTo(properties.tip.x, properties.tip.y);
+                p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
+
+                return p.toString();
+            });
+
+
+        // handle reactivity
+        for (let node of this.nodeContext.nodeArr()) {
+
+            node.onMouseIn("display_tooltip", () => {
+
+                // move bounding square to node
+                properties.translateToCoord(new Coordinate(node.x, node.y - node.radius - 0.4));
+
+                // update attributes accordingly
+                rectangle.attr(SVGAttrs.x, properties.bounds.topLeft.x)
+                    .attr(SVGAttrs.y, properties.bounds.topLeft.y);
+
+                console.log(properties.bounds.bottomLeft.y, properties.tip.y)
+
+                tip.attr(SVGAttrs.d, () => {
+                    const p = path();
+
+                    p.moveTo(properties.tipStart.x, properties.tipStart.y);
+                    p.lineTo(properties.tip.x, properties.tip.y);
+                    p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
+
+                    return p.toString();
+                })
+
+            });
+
+        }
 
     }
     
