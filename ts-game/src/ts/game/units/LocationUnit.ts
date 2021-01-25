@@ -282,8 +282,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 const selfRef = select<SVGGElement, LocationUnit>(elem).datum();
                 const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
 
-                console.log(worldContext)
-
                 config.snapOnEnd ?
                     worldContext.snap(selfRef):
                     selfRef.translateToCoord(eventCoordinate);

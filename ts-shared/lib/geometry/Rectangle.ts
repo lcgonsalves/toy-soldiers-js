@@ -109,7 +109,7 @@ export default class Rectangle extends Coordinate {
         // X ranges from left.x to right.x, inclusive
         // Y ranges from top.y to bottom.y
         const d = new Domain(
-            new Interval(this.topLeft.x, this.topLeft.x),
+            new Interval(this.topLeft.x, this.topRight.x),
             new Interval(this.topLeft.y, this.bottomLeft.y)
         );
 

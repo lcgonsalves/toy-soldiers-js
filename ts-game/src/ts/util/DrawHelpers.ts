@@ -4,12 +4,13 @@ import {sq} from "ts-shared/build/lib/util/Shorthands";
 import {Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
+import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 
 
 export type AnySelection = Selection<any, any, any, any>;
 
 export class RectConfig {
-    topLeft: ICoordinate;
+    bounds: Rectangle;
     width: number;
     height: number;
     cls: string;
@@ -20,7 +21,7 @@ export class RectConfig {
 
 
     constructor(topLeft: ICoordinate, width: number, height: number, cls: string = "") {
-        this.topLeft = topLeft;
+        this.bounds = Rectangle.fromCorners(topLeft, topLeft.copy.translateBy(width, height));
         this.width = width;
         this.height = height;
         this.cls = cls;
@@ -65,7 +66,7 @@ export function getCurveRadius(edge: IGraphEdge<IGraphNode, IGraphNode>, interse
 export function rect(selection: AnySelection, rectConfig: RectConfig): AnySelection {
 
     const {
-        topLeft,
+        bounds,
         width,
         height,
         fill,
@@ -73,6 +74,8 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): AnySelect
         strokeWidth,
         rx
     } = rectConfig;
+
+    const {topLeft} = bounds;
 
     return selection.append(SVGTags.SVGRectElement)
         .attr(SVGAttrs.x, topLeft.x)

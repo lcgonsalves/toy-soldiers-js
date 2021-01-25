@@ -171,8 +171,14 @@ export class MapEditorMap {
 
     /** Constructs and mounts bottom menu */
     private initBottomMenu(anchor: SVGSVGElement): void {
-        // contains the nodes that can be added
-        const menuContext: MenuContext = new MenuContext();
+        // todo: make generic for types and content of buttons
+        const mainContainerProperties = new RectConfig(
+            C(5, 82),
+            90,
+            100 - 85
+        );
+
+        const menuContext: MenuContext = new MenuContext(mainContainerProperties);
         menuContext.onNodeRemoval = (node: LocationUnit) => {
             this.nodeContext.add(node);
             // node.attachDepictionTo()
@@ -182,12 +188,6 @@ export class MapEditorMap {
             .append(SVGTags.SVGGElement)
             .classed(mapEditorMapCSS.BOTTOM_MENU, true);
 
-        // todo: make generic for types and content of buttons
-        const mainContainerProperties = new RectConfig(
-            C(5, 82),
-            90,
-            100 - 85
-        );
 
         // main container
         rect(selection, mainContainerProperties);
@@ -196,21 +196,21 @@ export class MapEditorMap {
 
         // add boxes
         const boxLength = mainContainerProperties.height / 2.5;
-        const prevBoxConfig = new RectConfig(mainContainerProperties.topLeft.copy.translateBy(1,1), boxLength, boxLength);
+        const prevBoxConfig = new RectConfig(mainContainerProperties.bounds.topLeft.copy.translateBy(1,1), boxLength, boxLength);
         const boxSelection = rect(gameUnitBox, prevBoxConfig);
         const temporaryNode = new LocationUnit(
             "click_to_change_name",
             "temp_node_" + this.nodeContext.nodes.size + 1,
             Rectangle.fromCorners(
-                prevBoxConfig.topLeft,
-                prevBoxConfig.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
+                prevBoxConfig.bounds.topLeft,
+                prevBoxConfig.bounds.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
             ),
             prevBoxConfig.height * 0.35
         );
         menuContext.add(temporaryNode);
         temporaryNode.attachDepictionTo(gameUnitBox);
 
-        rect(selection, new RectConfig(prevBoxConfig.topLeft.copy.translateBy(0, prevBoxConfig.height + 1), prevBoxConfig.width, prevBoxConfig.height));
+        rect(selection, new RectConfig(prevBoxConfig.bounds.topLeft.copy.translateBy(0, prevBoxConfig.height + 1), prevBoxConfig.width, prevBoxConfig.height));
 
         // todo: dragging within box will snap back to source location
 
