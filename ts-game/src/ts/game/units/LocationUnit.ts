@@ -165,7 +165,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
               .on("mouseleave", this.applyAllHandlers(this.onMouseOutHandlers));
 
         // remove previous
-        if (this.anchor) this.anchor.remove();
+        this.deleteDepiction();
 
         // data join
         this.anchor = anchor.datum<LocationUnit>(this);
@@ -190,6 +190,11 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
+    deleteDepiction(): void {
+        if (this.anchor) this.anchor.remove();
+    }
+
+
     /**
      * Draws edges of this unit.
      * @param d3selection
@@ -209,11 +214,15 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
 
         // // remove previous
-        // this.edgeAnchor?.remove();
+        this.deleteEdgeDepiction();
 
         // save anchor
         this.edgeAnchor = anchor;
 
+    }
+
+    deleteEdgeDepiction(): void {
+        this.edgeAnchor?.remove();
     }
 
     /** Draws path. Path can currently dodge 1 intersecting node */

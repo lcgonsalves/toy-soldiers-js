@@ -91,7 +91,7 @@ export class TooltipConfig extends RectConfig {
 
     }
 
-    getConfigForAction(actionKey: string, color: string = this.fill): RectConfig {
+    getConfigForAction(actionKey: string, color: string = this.fill, stroke: string = this.stroke): RectConfig {
 
         const i = this.actions.indexOf(actionKey);
         let index = i === -1 ? 0 : i;
@@ -102,7 +102,7 @@ export class TooltipConfig extends RectConfig {
                 TooltipConfig.verticalMargin + ((TooltipConfig.buttonHeight + TooltipConfig.verticalMargin) * index)),
             this.buttonWidth,
             TooltipConfig.buttonHeight
-        ).withFill(color).withStroke(this.stroke);
+        ).withFill(color).withStroke(stroke);
 
     }
 

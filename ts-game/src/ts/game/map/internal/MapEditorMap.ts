@@ -23,6 +23,10 @@ interface MapEditorMapConfig {
     gridStroke: string;
     zoomBuffer: number;
 }
+interface Action {
+    key: string,
+    apply: (n: LocationUnit) => void
+}
 
 enum mapEditorMapCSS {
     BG_ELEM_ID = "bg_elememnt",
@@ -275,10 +279,10 @@ export class MapEditorMap {
         const hideTooltip = {
             key: "hide_tooltip",
             apply: (delay: number = 1000) => () => {
-                // desociate node
-                targetNode = undefined;
-
-                selection.interrupt(showTooltip.key).transition(hideTooltip.key).delay(delay).attr(SVGAttrs.display, LocationUnitCSS.NONE);
+                selection.interrupt(showTooltip.key)
+                    .transition(hideTooltip.key)
+                    .delay(delay)
+                    .attr(SVGAttrs.display, LocationUnitCSS.NONE);
             }
         };
 
@@ -294,13 +298,24 @@ export class MapEditorMap {
 
         const removeNode = {
             key: "remove_node",
-            apply: (n: LocationUnit) => this.nodeContext.rm(n.id),
+            apply: (n: LocationUnit) => {
+
+                this.nodeContext.rm(n.id);
+                n.deleteDepiction();
+                n.deleteEdgeDepiction();
+                setCurrentNode(undefined);
+
+                hideTooltip.apply(0)();
+
+            },
             btnColor: "red"
         };
 
         const moveTooltipToNode = {
             key: "move_tooltip_to_node",
             apply: (delay: number, node: LocationUnit) => () => {
+                // assign current node to this
+                setCurrentNode(node);
 
                 // reverse transforms to place node in correct coordinate
                 const g: SVGGElement = this.mainGroup.node();
@@ -340,7 +355,32 @@ export class MapEditorMap {
                     .duration(0)
                     .attr(SVGAttrs.x, (action) => properties.getConfigForAction(action.key).bounds.topLeft.x)
                     .attr(SVGAttrs.y, (action) => properties.getConfigForAction(action.key).bounds.topLeft.y)
+                    .attr(SVGAttrs.stroke, "none")
                     .attr(SVGAttrs.fill, (action) => action.btnColor);
+
+                actionBtnLabel
+                    .transition()
+                    .delay(delay)
+                    .duration(0)
+                    .attr(SVGAttrs.x, (action) => {
+                        const bounds = properties.getConfigForAction(action.key).bounds;
+
+                        const centerBottom = bounds.bottomLeft.midpoint(bounds.bottomRight);
+                        const centerTop = bounds.topLeft.midpoint(bounds.topRight);
+
+                        return centerBottom.midpoint(centerTop).x
+
+                    })
+                    .attr(SVGAttrs.y, (action) => {
+                        const bounds = properties.getConfigForAction(action.key).bounds;
+
+                        const centerBottom = bounds.bottomLeft.midpoint(bounds.bottomRight);
+                        const centerTop = bounds.topLeft.midpoint(bounds.topRight);
+
+                        return centerBottom.midpoint(centerTop).y + (centerBottom.distance(centerTop) / 5)
+                    })
+                    .attr("text-anchor", "middle")
+                    .attr(SVGAttrs.fill, "white");
 
                 tip.transition()
                     .delay(delay)
@@ -358,19 +398,18 @@ export class MapEditorMap {
             }
         }
 
-        // the node to which the tooltip refers to
-        let targetNode: LocationUnit | undefined = undefined;
+        let activeNode: LocationUnit | undefined = undefined;
 
         // when graph zooms, move tooltip to node
         this.zoomHandlers.set(hideTooltip.key, hideTooltip.apply(0))
 
-        const actions = [
+        const actions: Action[] = [
             removeNode
         ];
 
         const properties = new TooltipConfig(
             C(0,2),
-            8,
+            15,
             actions.map(_ => _.key)
         ).withFill("black");
 
@@ -383,10 +422,24 @@ export class MapEditorMap {
 
         const mainTooltipContainer = rect(selection, properties);
 
+        const getCurrentNode = () => activeNode;
+        const setCurrentNode = (n: LocationUnit | undefined) => activeNode = n;
+
         // map each action to a button
-        const actionButtons = selection.selectAll("." + mapEditorMapCSS.TOOLTIP_ACTION_BUTTON)
-            .data(actions, (a: any) => a.key)
-            .enter();
+        const actionButtons = selection
+            .selectAll("." + mapEditorMapCSS.TOOLTIP_ACTION_BUTTON)
+            .data<Action>(actions, (a: any) => a.key)
+            .enter()
+            .append(SVGTags.SVGGElement)
+            .classed(mapEditorMapCSS.TOOLTIP_ACTION_BUTTON, true)
+            .on("click", function ()  {
+                const action = select<any, Action>(this).datum();
+                const n = getCurrentNode();
+
+                if (n)
+                    action.apply(n);
+
+            });
 
         // draw tip, starting from half - 5%, going down x units, up into half + 5%, close
         const tip = selection.append<SVGPathElement>(SVGTags.SVGPathElement)
@@ -405,6 +458,12 @@ export class MapEditorMap {
             key: string,
             btnColor: string
         }, any, any> = rect(actionButtons, properties.getConfigForAction(""));
+        const actionBtnLabel = actionButtons
+            .append(SVGTags.SVGTextElement)
+            .text(action => action.key)
+            .attr(SVGAttrs.fontSize, 1.5)
+            .attr(SVGAttrs.width, action => properties.getConfigForAction(action.key).width)
+            .attr(SVGAttrs.height, action => properties.getConfigForAction(action.key).height);
 
         // handle reactivity
         for (let node of this.nodeContext.nodeArr()) {
@@ -424,3 +483,7 @@ export class MapEditorMap {
     }
     
 }
+
+
+// TODO: fix pointer on delete button
+// TODO: edges should react to deletion of TO-NODE

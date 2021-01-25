@@ -9,6 +9,10 @@ export interface IGameUnit {
 
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;
+
+    /** removes the depiction from current selection */
+    deleteDepiction(): void;
+
     /** refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
 
@@ -17,6 +21,9 @@ export interface IGameUnit {
 export interface INodeUnit extends IGameUnit {
     /** Attaches depictions of game unit edges to selection */
     attachEdgeDepictionTo(d3selection: AnySelection): void;
+
+    /** */
+    deleteEdgeDepiction(): void;
 }
 
 export type DragHandler = (evt: any, n: IDraggable, coords: ICoordinate) => void

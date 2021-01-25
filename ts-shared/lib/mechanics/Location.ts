@@ -16,6 +16,11 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         return this;
     }
 
+    rm(...n): LocationContext<N> {
+        super.rm(...n);
+        return this;
+    }
+
     /**
      * Snaps to available unit on the grid by translating original coordinate to destination.
      *
