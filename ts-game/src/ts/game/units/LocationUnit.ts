@@ -130,7 +130,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): LocationUnit {
         // guarantees that neighbors are all LocationUnits
-        if (!(other instanceof LocationUnit)) throw new DestinationInvalidError();
+        if (!(other instanceof LocationNode)) throw new DestinationInvalidError();
 
         super.connectTo(other, bidirectional);
         this.refreshEdgeDepiction();

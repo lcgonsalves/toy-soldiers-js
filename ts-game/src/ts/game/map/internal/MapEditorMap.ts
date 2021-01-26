@@ -311,6 +311,10 @@ export class MapEditorMap {
 
                 const context = this.nodeContext;
 
+                // connect to temporary invisible node to follow mouse
+                const temp = new LocationNode("temp", 0, n.x, n.y);
+                n.connectTo(temp);
+
                 // create listener on background to track mouse movement
                 select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
                     .on("mousemove", function (evt: any) {
@@ -318,7 +322,10 @@ export class MapEditorMap {
                         const [x,y] = pointer(evt);
                         const pointerCoordinate = C(x, y);
 
-                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,3);
+                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,8);
+
+                        temp.translateToCoord(possibleTargets.length > 0 ? possibleTargets[0] : pointerCoordinate);
+                        n.refreshEdgeDepiction();
 
                         deactivateTooltipReactivity();
 
@@ -335,6 +342,9 @@ export class MapEditorMap {
 
                                 // connect!
                                 n.connectTo(target);
+
+                                // disconnect from other
+                                n.disconnectFrom(temp);
 
                                 for (let t of possibleTargets) {
                                     console.log("reactivating drag for " + t.toString())
