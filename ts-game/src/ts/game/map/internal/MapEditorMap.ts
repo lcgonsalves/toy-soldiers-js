@@ -1,6 +1,6 @@
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
 import {C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {BaseType, select, Selection} from "d3-selection";
+import {BaseType, pointer, select, Selection} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {GameMapHelpers} from "../GameMapHelpers";
@@ -29,8 +29,8 @@ interface Action {
 }
 
 enum mapEditorMapCSS {
-    BG_ELEM_ID = "bg_elememnt",
-    MAIN = "main_element",
+    BG_ELEM = "bg_elememnt",
+    MAIN_ELEM = "main_element",
     BOTTOM_MENU = "bottom_menu",
     TOOLTIP = "tooltip",
     GRID_ID = "grid_element",
@@ -58,6 +58,8 @@ export class MapEditorMap {
 
     private readonly zoomHandlers: Map<string, (scale: number, x: number, y: number) => void> = new Map<string, (scale: number, x: number, y: number) => void>();
 
+    private tooltipFocusedOn: LocationUnit | undefined;
+
     // putting all of the boilerplate in here
     constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
         this.nodeContext = nodeContext;
@@ -80,7 +82,7 @@ export class MapEditorMap {
         // background for event tracking
         const backgroundElement = select(anchor)
             .append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, mapEditorMapCSS.BG_ELEM_ID)
+            .classed(mapEditorMapCSS.BG_ELEM, true)
             .append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, bgCoords.topL.x)
             .attr(SVGAttrs.y, bgCoords.topL.y)
@@ -90,7 +92,7 @@ export class MapEditorMap {
 
         const mainGroup = select(anchor)
             .append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, mapEditorMapCSS.MAIN);
+            .classed(mapEditorMapCSS.MAIN_ELEM, true);
 
         this.mainGroup = mainGroup;
 
@@ -270,12 +272,14 @@ export class MapEditorMap {
 
         // detect when nodes move and react to it
         n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
-        n.onDragEnd(refreshEndpoints.key, () => refreshEndpoints.apply());
+        n.onDragEnd(refreshEndpoints.key, refreshEndpoints.apply);
 
     }
 
     /** instantiates the tooltip */
     private initializeTooltip(anchor: SVGSVGElement): void {
+
+        // todo: I gotta expose these methdos so new nodes can have the tooltip focus on them too.
 
         /** when remove button is clicked, this is what happens */
         const removeNode = {
@@ -295,7 +299,60 @@ export class MapEditorMap {
                 hideTooltip.apply(0)();
 
             },
-            btnColor: "red"
+            btnColor: "#c86969"
+        };
+
+        const startConnection = {
+            key: "start_connection",
+            apply: (n: LocationUnit) => {
+
+                // hide overlay
+                hideTooltip.apply(0)();
+
+                const context = this.nodeContext;
+
+                // create listener on background to track mouse movement
+                select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
+                    .on("mousemove", function (evt: any) {
+
+                        const [x,y] = pointer(evt);
+                        const pointerCoordinate = C(x, y);
+
+                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,3);
+
+                        deactivateTooltipReactivity();
+
+                        for (let target of possibleTargets) {
+
+                            const callbackName = "allow_attachment";
+
+                            target.draggable = false;
+                            target.onMouseClick(callbackName, () => {
+
+                                // disable mouse tracker
+                                select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
+                                    .on("mousemove", null);
+
+                                // connect!
+                                n.connectTo(target);
+
+                                for (let t of possibleTargets) {
+                                    console.log("reactivating drag for " + t.toString())
+                                    t.draggable = true;
+                                    target.removeOnMouseClick(callbackName);
+                                }
+
+                                activateTooltipReactivity();
+
+                            });
+
+                        }
+
+                    });
+
+
+            },
+            btnColor: "#3489db"
         };
 
         const hideTooltip = {
@@ -405,12 +462,11 @@ export class MapEditorMap {
             }
         }
 
-        let activeNode: LocationUnit | undefined = undefined;
-
         // when graph zooms, move tooltip to node
         this.zoomHandlers.set(hideTooltip.key, hideTooltip.apply(0))
 
         const actions: Action[] = [
+            startConnection,
             removeNode
         ];
 
@@ -429,8 +485,15 @@ export class MapEditorMap {
 
         const mainTooltipContainer = rect(selection, properties);
 
-        const getCurrentNode = () => activeNode;
-        const setCurrentNode = (n: LocationUnit | undefined) => activeNode = n;
+        const getCurrentNode = () => {
+            return this.tooltipFocusedOn;
+        };
+
+        const setCurrentNode = (n: LocationUnit | undefined) => {
+            this.tooltipFocusedOn = n;
+        }
+
+        // setInterval(() => console.log(getCurrentNode()), 1000);
 
         // map each action to a button
         const actionButtons = selection
@@ -474,10 +537,7 @@ export class MapEditorMap {
             .attr(SVGAttrs.width, action => properties.getConfigForAction(action.key).width)
             .attr(SVGAttrs.height, action => properties.getConfigForAction(action.key).height);
 
-        // handle reactivity
-        for (let node of this.nodeContext.nodeArr()) {
-
-            // assign local variable
+        const activateTooltipReactivityFor = (node: LocationUnit) => {
 
             node.onMouseIn(moveTooltipToNode.key, moveTooltipToNode.apply(400, node));
 
@@ -488,6 +548,38 @@ export class MapEditorMap {
             node.onDragEnd(moveTooltipToNode.key, moveTooltipToNode.apply(0, node));
 
         }
+
+        this.nodeContext.onAdd = activateTooltipReactivityFor;
+
+        const activateTooltipReactivity = () => {
+
+            // handle reactivity
+            for (let node of this.nodeContext.nodeArr()) {
+
+                // assign local variable
+                activateTooltipReactivityFor(node);
+
+            }
+
+        }
+
+        const deactivateTooltipReactivity = () => {
+
+            for (let node of this.nodeContext.nodeArr()) {
+
+                node.removeOnMouseIn(moveTooltipToNode.key);
+
+                node.removeOnMouseOut(hideTooltip.key);
+
+                node.removeOnDragStart(hideTooltip.key);
+
+                node.removeOnDragEnd(moveTooltipToNode.key);
+
+            }
+
+        }
+
+        activateTooltipReactivity();
 
     }
     

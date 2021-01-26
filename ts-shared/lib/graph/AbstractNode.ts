@@ -29,7 +29,8 @@ export default abstract class AbstractNode
     get radius(): number {
         return this._radius;
     }
-    set worldContext(value: WorldContext<IGraphNode>) {
+
+    public setWorldContext<CNode extends IGraphNode>(value: WorldContext<CNode>) {
         this._worldContext = value;
     }
 
@@ -53,8 +54,8 @@ export default abstract class AbstractNode
      * cryptically. :D
      * @param worldContext
      */
-    associate<Node extends AbstractNode, Context extends WorldContext<Node>>(worldContext: Context): AbstractNode {
-        this.worldContext = worldContext;
+    associate(worldContext: WorldContext<IGraphNode>): AbstractNode {
+        this.setWorldContext(worldContext);
         return this;
     }
 

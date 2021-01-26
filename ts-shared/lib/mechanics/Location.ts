@@ -7,11 +7,14 @@ import {Interval} from "../geometry/Interval";
 
 export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
+    onAdd: (n: N) => void = () => {};
+
     // all nodes in the location context must be associated with said context
     add(...n: N[]): LocationContext<N> {
         super.add(...n);
         n.forEach(_ => {
             _.associate(this);
+            this.onAdd(_);
         });
         return this;
     }

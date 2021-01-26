@@ -213,4 +213,7 @@ export interface IGraph<Node extends IGraphNode>
      */
     getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): IGraphNode[];
 
+    /** Function that is run for each node that gets added */
+    onAdd: (node: Node) => void;
+
 }

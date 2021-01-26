@@ -60,6 +60,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected readonly onMouseInHandlers: Map<string, Handler> = new Map<string, any>();
     protected readonly onMouseOutHandlers: Map<string, Handler> = new Map<string, any>();
 
+    // click handler
+    protected readonly onMouseClickHandlersHandlers: Map<string, Handler> = new Map<string, any>();
+
     public shouldDisplayLabel: boolean = false;
 
     private _debugMode: boolean = false;
@@ -80,9 +83,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         if (val) {
             this.setDefaultDragHandlers();
         } else {
-            this.dragStartHandlers.delete(key);
-            this.dragHandlers.delete(key);
-            this.dragEndHandlers.delete(key);
+            this.dragStartHandlers.set(key, () => {});
+            this.dragHandlers.set(key, () => {});
+            this.dragEndHandlers.set(key, () => {});
         }
 
     }
@@ -130,6 +133,8 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         if (!(other instanceof LocationUnit)) throw new DestinationInvalidError();
 
         super.connectTo(other, bidirectional);
+        this.refreshEdgeDepiction();
+
         return this;
     }
 
@@ -161,6 +166,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         // set attrs
         anchor.attr(SVGAttrs.id, this.id)
               .classed(this.cls, true)
+              .on("click", this.applyAllHandlers(this.onMouseClickHandlersHandlers))
               .on("mouseenter", this.applyAllHandlers(this.onMouseInHandlers))
               .on("mouseleave", this.applyAllHandlers(this.onMouseOutHandlers));
 
@@ -258,11 +264,13 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
-    associate<Node extends AbstractNode, Context extends WorldContext<Node>>(worldContext: Context): AbstractNode {
+    associate(worldContext: WorldContext<IGraphNode>): LocationUnit {
         // refresh default handlers because of association
         this.setDefaultDragHandlers();
 
-        return super.associate(worldContext);
+        super.associate(worldContext);
+
+        return this;
     }
 
     translateToCoord(other: ICoordinate): ICoordinate {
@@ -435,6 +443,19 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     removeOnMouseOut(actionName: string): boolean {
         return this.onMouseOutHandlers.delete(actionName);
     }
+
+    onMouseClick(actionName: string, newAction: Handler): string {
+
+        this.onMouseClickHandlersHandlers.set(actionName, newAction);
+
+        return actionName;
+
+    }
+
+    removeOnMouseClick(actionName: string): boolean {
+        return this.onMouseClickHandlersHandlers.delete(actionName);
+    }
+
 
     applyAllHandlers(handlers: Map<string, Handler>): Handler {
 
