@@ -322,10 +322,12 @@ export class MapEditorMap {
                         const [x,y] = pointer(evt);
                         const pointerCoordinate = C(x, y);
 
+
                         const possibleTargets = context.getNodesInVicinity(pointerCoordinate,5);
 
                         temp.translateToCoord(possibleTargets.length > 0 ? possibleTargets[0] : pointerCoordinate);
                         n.refreshEdgeDepiction();
+
 
                         deactivateTooltipReactivity();
 
@@ -353,6 +355,7 @@ export class MapEditorMap {
                                     n.removeOnMouseClick(callbackName);
 
                                 })
+
 
                                 activateTooltipReactivity();
 
