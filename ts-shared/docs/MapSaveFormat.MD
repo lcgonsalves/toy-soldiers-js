@@ -24,7 +24,7 @@ a square in chess, or monopoly. This encodes the class `Base` (implementation pe
   "x": 12.4,
   "y": 45.7
 }
-```
+``` 
 
 Where:
 
