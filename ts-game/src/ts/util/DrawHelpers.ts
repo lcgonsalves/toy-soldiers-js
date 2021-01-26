@@ -80,8 +80,8 @@ export class TooltipConfig extends RectConfig {
             cls
         );
 
-        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.3, 0);
-        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.3), 0);
+        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.45, 0);
+        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.45), 0);
         this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
         this.actions = actions;
 
@@ -105,7 +105,6 @@ export class TooltipConfig extends RectConfig {
         ).withFill(color).withStroke(stroke);
 
     }
-
 
     /** translates bounds and tip representations to given coordinate */
     translateToCoord(c: ICoordinate): TooltipConfig {
