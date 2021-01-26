@@ -263,7 +263,7 @@ export class MapEditorMap {
 
                 this.nodeContext.nodes.forEach(nodeInContext => {
 
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction(true);
 
                 });
 
@@ -322,7 +322,7 @@ export class MapEditorMap {
                         const [x,y] = pointer(evt);
                         const pointerCoordinate = C(x, y);
 
-                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,8);
+                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,5);
 
                         temp.translateToCoord(possibleTargets.length > 0 ? possibleTargets[0] : pointerCoordinate);
                         n.refreshEdgeDepiction();
@@ -334,6 +334,7 @@ export class MapEditorMap {
                             const callbackName = "allow_attachment";
 
                             target.draggable = false;
+
                             target.onMouseClick(callbackName, () => {
 
                                 // disable mouse tracker
@@ -346,11 +347,12 @@ export class MapEditorMap {
                                 // disconnect from other
                                 n.disconnectFrom(temp);
 
-                                for (let t of possibleTargets) {
-                                    console.log("reactivating drag for " + t.toString())
-                                    t.draggable = true;
-                                    target.removeOnMouseClick(callbackName);
-                                }
+                                context.nodeArr().forEach(n => {
+
+                                    n.draggable = true;
+                                    n.removeOnMouseClick(callbackName);
+
+                                })
 
                                 activateTooltipReactivity();
 

@@ -217,7 +217,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .classed(LocationUnitCSS.EDGE, true)
             .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
             .classed(LocationUnitCSS.EDGEPATH, true)
-            .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
+            .attr(SVGAttrs.d, e => this.drawEdgePath(e, true)); // draw path for the first time
 
         // // remove previous
         this.deleteEdgeDepiction();
@@ -232,31 +232,33 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     }
 
     /** Draws path. Path can currently dodge 1 intersecting node */
-    protected drawEdgePath(e: Edge): string {
+    protected drawEdgePath(e: Edge, avoidIntersecting?: boolean): string {
         const p = path();
 
         const {
             from, to
         } = e;
 
-        const margin = 10;
-        const intersecting = this.worldContext.getNodesIntersecting(e);
-        const deflectedPoint = (c: IGraphNode) => {
-            const vec = c.perpendicularVector(to);
-            const ratio = (c.radius + margin) / vec.length();
-            return vec.scale(ratio).getEndpoint(c);
-        };
-        const controlPointA = intersecting.length ?
-            deflectedPoint(intersecting[0]) :
-            e.midpoint;
-
-        const controlPointB = intersecting.length > 1 ?
-            deflectedPoint(intersecting[1]) :
-            e.to;
 
         p.moveTo(from.x, from.y);
-        p.bezierCurveTo(controlPointA.x, controlPointA.y, controlPointB.x, controlPointB.y, to.x, to.y);
 
+        if (avoidIntersecting) {
+            const margin = 10;
+            const intersecting = this.worldContext.getNodesIntersecting(e);
+            const deflectedPoint = (c: IGraphNode) => {
+                const vec = c.perpendicularVector(to);
+                const ratio = (c.radius + margin) / vec.length();
+                return vec.scale(ratio).getEndpoint(c);
+            };
+            const controlPointA = intersecting.length ?
+                deflectedPoint(intersecting[0]) :
+                e.midpoint;
+
+            const controlPointB = intersecting.length > 1 ?
+                deflectedPoint(intersecting[1]) :
+                e.to;
+            p.bezierCurveTo(controlPointA.x, controlPointA.y, controlPointB.x, controlPointB.y, to.x, to.y);
+        } else p.lineTo(to.x, to.y);
 
         return p.toString();
     }
@@ -533,7 +535,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     /** refresh just edges
      * Useful if you moved a node somewhere in the graph, and need to update its connections.
      * */
-    refreshEdgeDepiction(): void {
+    refreshEdgeDepiction(avoidIntersecting?: boolean): void {
 
         if (this.edgeAnchor) {
 
@@ -545,10 +547,10 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 .classed(LocationUnitCSS.EDGE, true)
                 .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
                 .classed(LocationUnitCSS.EDGEPATH, true)
-                .attr(SVGAttrs.d, this.drawEdgePath.bind(this)); // draw path for the first time
+                .attr(SVGAttrs.d, e => this.drawEdgePath(e, avoidIntersecting)); // draw path for the first time
 
             // edge update
-            edges.attr(SVGAttrs.d, this.drawEdgePath.bind(this));
+            edges.attr(SVGAttrs.d, e => this.drawEdgePath(e, avoidIntersecting));
 
             edges.exit<Edge>()
                 .transition()
