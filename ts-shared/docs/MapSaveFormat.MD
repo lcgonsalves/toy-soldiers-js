@@ -44,6 +44,24 @@ which can connect different nodes together. This encodes the class `Connector` i
   "description": "A description of this road in a sample game map",
   "id": "an idenitifying string unique amongst the other roads",
   "from": "an identifying string unique amongst the bases defined in this file",
-  "to": [ ... ] // an array of IDs unique amongst the bases defined in this file
+  "to": [ ... ],
+  "intermediate": [ {
+    "id": "interm_1",
+    "x": 23,
+    "y": 22,
+    "adjacent": [ "interm_2" ]
+  }, {
+    "id": "interm_2",
+    "x": 23,
+    "y": 22,
+    "adjacent": [ "destination_π" ]
+  }]
 }
 ```
+
+Where:
+
+- `to`  is an array of strings of IDs of `Base` elements in the map that are accessible from this `Road`
+- `intermediate` is an array of `IGraphNode` representations, containing `x` and `y` values for position, and ID unique
+amongst the intermediate nodes in this Road, and its `adjacent` nodes, encoded as an array of strings that are either
+the ID of an existing `intermediate` node or the ID of a destination (in `to`).
