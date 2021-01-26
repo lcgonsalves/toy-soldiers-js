@@ -235,20 +235,28 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected drawEdgePath(e: Edge): string {
         const p = path();
 
+        const {
+            from, to
+        } = e;
 
-        // TODO: handle more than 1 intersecting node, maybe?
-        // no
-        const intersectingNodes = this.worldContext?.getNodesIntersecting(e);
-        const intersectingNode = intersectingNodes ? intersectingNodes[0] : undefined;
-        const {from, to} = e;
+        const margin = 10;
+        const intersecting = this.worldContext.getNodesIntersecting(e);
+        const deflectedPoint = (c: IGraphNode) => {
+            const vec = c.perpendicularVector(to);
+            const ratio = (c.radius + margin) / vec.length();
+            return vec.scale(ratio).getEndpoint(c);
+        };
+        const controlPointA = intersecting.length ?
+            deflectedPoint(intersecting[0]) :
+            e.midpoint;
+
+        const controlPointB = intersecting.length > 1 ?
+            deflectedPoint(intersecting[1]) :
+            e.to;
 
         p.moveTo(from.x, from.y);
+        p.bezierCurveTo(controlPointA.x, controlPointA.y, controlPointB.x, controlPointB.y, to.x, to.y);
 
-        // curve around intersecting node
-        const tangentPoint = getArcToTangentPoint(e, intersectingNode, 5);
-        p.arcTo(tangentPoint.x, tangentPoint.y, e.to.x, e.to.y, getCurveRadius(e, intersectingNode, 5));
-
-        p.lineTo(to.x, to.y);
 
         return p.toString();
     }
