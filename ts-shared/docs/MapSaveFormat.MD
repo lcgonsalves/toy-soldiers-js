@@ -19,8 +19,8 @@ a square in chess, or monopoly. This encodes the class `Base` (implementation pe
   "label": "House A",
   "description": "A description of house A in a sample game map",
   "id": "an idenitifying string unique amongst the other bases",
-  "exits": [ ... ],
-  "adjacent": [ ... ],
+  "exits": [ ],
+  "adjacent": [ ],
   "x": 12.4,
   "y": 45.7
 }
@@ -44,7 +44,7 @@ which can connect different nodes together. This encodes the class `Connector` i
   "description": "A description of this road in a sample game map",
   "id": "an idenitifying string unique amongst the other roads",
   "from": "an identifying string unique amongst the bases defined in this file",
-  "to": [ ... ],
+  "to": [  ],
   "intermediate": [ {
     "id": "interm_1",
     "x": 23,
@@ -62,6 +62,6 @@ which can connect different nodes together. This encodes the class `Connector` i
 Where:
 
 - `to`  is an array of strings of IDs of `Base` elements in the map that are accessible from this `Road`
-- `intermediate` is an array of [`IGraphNode`](../ts-shared/lib/graph/GraphInterfaces.ts) representations, containing at least `x` and `y` values for position, and ID unique
+- `intermediate` is an array of [`IGraphNode`](../lib/graph/GraphInterfaces.ts) representations, containing at least `x` and `y` values for position, and ID unique
 amongst the intermediate nodes in this Road, and its `adjacent` nodes, encoded as an array of strings that are either
 the ID of an existing `intermediate` node or the ID of a destination (in `to`).
