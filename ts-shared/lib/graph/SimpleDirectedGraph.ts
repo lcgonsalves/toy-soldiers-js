@@ -3,17 +3,18 @@ import {Interval} from "../geometry/Interval";
 import {ICoordinate} from "../geometry/Coordinate";
 import IComparable from "../util/IComparable";
 import {IGraph, IGraphEdge, IGraphNode} from "./GraphInterfaces";
-import {Edge} from "./SimpleDirectedEdge";
 
 export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGraph<Node> {
     readonly domain: Domain;
     readonly nodes: Map<string, Node> = new Map<string, Node>();
+    public onAdd: (n: Node) => void;
 
     constructor(step?: number) {
 
         const s = step ? step : 1;
 
-        this.domain = new Domain(new Interval(-100, 100, s), new Interval(-100, 100, s))
+        this.domain = new Domain(new Interval(-100, 100, s), new Interval(-100, 100, s));
+        this.onAdd = () => {}
 
     }
 
