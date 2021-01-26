@@ -263,7 +263,7 @@ export class MapEditorMap {
 
                 this.nodeContext.nodes.forEach(nodeInContext => {
 
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction(true);
 
                 });
 
@@ -311,6 +311,10 @@ export class MapEditorMap {
 
                 const context = this.nodeContext;
 
+                // connect to temporary invisible node to follow mouse
+                const temp = new LocationNode("temp", 0, n.x, n.y);
+                n.connectTo(temp);
+
                 // create listener on background to track mouse movement
                 select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
                     .on("mousemove", function (evt: any) {
@@ -318,7 +322,12 @@ export class MapEditorMap {
                         const [x,y] = pointer(evt);
                         const pointerCoordinate = C(x, y);
 
-                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,3);
+
+                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,5);
+
+                        temp.translateToCoord(possibleTargets.length > 0 ? possibleTargets[0] : pointerCoordinate);
+                        n.refreshEdgeDepiction();
+
 
                         deactivateTooltipReactivity();
 
@@ -327,6 +336,7 @@ export class MapEditorMap {
                             const callbackName = "allow_attachment";
 
                             target.draggable = false;
+
                             target.onMouseClick(callbackName, () => {
 
                                 // disable mouse tracker
@@ -336,11 +346,16 @@ export class MapEditorMap {
                                 // connect!
                                 n.connectTo(target);
 
-                                for (let t of possibleTargets) {
-                                    console.log("reactivating drag for " + t.toString())
-                                    t.draggable = true;
-                                    target.removeOnMouseClick(callbackName);
-                                }
+                                // disconnect from other
+                                n.disconnectFrom(temp);
+
+                                context.nodeArr().forEach(n => {
+
+                                    n.draggable = true;
+                                    n.removeOnMouseClick(callbackName);
+
+                                })
+
 
                                 activateTooltipReactivity();
 
