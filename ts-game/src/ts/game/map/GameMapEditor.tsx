@@ -6,7 +6,7 @@ import "../../../css/Editor.css"
 
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
 import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {MapEditorMap} from "./internal/MapEditorMap";
+import {MapEditorController} from "./internal/MapEditorController";
 import LocationUnit from "../units/LocationUnit";
 
 
@@ -71,7 +71,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
                 zoomBuffer: 25,
             };
 
-            new MapEditorMap(this.nodeContext, d3ReactAnchor, conf);
+            new MapEditorController(this.nodeContext, d3ReactAnchor, conf);
 
 
         }

@@ -1,21 +1,15 @@
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
 import {C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {BaseType, pointer, select, Selection} from "d3-selection";
+import {pointer, select, Selection} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
-import {GameMapHelpers} from "../GameMapHelpers";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
 import LocationUnit, {LocationUnitCSS} from "../../units/LocationUnit";
 import {AnySelection, rect, RectConfig, TooltipConfig} from "../../../util/DrawHelpers";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
-import {IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
 import MenuContext from "./MenuContext";
-import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
 import LocationNode from "ts-shared/build/lib/graph/LocationNode";
-
-const {GraphZoomBehavior} = GameMapHelpers;
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -23,12 +17,13 @@ interface MapEditorMapConfig {
     gridStroke: string;
     zoomBuffer: number;
 }
-interface Action {
+
+interface NodeAction {
     key: string,
     apply: (n: LocationUnit) => void
 }
 
-enum mapEditorMapCSS {
+enum MapEditorControllerCSS {
     BG_ELEM = "bg_elememnt",
     MAIN_ELEM = "main_element",
     BOTTOM_MENU = "bottom_menu",
@@ -47,7 +42,7 @@ enum mapEditorMapCSS {
  * Basically tracks and renders contexts in the svg.
  * AKA: dumping zone for stuff I have no clue where should be defined.
  */
-export class MapEditorMap {
+export class MapEditorController {
     // contexts
     public readonly nodeContext: LocationContext<LocationUnit>;
 
@@ -82,7 +77,7 @@ export class MapEditorMap {
         // background for event tracking
         const backgroundElement = select(anchor)
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.BG_ELEM, true)
+            .classed(MapEditorControllerCSS.BG_ELEM, true)
             .append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, bgCoords.topL.x)
             .attr(SVGAttrs.y, bgCoords.topL.y)
@@ -92,7 +87,7 @@ export class MapEditorMap {
 
         const mainGroup = select(anchor)
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.MAIN_ELEM, true);
+            .classed(MapEditorControllerCSS.MAIN_ELEM, true);
 
         this.mainGroup = mainGroup;
 
@@ -115,8 +110,8 @@ export class MapEditorMap {
 
         // draw grid
         const gridGroup = mainGroup.append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, mapEditorMapCSS.GRID_ID)
-            .attr(SVGAttrs.pointerEvents, mapEditorMapCSS.POINTER_EVENTS);
+            .attr(SVGAttrs.id, MapEditorControllerCSS.GRID_ID)
+            .attr(SVGAttrs.pointerEvents, MapEditorControllerCSS.POINTER_EVENTS);
 
 
         gridGroup.append(SVGTags.SVGRectElement)
@@ -144,18 +139,18 @@ export class MapEditorMap {
         };
 
         gridGroup.append(SVGTags.SVGPathElement)
-            .classed(mapEditorMapCSS.GRID_CLS, true)
+            .classed(MapEditorControllerCSS.GRID_CLS, true)
             .attr(SVGAttrs.d, drawGrid(path()).toString());
 
 
         // append edges svg group first to respect rendering order
         this.edgeContainer = mainGroup.append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, mapEditorMapCSS.EDGE_CONTAINER_ID);
+            .attr(SVGAttrs.id, MapEditorControllerCSS.EDGE_CONTAINER_ID);
 
         // append nodes svg group
         this.nodeContainer = mainGroup.append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, mapEditorMapCSS.NODE_CONTAINER_ID)
-            .classed(mapEditorMapCSS.NODE_CONTAINER_CLS, true);
+            .attr(SVGAttrs.id, MapEditorControllerCSS.NODE_CONTAINER_ID)
+            .classed(MapEditorControllerCSS.NODE_CONTAINER_CLS, true);
 
         // attach nodes already in context to group
         nodeContext.nodes.forEach(n => this.initializeLocationNode(n));
@@ -229,13 +224,13 @@ export class MapEditorMap {
 
         const selection = select(anchor)
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.BOTTOM_MENU, true);
+            .classed(MapEditorControllerCSS.BOTTOM_MENU, true);
 
 
         // main container
         rect(selection, mainContainerProperties);
         const gameUnitBox = selection.append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.GAME_UNIT_BOX, true);
+            .classed(MapEditorControllerCSS.GAME_UNIT_BOX, true);
 
         // add boxes
         const boxLength = mainContainerProperties.height / 2.5;
@@ -316,7 +311,7 @@ export class MapEditorMap {
                 n.connectTo(temp);
 
                 // create listener on background to track mouse movement
-                select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
+                select(anchor).select("." + MapEditorControllerCSS.BG_ELEM)
                     .on("mousemove", function (evt: any) {
 
                         const [x,y] = pointer(evt);
@@ -340,7 +335,7 @@ export class MapEditorMap {
                             target.onMouseClick(callbackName, () => {
 
                                 // disable mouse tracker
-                                select(anchor).select("." + mapEditorMapCSS.BG_ELEM)
+                                select(anchor).select("." + MapEditorControllerCSS.BG_ELEM)
                                     .on("mousemove", null);
 
                                 // connect!
@@ -480,7 +475,7 @@ export class MapEditorMap {
         // when graph zooms, move tooltip to node
         this.zoomHandlers.set(hideTooltip.key, hideTooltip.apply(0))
 
-        const actions: Action[] = [
+        const actions: NodeAction[] = [
             startConnection,
             removeNode
         ];
@@ -493,7 +488,7 @@ export class MapEditorMap {
 
         const selection = select(anchor)
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.TOOLTIP, true)
+            .classed(MapEditorControllerCSS.TOOLTIP, true)
             .attr(SVGAttrs.display, LocationUnitCSS.NONE)
             .on("mouseover", () => selection.interrupt(hideTooltip.key))
             .on("mouseleave", hideTooltip.apply());
@@ -512,13 +507,13 @@ export class MapEditorMap {
 
         // map each action to a button
         const actionButtons = selection
-            .selectAll("." + mapEditorMapCSS.TOOLTIP_ACTION_BUTTON)
-            .data<Action>(actions, (a: any) => a.key)
+            .selectAll("." + MapEditorControllerCSS.TOOLTIP_ACTION_BUTTON)
+            .data<NodeAction>(actions, (a: any) => a.key)
             .enter()
             .append(SVGTags.SVGGElement)
-            .classed(mapEditorMapCSS.TOOLTIP_ACTION_BUTTON, true)
+            .classed(MapEditorControllerCSS.TOOLTIP_ACTION_BUTTON, true)
             .on("click", function ()  {
-                const action = select<any, Action>(this).datum();
+                const action = select<any, NodeAction>(this).datum();
                 const n = getCurrentNode();
 
                 if (n)
@@ -599,7 +594,3 @@ export class MapEditorMap {
     }
     
 }
-
-
-// TODO: fix pointer on delete button
-// TODO: edges should react to deletion of TO-NODE
