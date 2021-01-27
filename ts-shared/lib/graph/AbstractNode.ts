@@ -2,6 +2,7 @@ import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
 import {Edge} from "./SimpleDirectedEdge";
 import WorldContext from "../mechanics/WorldContext";
+import IComparable from "../util/IComparable";
 
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {
@@ -73,5 +74,13 @@ export default abstract class AbstractNode
     isAdjacent(other: IGraphNode): boolean {
         return this._edges.has(other);
     }
+
+
+    /**
+     * This class does not define what a copy of an abstract node looks like. You have to define
+     * that when you extend this class; It also does not define what equality looks like, so overriding the
+     * equals method is also recommended.
+     */
+    abstract get copy(): AbstractNode;
 
 }
