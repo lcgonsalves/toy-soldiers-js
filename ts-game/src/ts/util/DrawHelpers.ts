@@ -186,3 +186,10 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): Selection
         .attr(SVGAttrs.rx, rx);
 
 }
+
+export const defaultConfigurations = {
+    dockItemContainer: {},
+    dock: {}
+}
+
+
