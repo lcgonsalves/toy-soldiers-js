@@ -9,11 +9,11 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     readonly nodes: Map<string, Node> = new Map<string, Node>();
     public onAdd: (n: Node) => void;
 
-    constructor(step?: number) {
+    constructor(step?: number, width: number = 200, height: number = 200) {
 
         const s = step ? step : 1;
 
-        this.domain = new Domain(new Interval(-100, 100, s), new Interval(-100, 100, s));
+        this.domain = new Domain(new Interval(- (width / 2), (width / 2), s), new Interval(- (height / 2), (height / 2), s));
         this.onAdd = () => {}
 
     }

@@ -2,10 +2,10 @@
  * Represents a Location node in the front end.
  */
 import LocationNode from "ts-shared/build/lib/graph/LocationNode";
-import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {Coordinate, ICoordinate, C} from "ts-shared/build/lib/geometry/Coordinate";
 import {select, Selection} from "d3-selection";
 import SVGTags from "../../util/SVGTags";
-import {AnySelection, getArcToTangentPoint, getCurveRadius} from "../../util/DrawHelpers";
+import {AnySelection} from "../../util/DrawHelpers";
 import SVGAttrs from "../../util/SVGAttrs";
 import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
 import {path} from "d3-path";
@@ -14,9 +14,9 @@ import {DestinationInvalidError} from "../../util/Errors";
 import {drag} from "d3-drag";
 import {GameMapConfig} from "../map/GameMapHelpers";
 import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
-import AbstractNode from "ts-shared/build/lib/graph/AbstractNode";
-import {Transition, transition} from "d3-transition";
-import {easeCubicIn, easeExpIn, easeExpOut, easeLinear} from "d3-ease";
+import {easeExpIn, easeExpOut} from "d3-ease";
+import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+
 
 type ContainerElement = SVGGElement;
 type LocationUnitSelection<Datum> = Selection<ContainerElement, Datum, any, any>;
@@ -45,16 +45,23 @@ export enum LocationUnitCSS {
  */
 export default class LocationUnit extends LocationNode implements INodeUnit, IDraggable {
 
-    protected readonly name: string;
+    // getters
+    get name(): string {
+        return this._name;
+    }
+
+    private _name: string;
     protected anchor: LocationUnitSelection<LocationUnit> | undefined;
     protected edgeAnchor: LocationUnitSelection<Edge> | undefined;
     protected debugAnchor:LocationUnitSelection<LocationUnit> | undefined;
-    protected config: GameMapConfig = GameMapConfig.default
+    protected config: GameMapConfig = GameMapConfig.default;
+    protected scale: number = 1;
 
     // drag handlers
     protected readonly dragStartHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
     protected readonly dragEndHandlers: Map<string, DragHandler> = new Map<string, DragHandler>();
+    private readonly lastDragCursorPosition: ICoordinate;
 
     // hover handlers
     protected readonly onMouseInHandlers: Map<string, Handler> = new Map<string, any>();
@@ -128,28 +135,23 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return [ ...this._edges.keys() ] as LocationNode[];
     }
 
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): LocationUnit {
-        // guarantees that neighbors are all LocationUnits
-        if (!(other instanceof LocationNode)) throw new DestinationInvalidError();
-
-        super.connectTo(other, bidirectional);
-        this.refreshEdgeDepiction();
-
-        return this;
-    }
-
     get cls(): string {
         return this.constructor.name
     }
 
     get edgeContainerID(): string {
-        return `${LocationUnitCSS.EDGE_CONTAINER}_${this.name}_${this.id}`;
+        return `${LocationUnitCSS.EDGE_CONTAINER}_${this._name}_${this.id}`;
+    }
+
+    /** Returns the position of this Unit if it were not scaled to begin with. */
+    get unscaledPosition(): ICoordinate {
+        return this.copy.translateTo(this.x * this.scale, this.y * this.scale);
     }
 
     constructor(name: string, id: string, position: ICoordinate, size: number) {
         super(id, size, position.x, position.y);
-        this.name = name;
-
+        this._name = name;
+        this.lastDragCursorPosition = this.copy;
     }
 
     /**
@@ -188,7 +190,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
             .attr(SVGAttrs.opacity, this.shouldDisplayLabel ? "1" : "0")
-            .text(node => node.id)
+            .text(node => node.name)
             .classed(LocationUnitCSS.NODE_LABEL, true)
 
         this.initializeDrag();
@@ -199,7 +201,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     deleteDepiction(): void {
         if (this.anchor) this.anchor.remove();
     }
-
 
     /**
      * Draws edges of this unit.
@@ -274,6 +275,16 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
     }
 
+    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): LocationUnit {
+        // guarantees that neighbors are all LocationUnits
+        if (!(other instanceof LocationNode)) throw new DestinationInvalidError();
+
+        super.connectTo(other, bidirectional);
+        this.refreshEdgeDepiction();
+
+        return this;
+    }
+
     associate(worldContext: WorldContext<IGraphNode>): LocationUnit {
         // refresh default handlers because of association
         this.setDefaultDragHandlers();
@@ -283,12 +294,33 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return this;
     }
 
-    translateToCoord(other: ICoordinate): ICoordinate {
+    /** Translates to a given coordinate, but scaled to the size of this unit. */
+    translateToScaledCoord(other: ICoordinate): this {
+        this.translateToCoord(C(other.x / this.scale, other.y / this.scale));
+        return this;
+    }
 
+    /** translates by a value {x, y} by an equivalent amount, based on this game unit's scale */
+    translateByScaled(x: number, y: number): this {
+        this.translateBy(x / this.scale, y / this.scale);
+        return this;
+    }
+
+    translateToCoord(other: ICoordinate): ICoordinate {
+        
         super.translateToCoord(other);
         this.refresh();
 
         return this;
+    }
+
+    translateBy(x: number, y: number): ICoordinate {
+
+        super.translateBy(x, y);
+        this.refresh();
+
+        return this;
+
     }
 
     disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
@@ -352,12 +384,14 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         const {
             config,
-            worldContext
+            worldContext,
+            lastDragCursorPosition
         } = this;
 
         this.dragStartHandlers.set(
             "default",
             function (elem: SVGGElement, evt: any) {
+                lastDragCursorPosition.translateTo(evt.x, evt.y);
                 select(elem).classed(LocationUnitCSS.GRABBED, true);
             });
 
@@ -368,9 +402,14 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 const selfRef = select<SVGGElement, LocationUnit>(elem).datum();
                 const eventCoordinate: ICoordinate = new Coordinate(evt.x, evt.y);
 
+                /* distance to be translated must be calculated between last "virtual position", i.e. the scaled down
+                position of the mouse (the original event coordinates, since the event happens within a transformed SVG group). */
+                const unscaledDistance = lastDragCursorPosition.distanceInComponents(eventCoordinate);
+                lastDragCursorPosition.translateToCoord(eventCoordinate);
+
                 config.snapWhileDragging ?
                     worldContext.snap(selfRef) :
-                    selfRef.translateToCoord(eventCoordinate);
+                    selfRef.translateByScaled(unscaledDistance.x, unscaledDistance.y);
 
             });
 
@@ -524,12 +563,17 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             node.select("." + LocationUnitCSS.NODE_LABEL)
                 .attr(SVGAttrs.x, node => node.x + node.radius + 1)
                 .attr(SVGAttrs.y, node => node.y)
-                .text(node => node.id);
+                .text(node => node.name);
 
         }
 
         this.refreshEdgeDepiction();
 
+    }
+
+    rename(newName: string): this {
+        this._name = newName;
+        return this;
     }
 
     /** refresh just edges
@@ -560,6 +604,38 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
 
         }
 
+    }
+
+    scaleToFit(bounds: Rectangle): this {
+        const container = this.anchor?.node();
+        const bbox = container?.getBBox();
+        if (!bbox || !container) {
+            console.error("Cannot scale game unit.");
+            console.error("Anchor:", this.anchor);
+            console.error("Node:", this.anchor?.node());
+            return this;
+        }
+
+        const currentBounds = bbox;
+        const xRatio = bounds.width / currentBounds.width;
+        const yRatio = bounds.height / currentBounds.height;
+
+        const ratio = Math.min(xRatio, yRatio);
+        this.scale = ratio;
+        
+        this.anchor?.attr(SVGAttrs.transform, `scale(${ratio})`);
+
+        // update position to reverse scaling
+        this.translateToScaledCoord(this);
+
+        return this;
+    }
+
+    /** Removes any scaling done to this object. */
+    rmScale(): this {
+        this.translateToCoord(this.unscaledPosition);
+        this.scale = 1;
+        return this;
     }
 
     // DEBUGGING METHODS
@@ -601,7 +677,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 })
                 .each( e => {
 
-                    const selfRef = `[${this.name}, id: ${this.id}] `
+                    const selfRef = `[${this._name}, id: ${this.id}] `
                     console.log(`${selfRef} ${e.id}: 
                     midpoint = ${e.midpoint}
                     size = ${e.size}`);
@@ -641,7 +717,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
                 .attr(SVGAttrs.r, n => n.radius)
                 .each(n => {
 
-                    const selfRef = `[${this.name}, id: ${this.id}] `
+                    const selfRef = `[${this._name}, id: ${this.id}] `
                     console.log(`${selfRef} ${n.id}: ${n.toString()} 
                     radius = ${n.radius}`);
 

@@ -8,7 +8,7 @@ import {path, Path} from "d3-path";
 import LocationUnit, {LocationUnitCSS} from "../../units/LocationUnit";
 import {AnySelection, rect, RectConfig, TooltipConfig} from "../../../util/DrawHelpers";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-import MenuContext from "./MenuContext";
+import DockContext from "./Dock";
 import LocationNode from "ts-shared/build/lib/graph/LocationNode";
 
 interface MapEditorMapConfig {
@@ -170,33 +170,36 @@ export class MapEditorController {
             C(5, 82),
             90,
             100 - 85
+        ).withStroke("#dbdbdb")
+        .withFill("#e5e5e5");
+
+        const dock: DockContext = new DockContext(mainContainerProperties);
+        dock.register(
+            "Basic Location Node A",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 6)
         );
 
-        const makeTemporaryNode = (): LocationUnit => {
+        dock.register(
+            "Basic Location Node B",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 2)
+        );
 
-            const n = new LocationUnit(
-                "click_to_change_name",
-                "temp_node_" + (this.nodeContext.nodes.size + 1),
-                Rectangle.fromCorners(
-                    prevBoxConfig.bounds.topLeft,
-                    prevBoxConfig.bounds.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
-                ),
-                prevBoxConfig.height * 0.35
-            );
+        dock.register(
+            "Basic Location Node C",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 12)
+        );
 
-            n.shouldDisplayLabel = false;
+        dock.attachDepictionTo(select(anchor));
 
-            return n;
-        };
-
-
-        const menuContext: MenuContext = new MenuContext(mainContainerProperties);
-        menuContext.onNodeRemoval = (node: LocationUnit) => {
+        dock.onNodePlacement = (node: LocationUnit) => {
             this.nodeContext.add(node);
-
+        
             // reverse transforms to place node in correct coordinate
             const g: SVGGElement = this.mainGroup.node();
-            const hasTransforms = g.transform.baseVal.numberOfItems == 2;
+            const hasTransforms = g.transform.baseVal.numberOfItems === 2;
             const translation: {
                 x: number,
                 y: number
@@ -208,39 +211,15 @@ export class MapEditorController {
                 y: 0
             };
             const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
-
-
+        
+            console.log(node.toString());
+            
             node.translateBy(-(translation.x), -(translation.y));
             node.translateTo(node.x / scale, node.y / scale);
-
+        
             this.initializeLocationNode(node);
-
-            // create new temporary node in its place
-            const temporaryNode = makeTemporaryNode();
-            menuContext.add(temporaryNode);
-            temporaryNode.attachDepictionTo(gameUnitBox);
-
+        
         };
-
-        const selection = select(anchor)
-            .append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.BOTTOM_MENU, true);
-
-
-        // main container
-        rect(selection, mainContainerProperties);
-        const gameUnitBox = selection.append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.GAME_UNIT_BOX, true);
-
-        // add boxes
-        const boxLength = mainContainerProperties.height / 2.5;
-        const prevBoxConfig = new RectConfig(mainContainerProperties.bounds.topLeft.copy.translateBy(1,1), boxLength, boxLength);
-        prevBoxConfig.stroke = "none";
-        prevBoxConfig.fill = "#dbdbdb"
-        const boxSelection = rect(gameUnitBox, prevBoxConfig);
-        const temporaryNode = makeTemporaryNode();
-        menuContext.add(temporaryNode);
-        temporaryNode.attachDepictionTo(gameUnitBox);
 
     }
 

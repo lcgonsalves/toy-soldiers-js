@@ -6,12 +6,12 @@ import Domain from "./Domain";
  * Defines a rectangle. Does not support rotations.
  */
 export default class Rectangle extends Coordinate {
-    private _topLeft: ICoordinate;
-    private _bottomLeft: ICoordinate;
-    private _topRight: ICoordinate;
-    private _bottomRight: ICoordinate;
+    private readonly _topLeft: ICoordinate;
+    private readonly _bottomLeft: ICoordinate;
+    private readonly _topRight: ICoordinate;
+    private readonly _bottomRight: ICoordinate;
     // length divided in two parameters: x and y
-    private _length: {
+    private readonly _length: {
         x: number,
         y: number
     };
@@ -35,6 +35,9 @@ export default class Rectangle extends Coordinate {
     get length(): { x: number; y: number } {
         return this._length;
     }
+
+    get width(): number { return this.length.x }
+    get height(): number { return this.length.y }
 
 
     constructor(topLeft: ICoordinate, topRight: ICoordinate, bottomLeft: ICoordinate, bottomRight: ICoordinate) {

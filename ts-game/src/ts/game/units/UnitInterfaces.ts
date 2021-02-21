@@ -1,12 +1,7 @@
 import {AnySelection} from "../../util/DrawHelpers";
 import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 
-export interface IGameUnit {
-    /** the class of the outer container */
-    readonly cls: string;
-    /** sets the game unit to display debug information */
-    debugMode: boolean;
-
+export interface IDepictable {
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;
 
@@ -15,6 +10,13 @@ export interface IGameUnit {
 
     /** refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
+}
+
+export interface IGameUnit extends IDepictable {
+    /** the class of the outer container */
+    readonly cls: string;
+    /** sets the game unit to display debug information */
+    debugMode: boolean;
 
 }
 
