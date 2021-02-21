@@ -1,5 +1,5 @@
 import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {ICoordinate, C} from "ts-shared/build/lib/geometry/Coordinate";
 import {sq} from "ts-shared/build/lib/util/Shorthands";
 import {Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
@@ -64,19 +64,25 @@ export class TooltipConfig extends RectConfig {
     buttonWidth: number;
     actions: string[];
     horizontalMargin: number;
-
-    public static buttonHeight: number = 2.5;
-    public static verticalMargin: number = 0.25;
+    buttonHeight: number = 2.5;
+    verticalMargin: number = 0.25;
 
     // todo: account for boxes inside tooltip
 
-    constructor(topLeft: ICoordinate, width: number, actions: string [], cls: string = "") {
+    constructor(
+        topLeft: ICoordinate, 
+        width: number, 
+        actions: string [], 
+        cls: string = "",
+        buttonHeight: number = 2.5,
+        verticalMargin: number = 0.25
+    ) {
 
         super(
             topLeft,
             width,
             // height is calculated as x button heights + button margin, + 1 margin to start
-            (actions.length * (TooltipConfig.buttonHeight + TooltipConfig.verticalMargin)) + TooltipConfig.verticalMargin,
+            (actions.length * (buttonHeight + verticalMargin)) + verticalMargin,
             cls
         );
 
@@ -84,6 +90,8 @@ export class TooltipConfig extends RectConfig {
         this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.45), 0);
         this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
         this.actions = actions;
+        this.buttonHeight = buttonHeight;
+        this.verticalMargin = verticalMargin;
 
         // button should take 90% of container width
         this.buttonWidth = this.width * 0.95;
@@ -99,9 +107,9 @@ export class TooltipConfig extends RectConfig {
         return new RectConfig(
             this.bounds.topLeft.copy.translateBy(
                 this.horizontalMargin,
-                TooltipConfig.verticalMargin + ((TooltipConfig.buttonHeight + TooltipConfig.verticalMargin) * index)),
+                this.verticalMargin + ((this.buttonHeight + this.verticalMargin) * index)),
             this.buttonWidth,
-            TooltipConfig.buttonHeight
+            this.buttonHeight
         ).withFill(color).withStroke(stroke);
 
     }
@@ -124,6 +132,38 @@ export class TooltipConfig extends RectConfig {
 
         return this;
     }
+
+}
+
+export class DockConfig extends RectConfig {
+    readonly margin: number;
+    readonly dockItemContainerConfig: RectConfig;
+    title: string = "Untitled";
+    secondaryColor: string;
+
+    get primaryColor(): string { return this.fill }
+
+  constructor(
+      topLeft: ICoordinate,
+      width: number,
+      height: number,
+      margin: number,
+      dockItemContainerConfig: RectConfig,
+      primaryColor: string = "#e5e5e5",
+      secondaryColor: string = primaryColor,
+      cls?: string
+    ) {
+    super(topLeft, width, height, cls);
+    this.fill = primaryColor;
+    this.secondaryColor = secondaryColor;
+    this.margin = margin;
+    this.dockItemContainerConfig = dockItemContainerConfig;
+  }
+
+  rename(x: string): this {
+      this.title = x;
+      return this;
+  }
 
 }
 
@@ -187,9 +227,29 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): Selection
 
 }
 
+const defaultDockWidth = 90;
+const defaultDockItemSize = defaultDockWidth / 15;
+
+const defaultDockItemContainerConfig = new RectConfig(
+    C(0,0),
+    defaultDockItemSize,
+    defaultDockItemSize
+).withFill("#d5d5d5").withRx(0.3);
+
 export const defaultConfigurations = {
-    dockItemContainer: {},
-    dock: {}
+    /** Default configuration of a dock item container */
+    dockItemContainer: defaultDockItemContainerConfig,
+    /** Default configuration of the Dock */
+    dock: new DockConfig(
+        C(5, 85),
+        defaultDockWidth,
+        100 - 85,
+        0.6,
+        defaultDockItemContainerConfig,
+        "#e5e5e5",
+        "#c0c0c0"
+    )
+    .withStroke("#dedede")
 }
 
 

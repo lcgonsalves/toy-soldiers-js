@@ -165,15 +165,8 @@ export class MapEditorController {
 
     /** Constructs and mounts bottom menu */
     private initBottomMenu(anchor: SVGSVGElement): void {
-        // todo: make generic for types and content of buttons
-        const mainContainerProperties = new RectConfig(
-            C(5, 82),
-            90,
-            100 - 85
-        ).withStroke("#dbdbdb")
-        .withFill("#e5e5e5");
 
-        const dock: DockContext = new DockContext(mainContainerProperties);
+        const dock: DockContext = new DockContext();
         dock.register(
             "Basic Location Node A",
             "A simple node signifying a location in the x-y plane.",

@@ -120,3 +120,11 @@ export default class Rectangle extends Coordinate {
     }
 
 }
+
+/**
+ * Returns a simple square, with top left corner at origin.
+ * @param size
+ */
+export function Square(size: number): Rectangle {
+    return Rectangle.fromCorners(Coordinate.origin, Coordinate.origin.translateBy(size, size));
+}

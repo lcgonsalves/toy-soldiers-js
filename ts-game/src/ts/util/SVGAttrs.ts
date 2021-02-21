@@ -19,6 +19,14 @@ export default abstract class SVGAttrs {
     public static readonly opacity: string = "opacity";
     public static readonly fontSize: string = "font-size";
     public static readonly transform: string = "transform";
+    public static readonly alignment: string = "alignment-baseline";
+
+    static options = {
+        alignment: {
+            middle: "middle",
+            center: "center"
+        }
+    }
 
 }
 

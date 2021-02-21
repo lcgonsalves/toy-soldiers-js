@@ -1,48 +1,28 @@
 import { ICoordinate } from "ts-shared/build/lib/geometry/Coordinate";
 import { LocationContext } from "ts-shared/build/lib/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
-import { AnySelection, rect, RectConfig } from "../../../util/DrawHelpers";
+import { AnySelection, defaultConfigurations, DockConfig, rect, RectConfig } from "../../../util/DrawHelpers";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
+import { path, svg } from "d3";
 
 type AcceptedUnits = LocationUnit;
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
 
 enum DockContextCSS {
     MAIN_CONTAINER_CLS = "menu_main_container",
-    ITEM_CONTAINER_CLS = "menu_item_container"
-}
-
-export class DockConfig extends RectConfig {
-    readonly menuItemContainerSize: number;
-    readonly margin: number;
-
-  constructor(
-      topLeft: ICoordinate,
-      width: number,
-      height: number,
-      menuItemContainerSize: number, 
-      margin: number,
-      cls?: string
-    ) {
-    super(topLeft, width, height, cls);
-    this.menuItemContainerSize = menuItemContainerSize
-    this.margin = margin
-  }
-
+    ITEM_CONTAINER_CLS = "menu_item_container",
+    TAB_CONTAINER_CLS = "tab_container",
+    TAB_TEXT_CLS = "tab_text"
 }
 
 export default class DockContext extends LocationContext<AcceptedUnits> implements IDepictable {
 
     private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
     private itemsCreated: number = 0;
-    public readonly config: {
-        mainContainer: RectConfig,
-        menuItemContainerSize: number,
-        margin: number
-    };
+    public readonly config: DockConfig;
 
     /**
      * A function that is called once a node is placed outside of the bounds of the menu.
@@ -50,23 +30,17 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
     public onNodePlacement: (node: LocationUnit) => void = () => { };
     private anchor: AnySelection | undefined;
 
-    constructor(mainContainerConfig: RectConfig) {
+    constructor(name?: string, config: DockConfig = defaultConfigurations.dock) {
         super();
-
-        const defaultMargin = 0.5;
-        this.config = {
-            mainContainer: mainContainerConfig,
-            menuItemContainerSize: (mainContainerConfig.bounds.width / 15) - (defaultMargin / 15),
-            margin: defaultMargin
-        };
-
+        if (name) config.rename(name);
+        this.config = config;
     }
 
     snap(node: AcceptedUnits): ICoordinate {
 
         const assignedItem = this.registeredItems.get(node.name);
         const assignedBox = assignedItem?.container;
-        const menuBounds = this.config.mainContainer.bounds;
+        const menuBounds = this.config.bounds;
 
         if (assignedBox && menuBounds.overlaps(node.unscaledPosition))
             return node.translateToScaledCoord(assignedBox);
@@ -121,13 +95,15 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
     getNextBox(index: number = 0): Rectangle {
 
         const {
-            mainContainer: {
-                bounds
+            bounds,
+            dockItemContainerConfig: {
+                width
             },
-            menuItemContainerSize,
             margin
         } = this.config;
 
+        // square
+        const menuItemContainerSize = width;
 
         const rowSize = Math.round(bounds.length.x / menuItemContainerSize)
 
@@ -194,14 +170,17 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
 
     attachDepictionTo(d3selection: AnySelection): void {
 
+        const {
+            config
+        } = this;
+
         const selection = d3selection.append(SVGTags.SVGGElement)
             .classed(DockContextCSS.MAIN_CONTAINER_CLS, true);
 
-        // TODO: write depiction of the box menu
-        // TODO: render thing in place
-
         // draw main container
-        rect(selection, this.config.mainContainer);
+        rect(selection, config);
+
+        this.attachTabDepictionTo(selection);
 
         // draw containers for each registered item
         selection.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockContextCSS.ITEM_CONTAINER_CLS)
@@ -214,7 +193,8 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
             .attr(SVGAttrs.y, _ => _.container.topLeft.y)
             .attr(SVGAttrs.width, _ => _.container.width)
             .attr(SVGAttrs.height, _ => _.container.height)
-            .attr(SVGAttrs.fill, "#e8e8e8");
+            .attr(SVGAttrs.fill, config.dockItemContainerConfig.fill)
+            .attr(SVGAttrs.rx, config.dockItemContainerConfig.rx);
 
         // attach depictions if they haven't been attached yet
         for (let unit of this.nodes.values()) {
@@ -223,6 +203,50 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
         }
 
         this.anchor = selection;
+    }
+
+    attachTabDepictionTo(selection: AnySelection): void {
+
+        const {config} = this;
+
+        // tab geometry
+        const dockWidth = config.width;
+        const height = 4.5;
+        const width = 4.5 * height;
+        const start = config.bounds.topLeft.copy // .translateBy(0.005 * dockWidth, 0);
+        const topL = start.copy.translateBy(0, -height);
+        const topR = topL.copy.translateBy(width, 0);
+        const end = topR.copy.translateBy(width / 6, height);
+        const textStart = start.midpoint(topL).translateBy(1.2, 0);
+        const fontSize = 2.25;
+
+        // draw tab title
+        const tabG = selection.append(SVGTags.SVGGElement)
+        .classed(DockContextCSS.TAB_CONTAINER_CLS, true);
+
+        tabG.append(SVGTags.SVGPathElement)
+        .attr(SVGAttrs.fill, config.stroke)
+        .attr(SVGAttrs.stroke, config.secondaryColor)
+        .attr(SVGAttrs.strokeWidth, config.strokeWidth)
+        .attr(SVGAttrs.d, (): string => {
+            const p = path();
+
+            p.moveTo(start.x, start.y);
+            p.lineTo(topL.x, topL.y);
+            p.lineTo(topR.x, topR.y);
+            p.lineTo(end.x, end.y);
+
+            return p.toString()
+        });
+
+        tabG.append(SVGTags.SVGTextElement)
+            .classed(DockContextCSS.TAB_TEXT_CLS, true)
+            .text("hello")
+            .attr(SVGAttrs.x, textStart.x)
+            .attr(SVGAttrs.y, textStart.y)
+            .attr(SVGAttrs.alignment, SVGAttrs.options.alignment.middle)
+            .style(SVGAttrs.fontSize, fontSize);
+
     }
 
     deleteDepiction(): void {
