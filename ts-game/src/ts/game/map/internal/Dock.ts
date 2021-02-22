@@ -209,26 +209,38 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
 
         const {config} = this;
 
-        // tab geometry
-        const dockWidth = config.width;
+                // tab geometry
+        const textMargin = 1.2;
         const height = 4.5;
-        const width = 4.5 * height;
+        const defaultWidth = 4.5 * height;
         const start = config.bounds.topLeft.copy // .translateBy(0.005 * dockWidth, 0);
         const topL = start.copy.translateBy(0, -height);
-        const topR = topL.copy.translateBy(width, 0);
-        const end = topR.copy.translateBy(width / 6, height);
-        const textStart = start.midpoint(topL).translateBy(1.2, 0);
+        const textStart = start.midpoint(topL).translateBy(textMargin, 0);
         const fontSize = 2.25;
 
         // draw tab title
         const tabG = selection.append(SVGTags.SVGGElement)
         .classed(DockContextCSS.TAB_CONTAINER_CLS, true);
 
-        tabG.append(SVGTags.SVGPathElement)
-        .attr(SVGAttrs.fill, config.stroke)
-        .attr(SVGAttrs.stroke, config.secondaryColor)
-        .attr(SVGAttrs.strokeWidth, config.strokeWidth)
-        .attr(SVGAttrs.d, (): string => {
+        const pathSelec = tabG.append(SVGTags.SVGPathElement)
+            .attr(SVGAttrs.fill, config.stroke)
+            .attr(SVGAttrs.stroke, config.secondaryColor)
+            .attr(SVGAttrs.strokeWidth, config.strokeWidth);
+
+        const text = tabG.append(SVGTags.SVGTextElement)
+            .classed(DockContextCSS.TAB_TEXT_CLS, true)
+            .text(this.config.title)
+            .attr(SVGAttrs.x, textStart.x)
+            .attr(SVGAttrs.y, textStart.y)
+            .attr(SVGAttrs.alignment, SVGAttrs.options.alignment.middle)
+            .style(SVGAttrs.fontSize, fontSize);
+
+        // @ts-ignore
+        const textWidth = text.node()?.getBBox()?.width;
+        const topR = topL.copy.translateBy((textWidth ? textWidth : defaultWidth) + 2 * textMargin, 0);
+        const end = topR.copy.translateBy(defaultWidth / 6, height);
+
+        pathSelec.attr(SVGAttrs.d, (): string => {
             const p = path();
 
             p.moveTo(start.x, start.y);
@@ -237,34 +249,26 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
             p.lineTo(end.x, end.y);
 
             return p.toString()
-        });
-
-        tabG.append(SVGTags.SVGTextElement)
-            .classed(DockContextCSS.TAB_TEXT_CLS, true)
-            .text("hello")
-            .attr(SVGAttrs.x, textStart.x)
-            .attr(SVGAttrs.y, textStart.y)
-            .attr(SVGAttrs.alignment, SVGAttrs.options.alignment.middle)
-            .style(SVGAttrs.fontSize, fontSize);
+        })
+            
 
     }
 
+    // TODO: implement
     deleteDepiction(): void {
     }
 
+    // TODO: finish implementation, update text content
     refresh(): void {
 
         const dataJoin = this.anchor?.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockContextCSS.ITEM_CONTAINER_CLS)
             .data(this.allMenuItems);
 
-        dataJoin?.append(SVGTags.SVGGElement)
-            .classed(DockContextCSS.ITEM_CONTAINER_CLS, true)
-            .append(SVGTags.SVGRectElement)
-            .attr(SVGAttrs.x, _ => _.container.topLeft.x)
+        dataJoin?.attr(SVGAttrs.x, _ => _.container.topLeft.x)
             .attr(SVGAttrs.y, _ => _.container.topLeft.y)
             .attr(SVGAttrs.width, _ => _.container.width)
             .attr(SVGAttrs.height, _ => _.container.height)
-            .attr(SVGAttrs.fill, "#e8e8e8");
+            .attr(SVGAttrs.fill, this.config.dockItemContainerConfig.fill);
 
         dataJoin?.exit().remove();
 

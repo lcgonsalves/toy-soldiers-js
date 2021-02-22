@@ -166,7 +166,7 @@ export class MapEditorController {
     /** Constructs and mounts bottom menu */
     private initBottomMenu(anchor: SVGSVGElement): void {
 
-        const dock: DockContext = new DockContext();
+        const dock: DockContext = new DockContext("Map Elements");
         dock.register(
             "Basic Location Node A",
             "A simple node signifying a location in the x-y plane.",
