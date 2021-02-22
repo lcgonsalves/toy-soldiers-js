@@ -1,24 +1,25 @@
 import { ICoordinate } from "ts-shared/build/lib/geometry/Coordinate";
 import { LocationContext } from "ts-shared/build/lib/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
-import { AnySelection, defaultConfigurations, DockConfig, rect, RectConfig } from "../../../util/DrawHelpers";
+import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
-import { path, svg } from "d3";
-
-type AcceptedUnits = LocationUnit;
+import { path } from "d3";
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
 
-enum DockContextCSS {
+enum DockCSS {
     MAIN_CONTAINER_CLS = "menu_main_container",
     ITEM_CONTAINER_CLS = "menu_item_container",
     TAB_CONTAINER_CLS = "tab_container",
     TAB_TEXT_CLS = "tab_text"
 }
 
-export default class DockContext extends LocationContext<AcceptedUnits> implements IDepictable {
+/**
+ * Implementation of a menu that can instantiate Units.
+ */
+export default class Dock<AcceptedUnits extends LocationUnit> extends LocationContext<AcceptedUnits> implements IDepictable {
 
     private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
     private itemsCreated: number = 0;
@@ -154,7 +155,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
         this.instantiate(item);
     }
 
-    private instantiate(item: DockItem<LocationUnit>): LocationUnit {
+    private instantiate(item: DockItem<AcceptedUnits>): LocationUnit {
 
         const {container, title, id} = item;
         const gameUnitInstance = item.make(container.x, container.y, title + this.itemsCreated, id);
@@ -175,7 +176,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
         } = this;
 
         const selection = d3selection.append(SVGTags.SVGGElement)
-            .classed(DockContextCSS.MAIN_CONTAINER_CLS, true);
+            .classed(DockCSS.MAIN_CONTAINER_CLS, true);
 
         // draw main container
         rect(selection, config);
@@ -183,11 +184,11 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
         this.attachTabDepictionTo(selection);
 
         // draw containers for each registered item
-        selection.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockContextCSS.ITEM_CONTAINER_CLS)
+        selection.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockCSS.ITEM_CONTAINER_CLS)
             .data(this.allMenuItems)
             .enter()
             .append(SVGTags.SVGGElement)
-            .classed(DockContextCSS.ITEM_CONTAINER_CLS, true)
+            .classed(DockCSS.ITEM_CONTAINER_CLS, true)
             .append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, _ => _.container.topLeft.x)
             .attr(SVGAttrs.y, _ => _.container.topLeft.y)
@@ -220,7 +221,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
 
         // draw tab title
         const tabG = selection.append(SVGTags.SVGGElement)
-        .classed(DockContextCSS.TAB_CONTAINER_CLS, true);
+        .classed(DockCSS.TAB_CONTAINER_CLS, true);
 
         const pathSelec = tabG.append(SVGTags.SVGPathElement)
             .attr(SVGAttrs.fill, config.stroke)
@@ -228,7 +229,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
             .attr(SVGAttrs.strokeWidth, config.strokeWidth);
 
         const text = tabG.append(SVGTags.SVGTextElement)
-            .classed(DockContextCSS.TAB_TEXT_CLS, true)
+            .classed(DockCSS.TAB_TEXT_CLS, true)
             .text(this.config.title)
             .attr(SVGAttrs.x, textStart.x)
             .attr(SVGAttrs.y, textStart.y)
@@ -261,7 +262,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
     // TODO: finish implementation, update text content
     refresh(): void {
 
-        const dataJoin = this.anchor?.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockContextCSS.ITEM_CONTAINER_CLS)
+        const dataJoin = this.anchor?.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockCSS.ITEM_CONTAINER_CLS)
             .data(this.allMenuItems);
 
         dataJoin?.attr(SVGAttrs.x, _ => _.container.topLeft.x)
@@ -282,7 +283,7 @@ export default class DockContext extends LocationContext<AcceptedUnits> implemen
  * Upon placement, new menu items are re-generated as many times as they are allowed to be, as defined by
  * the 'allowedCopies' parameter.
  */
-class DockItem<NewUnit extends AcceptedUnits> {
+class DockItem<NewUnit> {
     id: string;
     title: string;
     description: string;

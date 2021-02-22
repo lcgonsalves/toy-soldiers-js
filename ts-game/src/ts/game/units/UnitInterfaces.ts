@@ -5,7 +5,7 @@ export interface IDepictable {
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;
 
-    /** removes the depiction from current selection */
+    /** Removes SVG element containing this depictable element. */
     deleteDepiction(): void;
 
     /** refreshes depiction to reflect any changes in this Unit's content */

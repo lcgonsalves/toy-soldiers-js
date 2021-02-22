@@ -14,5 +14,14 @@
 			"$2"
 		],
 		"description": "Creates a public static field with the same string as the name of the field."
+	},
+	"D3 Attribute": {
+		"scope": "javascript,typescript",
+		"prefix": "attr",
+		"body": [
+			".attr(SVGAttrs.${1:attribute}, this.config.${1:attribute})",
+			"$2"
+		],
+		"description": "d3 attribute"
 	}
 }

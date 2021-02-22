@@ -148,6 +148,9 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return this.copy.translateTo(this.x * this.scale, this.y * this.scale);
     }
 
+    /** Returns a simple coordinate representing the position of this unit. Essentially copy, but simpler. */
+    get coordinate(): ICoordinate { return C(this.x, this.y) }
+
     constructor(name: string, id: string, position: ICoordinate, size: number) {
         super(id, size, position.x, position.y);
         this._name = name;

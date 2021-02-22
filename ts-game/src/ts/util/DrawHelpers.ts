@@ -1,11 +1,10 @@
 import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
-import {ICoordinate, C} from "ts-shared/build/lib/geometry/Coordinate";
+import {ICoordinate, C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import {sq} from "ts-shared/build/lib/util/Shorthands";
 import {Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-
 
 export type AnySelection = Selection<any, any, any, any>;
 
@@ -18,7 +17,6 @@ export class RectConfig {
     stroke: string = "black";
     strokeWidth: number = 0.4;
     rx: number = 0.2;
-
 
     constructor(topLeft: ICoordinate, width: number, height: number, cls: string = "") {
         this.bounds = Rectangle.fromCorners(topLeft, topLeft.copy.translateBy(width, height));
@@ -61,56 +59,28 @@ export class TooltipConfig extends RectConfig {
     tip: ICoordinate;
     tipStart: ICoordinate;
     tipEnd: ICoordinate;
-    buttonWidth: number;
-    actions: string[];
-    horizontalMargin: number;
-    buttonHeight: number = 2.5;
-    verticalMargin: number = 0.25;
+    buttonRadius: number = 4;
+    buttonMargin: number = 0.4;
 
-    // todo: account for boxes inside tooltip
+    get buttonDiameter(): number { return this.buttonRadius * 2 }
 
     constructor(
         topLeft: ICoordinate, 
-        width: number, 
-        actions: string [], 
-        cls: string = "",
-        buttonHeight: number = 2.5,
-        verticalMargin: number = 0.25
+        buttonRadius: number,
+        buttonMargin: number
     ) {
-
+        // by default, fits 2 buttons
         super(
             topLeft,
-            width,
-            // height is calculated as x button heights + button margin, + 1 margin to start
-            (actions.length * (buttonHeight + verticalMargin)) + verticalMargin,
-            cls
+            (2 * (2 * buttonRadius)) + (3 * buttonMargin),
+            (2 * buttonRadius) + (2 * buttonMargin)
         );
 
-        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.45, 0);
-        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.45), 0);
+        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.62, -(this.height * 0.1));
+        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.62), -(this.height * 0.1));
         this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
-        this.actions = actions;
-        this.buttonHeight = buttonHeight;
-        this.verticalMargin = verticalMargin;
-
-        // button should take 90% of container width
-        this.buttonWidth = this.width * 0.95;
-        this.horizontalMargin = (this.width - this.buttonWidth) / 2
-
-    }
-
-    getConfigForAction(actionKey: string, color: string = this.fill, stroke: string = this.stroke): RectConfig {
-
-        const i = this.actions.indexOf(actionKey);
-        let index = i === -1 ? 0 : i;
-
-        return new RectConfig(
-            this.bounds.topLeft.copy.translateBy(
-                this.horizontalMargin,
-                this.verticalMargin + ((this.buttonHeight + this.verticalMargin) * index)),
-            this.buttonWidth,
-            this.buttonHeight
-        ).withFill(color).withStroke(stroke);
+        this.buttonRadius = buttonRadius;
+        this.rx = this.height / 2
 
     }
 
@@ -119,6 +89,11 @@ export class TooltipConfig extends RectConfig {
 
         // get distance from tip to target
         const dist = this.tip.distanceInComponents(c);
+        return this.translateBy(dist.x, dist.y);
+
+    }
+
+    translateBy(x: number, y: number): TooltipConfig {
 
         // translate all other components by the parameters
         [
@@ -127,10 +102,11 @@ export class TooltipConfig extends RectConfig {
             this.tipEnd,
             this.bounds
         ].forEach(location => {
-                location.translateBy(dist.x, dist.y)
+                location.translateBy(x, y)
         });
 
         return this;
+
     }
 
 }
@@ -230,11 +206,29 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): Selection
 const defaultDockWidth = 90;
 const defaultDockItemSize = defaultDockWidth / 15;
 
+export const defaultColors = {
+    primary: "#5862ef",
+    secondary: "#bababa",
+    neutral: "#6d6d6d",
+    error: "#d0444b",
+    grays: {
+        a: "#e5e5e5",
+        b: "#c0c0c0",
+        c: "#dedede",
+        d: "#d5d5d5",
+        dark: "#525252"
+    },
+    text: {
+        light: "#f7f7f7",
+        dark: "#505050"
+    }
+}
+
 const defaultDockItemContainerConfig = new RectConfig(
     C(0,0),
     defaultDockItemSize,
     defaultDockItemSize
-).withFill("#d5d5d5").withRx(0.3);
+).withFill(defaultColors.grays.d).withRx(0.3);
 
 export const defaultConfigurations = {
     /** Default configuration of a dock item container */
@@ -246,10 +240,10 @@ export const defaultConfigurations = {
         100 - 85,
         0.6,
         defaultDockItemContainerConfig,
-        "#e5e5e5",
-        "#c0c0c0"
-    )
-    .withStroke("#dedede")
+        defaultColors.grays.a,
+        defaultColors.grays.b
+    ).withStroke(defaultColors.grays.c),
+    tooltip: new TooltipConfig(Coordinate.origin, 1.6, 0.3).withFill(defaultColors.grays.dark).withStroke("none")
 }
 
 
