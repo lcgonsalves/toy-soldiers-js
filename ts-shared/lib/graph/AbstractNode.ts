@@ -68,6 +68,7 @@ export default abstract class AbstractNode
 
     disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
         this._edges.delete(other);
+        if (bidirectional) other.disconnectFrom(this);
         return this;
     }
 

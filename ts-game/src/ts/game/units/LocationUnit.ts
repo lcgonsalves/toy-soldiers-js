@@ -203,7 +203,8 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     }
 
     deleteDepiction(): void {
-        if (this.anchor) this.anchor.remove();
+        this.anchor?.remove();
+        this.deleteEdgeDepiction();
     }
 
     /**
@@ -233,7 +234,10 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     }
 
     deleteEdgeDepiction(): void {
+
+        console.log(this.edgeAnchor?.selectAll("*"))
         this.edgeAnchor?.remove();
+
     }
 
     /** Draws path. Path can currently dodge 1 intersecting node */

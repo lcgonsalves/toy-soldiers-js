@@ -4,5 +4,6 @@ export enum Events {
     mouseenter = "mouseenter",
     mouseleave = "mouseleave",
     mousemove = "mousemove",
-    
+    keydown = "keydown",
+
 }

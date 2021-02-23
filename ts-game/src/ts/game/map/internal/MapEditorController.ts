@@ -248,19 +248,19 @@ export class MapEditorController {
         
 
         // allowed actions upon every node
+
+        // moves into connecting state, tracking a virtual node until either the esc key is pressed,
+        // or the user clicks on a node, or the user clicks somewhere in the map.
         const connectToAction = action<Unit>("connect", "connect", node => {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
             const mouseTrackerNode = new LocationNode(mouseTrackerNodeID, 1, node.x, node.y);
 
-
-
             // connect to it
             node.connectTo(mouseTrackerNode);
 
             // make background track mouse movement and update node location
-
 
             // attach a listener to this node to detect clicks.
             // clicking on this node should create a connection
@@ -274,11 +274,12 @@ export class MapEditorController {
                 });
                 this.bgGroup?.on(Events.mousemove, null);
                 node.disconnectFrom(mouseTrackerNode);
+                select("body").on(Events.keydown, null);
 
             });
 
             // prepare nodes for connection
-            const allLocations = this.locations.all();
+            const allLocations = this.locations.all().filter(l => !l.overlaps(node));
             allLocations.forEach(l => {
 
                 // now they are listening for that sweet sweet click
@@ -294,33 +295,45 @@ export class MapEditorController {
 
                 const [x, y] = pointer(evt);
                 const eventCoordinate = C(x, y);
-                console.log(node.toString(), eventCoordinate.toString());
 
                 // magnet zone
                 const magnetZone = 5;
+                const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
+                closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
 
-                const closestNeighbor = allLocations.find(l => l.distance(node) <= magnetZone);
-
-                (closestNeighbor) ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
                 node.refreshEdgeDepiction();
 
             });
 
-            // at each step, get nodes in vicinity (which by the way needs to cache by closest location to save some performance)
-            // within a bound (say 5 units)  lockstep node position to the position of the closest node in the vicinity of the mouse
+            // listen for esc press, stop all when pressed
+            select("body").on(Events.keydown, e => {
+                if (e.code === "Escape") {
+
+                    allLocations.forEach(_ => {
+                        _.removeOnMouseClick(hook.key);
+                        _.draggable = true;
+                    });
+                    this.bgGroup?.on(Events.mousemove, null);
+                    node.disconnectFrom(mouseTrackerNode);
+                    select("body").on(Events.keydown, null);
+
+                }
+            });
 
         });
-
         connectToAction.depiction = TargetAction.depiction.main
 
         const removeAction = action<Unit>("remove", "remove", node => {
-            n.deleteDepiction();
             this.locations.rm(node.id);
             this.actionTooltip.unfocus(0);
-            this.locations.getNodesAdjacentTo(node).forEach(unit => {
-                unit.disconnectFrom(node, true);
-                unit.refreshEdgeDepiction();
+            this.locations.getNodesAdjacentTo(node).forEach(adj => {
+                node.disconnectFrom(adj, true);
+                console.log(adj.adjacent);
+                adj.refreshEdgeDepiction();
             });
+
+            node.deleteDepiction();
+
         });
         removeAction.depiction = TargetAction.depiction.delete;
 
