@@ -67,7 +67,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
      */
     focus<Target extends ICoordinate>(
         target: Target,
-        actions: TooltipAction<Target>[],
+        actions: TargetAction<Target>[],
         anchorPoint: ICoordinate = target,
         delayMs: number = 0
     ): void {
@@ -75,8 +75,8 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         if (!actions.length) return;
 
         const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
-            .selectAll<SVGCircleElement, TooltipAction<Target>>("." + TooltipCSS.BUTTON_CLS)
-            .data<TooltipAction<Target>>(actions, _ => _.key);
+            .selectAll<SVGCircleElement, TargetAction<Target>>("." + TooltipCSS.BUTTON_CLS)
+            .data<TargetAction<Target>>(actions, _ => _.key);
 
         const currentlyDisplaying = this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
 
@@ -87,7 +87,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // if not displaying, we transition into displaying. this is needed to avoid accidentally transitioning twice and causing the tooltip to show after unfocusing
         if (!currentlyDisplaying)
             this.anchor?.transition(TooltipTransitions.focus)
-                .delay(delayMs + 1000)
+                .delay(delayMs)
                 .attr(SVGAttrs.display, TooltipCSS.DISPLAY_SHOW);
 
         const {
@@ -119,13 +119,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         dataJoin?.enter()
             .append(SVGTags.SVGCircleElement)
             .classed(TooltipCSS.BUTTON_CLS, true)
-            .on("click", function(evt: any, action: TooltipAction<Target>) {
+            .on("click", function(evt: any, action: TargetAction<Target>) {
                 action.apply(target);
             })
             .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
             .attr(SVGAttrs.cy, mid.y)
             .transition(TooltipTransitions.button_pop)
-            .delay(delayMs + 100)
+            .delay(delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
@@ -138,11 +138,11 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         dataJoin?.attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
             .attr(SVGAttrs.cy, mid.y)
             .attr(SVGAttrs.r, buttonRadius / 1.2)
-            .on("click", function(evt: any, action: TooltipAction<Target>) {
+            .on("click", function(evt: any, action: TargetAction<Target>) {
                 action.apply(target);
             })
             .transition(TooltipTransitions.button_pop)
-            .delay(currentlyDisplaying ? 100 : delayMs + 900)
+            .delay(currentlyDisplaying ? 30 : delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
@@ -285,18 +285,27 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
 }
 
-
-export class TooltipAction<Target> {
-
+export class GenericAction {
     public readonly key: string;
     public readonly name: string;
-    public readonly apply: (t: Target) => void;
-    public depiction: SimpleDepiction = TooltipAction.depiction.neutral;
+    public readonly apply: (param: any) => any;
 
-    constructor(key: string, name: string, fn: (t: Target) => void) {
-        this.apply = fn;
+    constructor(key: string, name: string, apply: (param: any) => any) {
         this.key = key;
         this.name = name;
+        this.apply = apply;
+    }
+}
+
+
+export class TargetAction<Target> extends GenericAction {
+
+    public readonly apply: (t: Target) => void;
+    public depiction: SimpleDepiction = TargetAction.depiction.neutral;
+
+    constructor(key: string, name: string, fn: (t: Target) => void) {
+        super(key, name, fn);
+        this.apply = fn;
     };
 
     // default kinds of action depictions
@@ -309,4 +318,4 @@ export class TooltipAction<Target> {
 }
 
 // shorthand the constructor
-export function action<Target>(key: string, name: string, fn: (t: Target) => void): TooltipAction<Target> { return new TooltipAction(key, name, fn) }
+export function action<Target>(key: string, name: string, fn: (t: Target) => void): TargetAction<Target> { return new TargetAction(key, name, fn) }

@@ -1,6 +1,6 @@
 import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
-import {C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {select} from "d3-selection";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {pointer, select} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
@@ -8,9 +8,11 @@ import {path, Path} from "d3-path";
 import LocationUnit from "../../units/LocationUnit";
 import {AnySelection, defaultColors} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
-import { action, ActionTooltip, TooltipAction } from "./Tooltip";
+import {action, ActionTooltip, GenericAction, TargetAction} from "./Tooltip";
+import LocationNode from "ts-shared/build/lib/graph/LocationNode";
 import { act } from "react-dom/test-utils";
 import {log} from "util";
+import {Events} from "../../../util/Events";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -52,6 +54,7 @@ export class MapEditorController {
     private readonly edgeContainer: AnySelection;
     private readonly nodeContainer: AnySelection;
     private readonly mainGroup: AnySelection;
+    private readonly bgGroup: AnySelection;
 
     private readonly zoomHandlers: Map<string, (scale: number, x: number, y: number) => void> = new Map<string, (scale: number, x: number, y: number) => void>();
 
@@ -87,6 +90,8 @@ export class MapEditorController {
             .attr(SVGAttrs.width, bgCoords.topL.distance(bgCoords.topR))
             .attr(SVGAttrs.height, bgCoords.topL.distance(bgCoords.bottomL))
             .attr(SVGAttrs.fill, config.backgroundColor);
+
+        this.bgGroup = backgroundElement;
 
         const mainGroup = select(anchor)
             .append(SVGTags.SVGGElement)
@@ -243,13 +248,70 @@ export class MapEditorController {
         
 
         // allowed actions upon every node
-        const connectToAction = action("connect", "connect", node => {
+        const connectToAction = action<Unit>("connect", "connect", node => {
 
-            // TODO: implement
+            // create virtual node
+            const mouseTrackerNodeID = "tracker";
+            const mouseTrackerNode = new LocationNode(mouseTrackerNodeID, 1, node.x, node.y);
+
+
+
+            // connect to it
+            node.connectTo(mouseTrackerNode);
+
+            // make background track mouse movement and update node location
+
+
+            // attach a listener to this node to detect clicks.
+            // clicking on this node should create a connection
+            // callback function should undo everything.
+            const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
+
+                n.connectTo(node);
+                allLocations.forEach(_ => {
+                    _.removeOnMouseClick(hook.key);
+                    _.draggable = true;
+                });
+                this.bgGroup?.on(Events.mousemove, null);
+                node.disconnectFrom(mouseTrackerNode);
+
+            });
+
+            // prepare nodes for connection
+            const allLocations = this.locations.all();
+            allLocations.forEach(l => {
+
+                // now they are listening for that sweet sweet click
+                l.onMouseClick(hook.key, () => hook.apply(l));
+
+                // now they stop being draggable
+                l.draggable = false;
+
+            });
+
+
+            this.bgGroup?.on(Events.mousemove, function(evt: any) {
+
+                const [x, y] = pointer(evt);
+                const eventCoordinate = C(x, y);
+                console.log(node.toString(), eventCoordinate.toString());
+
+                // magnet zone
+                const magnetZone = 5;
+
+                const closestNeighbor = allLocations.find(l => l.distance(node) <= magnetZone);
+
+                (closestNeighbor) ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
+                node.refreshEdgeDepiction();
+
+            });
+
+            // at each step, get nodes in vicinity (which by the way needs to cache by closest location to save some performance)
+            // within a bound (say 5 units)  lockstep node position to the position of the closest node in the vicinity of the mouse
 
         });
 
-        connectToAction.depiction = TooltipAction.depiction.main
+        connectToAction.depiction = TargetAction.depiction.main
 
         const removeAction = action<Unit>("remove", "remove", node => {
             n.deleteDepiction();
@@ -260,7 +322,7 @@ export class MapEditorController {
                 unit.refreshEdgeDepiction();
             });
         });
-        removeAction.depiction = TooltipAction.depiction.delete;
+        removeAction.depiction = TargetAction.depiction.delete;
 
         // display tooltip on hover
         n.onMouseIn("display_tooltip", () => {
@@ -268,7 +330,7 @@ export class MapEditorController {
                 n,
                 [removeAction, connectToAction],
                 n.coordinate.translateBy(0, -n.radius),
-                1500
+                670
             )
         });
         n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true))
