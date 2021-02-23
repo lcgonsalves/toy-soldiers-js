@@ -1,13 +1,19 @@
 import { path } from "d3";
-import { C, Coordinate, ICoordinate } from "ts-shared/build/lib/geometry/Coordinate";
-import Rectangle, {RectangleCorners} from "ts-shared/build/lib/geometry/Rectangle";
-import IComparable from "ts-shared/build/lib/util/IComparable";
-import Vector from "ts-shared/build/lib/util/Vector";
-import { SimpleDepiction } from "../../../util/Depiction";
-import { AnySelection, defaultColors, defaultConfigurations, rect, RectConfig, TooltipConfig } from "../../../util/DrawHelpers";
-import SVGAttrs from "../../../util/SVGAttrs";
+import {
+    AnySelection,
+    defaultColors,
+    defaultConfigurations,
+    getTransforms,
+    rect,
+    TooltipConfig
+} from "../../../util/DrawHelpers";
+import {C, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {IDepictable} from "../../units/UnitInterfaces";
+import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import SVGTags from "../../../util/SVGTags";
-import { DragEvents, IDepictable } from "../../units/UnitInterfaces";
+import {SimpleDepiction} from "../../../util/Depiction";
+import SVGAttrs from "../../../util/SVGAttrs";
+
 
 enum TooltipCSS {
     TOOLTIP = "tooltip",
@@ -17,6 +23,12 @@ enum TooltipCSS {
     BUTTON_CLS = "tooltip_button"
 }
 
+enum TooltipTransitions {
+    unfocus = "unfocus",
+    focus = "focus",
+    button_pop = "button_pop"
+}
+
 /**
  * Tooltip that displays buttons that are actions.
  */
@@ -24,8 +36,10 @@ export class ActionTooltip extends Rectangle implements IDepictable {
     private config: TooltipConfig;
     private anchor: AnySelection | undefined;
     private visible: boolean = false;
-    private activeButtons: number = 0;
-    private delayToUpdate: number = 0;
+
+    // defines the context in which the transforms will be applied to. For example, if we have nodes that have transforms, we correct for their position
+    // with this selection.
+    private context: AnySelection | undefined;
 
     constructor(config: TooltipConfig = defaultConfigurations.tooltip) {
 
@@ -41,28 +55,40 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
     }
 
+    /* Tooltip Methods */
+
     /**
      * Moves the tooltip to the desired target, displays tooltip, and generates buttons
      * for the actions passed to it. If an empty array of actions is passed, the tooltip will not be displayed.
      * @param target element to be moved towards
      * @param actions actions that can be performed on this target upon focus
      * @param anchorPoint (optional) point where the tip of the tooltip should be at
+     * @param delayMs (optional) delay
      */
     focus<Target extends ICoordinate>(
-        target: Target, 
-        actions: GenericAction<Target>[], 
+        target: Target,
+        actions: TooltipAction<Target>[],
         anchorPoint: ICoordinate = target,
-        delayMs: number = this.delayToUpdate
+        delayMs: number = 0
     ): void {
 
-        this.visible = actions.length > 0;
-        if (!this.visible) return;
+        if (!actions.length) return;
 
-        this.delayToUpdate = delayMs;
-        
-        const dataJoin = this.anchor?.interrupt().select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
-            .selectAll<SVGCircleElement, GenericAction<Target>>("." + TooltipCSS.BUTTON_CLS)
-            .data<GenericAction<Target>>(actions, _ => _.key);
+        const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
+            .selectAll<SVGCircleElement, TooltipAction<Target>>("." + TooltipCSS.BUTTON_CLS)
+            .data<TooltipAction<Target>>(actions, _ => _.key);
+
+        const currentlyDisplaying = this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
+
+        // display tooltip
+        // interrupt unfocus if there was an unfocus action in place
+        this.anchor?.interrupt(TooltipTransitions.unfocus);
+
+        // if not displaying, we transition into displaying. this is needed to avoid accidentally transitioning twice and causing the tooltip to show after unfocusing
+        if (!currentlyDisplaying)
+            this.anchor?.transition(TooltipTransitions.focus)
+                .delay(delayMs + 1000)
+                .attr(SVGAttrs.display, TooltipCSS.DISPLAY_SHOW);
 
         const {
             buttonMargin,
@@ -75,36 +101,49 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // set width to fit new params
         this.setWidth(newWidth);
 
+        // undo contextual transforms
+        const transforms = getTransforms(this.context);
+        const untransformedTarget: ICoordinate = anchorPoint.copy.translateTo(
+            (anchorPoint.x * transforms.scale) + transforms.translation.x,
+            (anchorPoint.y * transforms.scale) + transforms.translation.y
+        )
+
         const {
             topLeft,
             bottomLeft
-        } = this.translateToCoord(anchorPoint ? anchorPoint : target);
+        } = this.translateToCoord(untransformedTarget);
 
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
 
-        // new buttons
+        // add new buttons
         dataJoin?.enter()
             .append(SVGTags.SVGCircleElement)
             .classed(TooltipCSS.BUTTON_CLS, true)
-            .on("click", function(evt: any, action: GenericAction<Target>) {
+            .on("click", function(evt: any, action: TooltipAction<Target>) {
                 action.apply(target);
             })
             .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
-            .attr(SVGAttrs.cy, (_, index) => mid.y)
-            .transition()
-            .delay(delayMs)
+            .attr(SVGAttrs.cy, mid.y)
+            .transition(TooltipTransitions.button_pop)
+            .delay(delayMs + 100)
             .attr(SVGAttrs.r, buttonRadius)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
             .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth);
 
+        // remove old buttons
         dataJoin?.exit().remove();
 
+        // update position and handler of buttons, in case the actions have changed.
         dataJoin?.attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
-            .attr(SVGAttrs.cy, (_, index) => mid.y)
+            .attr(SVGAttrs.cy, mid.y)
+            .attr(SVGAttrs.r, buttonRadius / 1.2)
+            .on("click", function(evt: any, action: TooltipAction<Target>) {
+                action.apply(target);
+            })
+            .transition(TooltipTransitions.button_pop)
+            .delay(currentlyDisplaying ? 100 : delayMs + 900)
             .attr(SVGAttrs.r, buttonRadius)
-            .transition()
-            .delay(delayMs)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
             .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
@@ -115,12 +154,26 @@ export class ActionTooltip extends Rectangle implements IDepictable {
      * Makes tooltip ~*disappear*~, if not being hovered over currently.
      * Can force to disappear evenwhen hovering by passing the parameter force.
      */
-    unfocus(delayMs: number = this.delayToUpdate, force?: boolean): void {
-        this.anchor?.interrupt()
-                    .transition("unfocus")
+    unfocus(delayMs: number = 0, interrupt?: boolean): void {
+
+        if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus);
+
+        this.anchor?.transition(TooltipTransitions.unfocus)
                     .delay(delayMs)
                     .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
+
     }
+
+    /**
+     * Assigns context to the tooltip. This selection will dictate what kinds of transforms
+     * will be used to correct the tooltip's position.
+     * @param selection
+     */
+    setContext(selection: AnySelection): void {
+        this.context = selection;
+    }
+
+    /* Rectangle method Overrides */
 
     translateTo(x: number, y: number): this {
         return this.translateToCoord(C(x,y));
@@ -160,7 +213,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             })
             .on("mouseleave", () => {
                 // unfocus automatically on leave
-                this.unfocus(450);
+                this.unfocus(450, true);
             });
 
         // append rectangle with default configuraion
@@ -177,7 +230,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
                     tipEnd,
                     tip
                 } = this.config;
-                
+
                 const p = path();
 
                 p.moveTo(tipStart.x, tipStart.y);
@@ -191,7 +244,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // add last for rendering order
         selection.append(SVGTags.SVGGElement)
             .classed(TooltipCSS.BUTTONS_CONTAINER_CLS, true);
-        
+
         // save reference
         this.anchor = selection;
 
@@ -205,13 +258,11 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         const s = this.anchor;
 
-        s?.transition().delay(this.delayToUpdate).attr(SVGAttrs.display, this.visible);
-
         s?.select(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, this.topLeft.x)
             .attr(SVGAttrs.y, this.topLeft.y)
             .attr(SVGAttrs.width, this.width);
-        
+
         s?.select(SVGTags.SVGPathElement)
             .attr(SVGAttrs.d, (): string => {
                 const {
@@ -219,7 +270,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
                     tipEnd,
                     tip
                 } = this.config;
-                
+
                 const p = path();
 
                 p.moveTo(tipStart.x, tipStart.y);
@@ -228,19 +279,19 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
                 return p.toString();
             });
-        
+
 
     }
 
 }
 
 
-export class GenericAction<Target> {
+export class TooltipAction<Target> {
 
     public readonly key: string;
     public readonly name: string;
     public readonly apply: (t: Target) => void;
-    public depiction: SimpleDepiction = GenericAction.depiction.neutral;
+    public depiction: SimpleDepiction = TooltipAction.depiction.neutral;
 
     constructor(key: string, name: string, fn: (t: Target) => void) {
         this.apply = fn;
@@ -258,4 +309,4 @@ export class GenericAction<Target> {
 }
 
 // shorthand the constructor
-export function action<Target>(key: string, name: string, fn: (t: Target) => void): GenericAction<Target> { return new GenericAction(key, name, fn) }
+export function action<Target>(key: string, name: string, fn: (t: Target) => void): TooltipAction<Target> { return new TooltipAction(key, name, fn) }

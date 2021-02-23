@@ -16,6 +16,7 @@ import {GameMapConfig} from "../map/GameMapHelpers";
 import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
 import {easeExpIn, easeExpOut} from "d3-ease";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+import {Events} from "../../util/Events";
 
 
 type ContainerElement = SVGGElement;
@@ -29,12 +30,9 @@ export enum LocationUnitCSS {
     EDGE = "node_edge",
     EDGEPATH = "node_edge_path",
     EDGE_CONTAINER = "edge_container",
-    DEBUG = "debug",
     DEBUG_NODE = "debug_node",
     DEBUG_EDGE = "debug_edge",
-    DEBUG_TEXT = "debug_text",
-    NONE = "none",
-    INLINE = "inline"
+    DEBUG_TEXT = "debug_text"
 }
 
 /**
@@ -168,12 +166,15 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         // if there's a context associated, snap to value
         this.worldContext?.snap(this);
 
+        // TODO: have click and hover associated to specific groups to avoid hovering on text
+        // TODO: maybe have name pop up on tooltip instead
+
         // set attrs
         anchor.attr(SVGAttrs.id, this.id)
               .classed(this.cls, true)
-              .on("click", this.applyAllHandlers(this.onMouseClickHandlersHandlers))
-              .on("mouseenter", this.applyAllHandlers(this.onMouseInHandlers))
-              .on("mouseleave", this.applyAllHandlers(this.onMouseOutHandlers));
+              .on(Events.click, this.applyAllHandlers(this.onMouseClickHandlersHandlers))
+              .on(Events.mouseenter, this.applyAllHandlers(this.onMouseInHandlers))
+              .on(Events.mouseleave, this.applyAllHandlers(this.onMouseOutHandlers));
 
         // remove previous
         this.deleteDepiction();
@@ -192,7 +193,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.anchor.append<SVGTextElement>(SVGTags.SVGTextElement)
             .attr(SVGAttrs.x, node => node.x + node.radius + 1)
             .attr(SVGAttrs.y, node => node.y)
-            .attr(SVGAttrs.opacity, this.shouldDisplayLabel ? "1" : "0")
+            .attr(SVGAttrs.display, this.shouldDisplayLabel ? "block" : "none")
             .text(node => node.name)
             .classed(LocationUnitCSS.NODE_LABEL, true)
 
@@ -619,9 +620,13 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             return this;
         }
 
+        // 15% padding to give the container some breathing room
+        const padding = 0.3;
+        const paddedBounds = bounds.copy.setWidth(bounds.width * (1-padding)).setHeight(bounds.height * (1-padding));
+
         const currentBounds = bbox;
-        const xRatio = bounds.width / currentBounds.width;
-        const yRatio = bounds.height / currentBounds.height;
+        const xRatio = paddedBounds.width / currentBounds.width;
+        const yRatio = paddedBounds.height / currentBounds.height;
 
         const ratio = Math.min(xRatio, yRatio);
         this.scale = ratio;

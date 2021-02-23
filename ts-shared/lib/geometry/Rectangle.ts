@@ -137,6 +137,7 @@ export default class Rectangle extends Coordinate {
             bottomRight
         } = this;
 
+        // positive if expanding, negative if shrink
         const amountToExpand = newWidth - this.width;
 
         switch(anchorPoint) {
@@ -160,6 +161,53 @@ export default class Rectangle extends Coordinate {
                 bottomLeft.translateBy(-amountToExpand, 0);
                 break;
             
+            default:
+                throw new Error("Invalid anchor point.");
+        }
+        return this;
+    }
+
+    /** Sets new width, shrinking/expanding from a given anchor point, defaulting in the center */
+    setHeight(newHeight: number, anchorPoint: RectangleCorners = RectangleCorners.CENTER): this {
+        const {
+            CENTER,
+            TOP_LEFT,
+            TOP_RIGHT,
+            BOTTOM_LEFT,
+            BOTTOM_RIGHT
+        } = RectangleCorners;
+
+        const {
+            topLeft,
+            topRight,
+            bottomLeft,
+            bottomRight
+        } = this;
+
+        // positive if expanding, negative if shrink
+        const amountToExpand = newHeight - this.width;
+
+        switch(anchorPoint) {
+            // expand points equally away from center, half of the difference
+            case CENTER:
+                topLeft.translateBy(0, -(amountToExpand / 2));
+                topRight.translateBy(0, -(amountToExpand / 2));
+                bottomLeft.translateBy(0, amountToExpand / 2);
+                bottomRight.translateBy(0, amountToExpand / 2);
+                break;
+
+            case BOTTOM_RIGHT:
+            case BOTTOM_LEFT:
+                topRight.translateBy(-amountToExpand, 0);
+                topLeft.translateBy(-amountToExpand, 0);
+                break;
+
+            case TOP_RIGHT:
+            case TOP_LEFT:
+                bottomRight.translateBy(amountToExpand, 0);
+                bottomLeft.translateBy(amountToExpand, 0);
+                break;
+
             default:
                 throw new Error("Invalid anchor point.");
         }

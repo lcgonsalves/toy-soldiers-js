@@ -176,6 +176,29 @@ export function getCurveRadius(edge: IGraphEdge<IGraphNode, IGraphNode>, interse
     return (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
 }
 
+export function getTransforms(s?: AnySelection): {scale: number, translation: {x: number, y: number}} {
+
+    const g: SVGGElement = s?.node();
+    const hasTransforms = g?.transform.baseVal.numberOfItems == 2;
+    const translation: {
+        x: number,
+        y: number
+    } = hasTransforms ? {
+        x: g.transform.baseVal.getItem(0).matrix.e,
+        y: g.transform.baseVal.getItem(0).matrix.f
+    } : {
+        x: 0,
+        y: 0
+    };
+    const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
+
+    return {
+        translation,
+        scale
+    }
+
+}
+
 /** shorthand for drawing a rectangle in d3 */
 export function rect(selection: AnySelection, rectConfig: RectConfig): Selection<SVGRectElement, any, any, any> {
 

@@ -8,8 +8,9 @@ import {path, Path} from "d3-path";
 import LocationUnit from "../../units/LocationUnit";
 import {AnySelection, defaultColors} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
-import { action, ActionTooltip, GenericAction } from "./Tooltip";
+import { action, ActionTooltip, TooltipAction } from "./Tooltip";
 import { act } from "react-dom/test-utils";
+import {log} from "util";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -244,8 +245,11 @@ export class MapEditorController {
         // allowed actions upon every node
         const connectToAction = action("connect", "connect", node => {
 
+            // TODO: implement
+
         });
-        connectToAction.depiction = GenericAction.depiction.main
+
+        connectToAction.depiction = TooltipAction.depiction.main
 
         const removeAction = action<Unit>("remove", "remove", node => {
             n.deleteDepiction();
@@ -256,8 +260,7 @@ export class MapEditorController {
                 unit.refreshEdgeDepiction();
             });
         });
-        removeAction.depiction = GenericAction.depiction.delete;
-        
+        removeAction.depiction = TooltipAction.depiction.delete;
 
         // display tooltip on hover
         n.onMouseIn("display_tooltip", () => {
@@ -268,7 +271,7 @@ export class MapEditorController {
                 1500
             )
         });
-        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250))
+        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true))
 
     }
 
@@ -276,7 +279,12 @@ export class MapEditorController {
     private initializeTooltip(anchor: SVGSVGElement): void {
 
         const {actionTooltip} = this;
-        actionTooltip.attachDepictionTo(this.mainGroup);
+
+        // attach depiction so tooltip shows up
+        actionTooltip.attachDepictionTo(select(anchor));
+
+        // associate context so the tooltip knows how to correct its position
+        actionTooltip.setContext(this.mainGroup);
 
     }
     
