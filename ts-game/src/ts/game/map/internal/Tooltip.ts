@@ -26,7 +26,8 @@ enum TooltipCSS {
 enum TooltipTransitions {
     unfocus = "unfocus",
     focus = "focus",
-    button_pop = "button_pop"
+    button_pop = "button_pop",
+    refresh = "refresh"
 }
 
 /**
@@ -35,7 +36,8 @@ enum TooltipTransitions {
 export class ActionTooltip extends Rectangle implements IDepictable {
     private config: TooltipConfig;
     private anchor: AnySelection | undefined;
-    private visible: boolean = false;
+    public enabled: boolean = true;
+    private delayRefresh: number = 0;
 
     // defines the context in which the transforms will be applied to. For example, if we have nodes that have transforms, we correct for their position
     // with this selection.
@@ -72,7 +74,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         delayMs: number = 0
     ): void {
 
-        if (!actions.length) return;
+        if (!actions.length || !this.enabled) return;
 
         const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
             .selectAll<SVGCircleElement, TargetAction<Target>>("." + TooltipCSS.BUTTON_CLS)
@@ -89,6 +91,9 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             this.anchor?.transition(TooltipTransitions.focus)
                 .delay(delayMs)
                 .attr(SVGAttrs.display, TooltipCSS.DISPLAY_SHOW);
+        else {
+            this.anchor?.interrupt(TooltipTransitions.refresh);
+        }
 
         const {
             buttonMargin,
@@ -108,10 +113,15 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             (anchorPoint.y * transforms.scale) + transforms.translation.y
         )
 
+        this.delayRefresh = delayMs;
+
         const {
             topLeft,
             bottomLeft
         } = this.translateToCoord(untransformedTarget);
+
+        this.delayRefresh = 0;
+
 
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
 
@@ -146,7 +156,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .attr(SVGAttrs.r, buttonRadius)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
-            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
+            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth);
 
     }
 
@@ -205,7 +215,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         const selection = d3selection
             .append(SVGTags.SVGGElement)
             .classed(TooltipCSS.TOOLTIP, true)
-            .attr(SVGAttrs.display, this.visible ? TooltipCSS.DISPLAY_SHOW : TooltipCSS.DISPLAY_HIDE)
+            .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE)
             .on("mouseenter", () => {
                 // prevent tooltip from losing focus when hovering
                 this.anchor?.interrupt("unfocus");
@@ -257,6 +267,9 @@ export class ActionTooltip extends Rectangle implements IDepictable {
     refresh(): void {
 
         const s = this.anchor;
+
+        s?.transition(TooltipTransitions.refresh).delay(this.delayRefresh)
+            .attr(SVGAttrs.display, this.enabled ? TooltipCSS.DISPLAY_SHOW : TooltipCSS.DISPLAY_HIDE)
 
         s?.select(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, this.topLeft.x)

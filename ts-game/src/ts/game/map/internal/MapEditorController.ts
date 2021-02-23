@@ -260,6 +260,9 @@ export class MapEditorController {
             // connect to it
             node.connectTo(mouseTrackerNode);
 
+            // disable tooltip to not create a mess
+            this.actionTooltip.enabled = false;
+
             // make background track mouse movement and update node location
 
             // attach a listener to this node to detect clicks.
@@ -275,6 +278,7 @@ export class MapEditorController {
                 this.bgGroup?.on(Events.mousemove, null);
                 node.disconnectFrom(mouseTrackerNode);
                 select("body").on(Events.keydown, null);
+                this.actionTooltip.enabled = false;
 
             });
 
@@ -316,6 +320,7 @@ export class MapEditorController {
                     this.bgGroup?.on(Events.mousemove, null);
                     node.disconnectFrom(mouseTrackerNode);
                     select("body").on(Events.keydown, null);
+                    this.actionTooltip.enabled = false;
 
                 }
             });
