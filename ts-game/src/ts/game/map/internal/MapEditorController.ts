@@ -278,7 +278,7 @@ export class MapEditorController {
                 this.bgGroup?.on(Events.mousemove, null);
                 node.disconnectFrom(mouseTrackerNode);
                 select("body").on(Events.keydown, null);
-                this.actionTooltip.enabled = false;
+                this.actionTooltip.enabled = true;
 
             });
 
@@ -320,13 +320,15 @@ export class MapEditorController {
                     this.bgGroup?.on(Events.mousemove, null);
                     node.disconnectFrom(mouseTrackerNode);
                     select("body").on(Events.keydown, null);
-                    this.actionTooltip.enabled = false;
+                    this.actionTooltip.enabled = true;
 
                 }
             });
 
         });
         connectToAction.depiction = TargetAction.depiction.main
+
+        const sayHelloAction = action<Unit>("hello", "hello", n => console.log("hello from " + n.toString()))
 
         const removeAction = action<Unit>("remove", "remove", node => {
             this.locations.rm(node.id);
@@ -342,16 +344,25 @@ export class MapEditorController {
         });
         removeAction.depiction = TargetAction.depiction.delete;
 
+        let actions = n.id === "b" ? [removeAction, connectToAction, sayHelloAction] : [removeAction, connectToAction];
+
         // display tooltip on hover
         n.onMouseIn("display_tooltip", () => {
             this.actionTooltip.focus(
                 n,
-                [removeAction, connectToAction],
+                actions,
                 n.coordinate.translateBy(0, -n.radius),
                 670
             )
         });
-        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true))
+        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250));
+        n.onDragStart("hide_and_disable_tooltip", () => {
+            this.actionTooltip.enabled = false;
+            this.actionTooltip.unfocus(0, true);
+        });
+        n.onDragEnd("re_enable_tooltip", () => {
+            this.actionTooltip.enabled = true;
+        });
 
     }
 

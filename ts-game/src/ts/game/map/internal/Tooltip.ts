@@ -134,12 +134,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             })
             .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
             .attr(SVGAttrs.cy, mid.y)
-            .transition(TooltipTransitions.button_pop)
-            .delay(delayMs + 30)
-            .attr(SVGAttrs.r, buttonRadius)
+            .attr(SVGAttrs.r, buttonRadius / 1.2)
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
-            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth);
+            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
+            .transition(TooltipTransitions.button_pop)
+            .delay(currentlyDisplaying ? 30 : delayMs + 30)
+            .attr(SVGAttrs.r, buttonRadius);
 
         // remove old buttons
         dataJoin?.exit().remove();
@@ -151,12 +152,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .on("click", function(evt: any, action: TargetAction<Target>) {
                 action.apply(target);
             })
-            .transition(TooltipTransitions.button_pop)
-            .delay(currentlyDisplaying ? 30 : delayMs + 30)
-            .attr(SVGAttrs.r, buttonRadius)
+
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
-            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth);
+            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
+            .transition(TooltipTransitions.button_pop)
+            .delay(currentlyDisplaying ? 30 : delayMs + 30)
+            .attr(SVGAttrs.r, buttonRadius);
 
     }
 
@@ -166,7 +168,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
      */
     unfocus(delayMs: number = 0, interrupt?: boolean): void {
 
-        if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus);
+        if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
 
         this.anchor?.transition(TooltipTransitions.unfocus)
                     .delay(delayMs)
@@ -195,6 +197,8 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         const dist = this.config.tip.distanceInComponents(other);
         return this.translateBy(dist.x, dist.y);
     }
+
+    // TODO: fucking uhhhh add an icon in the button
 
     /** Moves tooltip by a given amount, returning itself for chaining. */
     translateBy(x: number, y: number): this {
