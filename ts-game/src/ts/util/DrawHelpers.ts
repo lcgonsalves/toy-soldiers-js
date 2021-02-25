@@ -212,7 +212,10 @@ export function renderIconForSelection<
     Datum,
     Container extends PayloadRectangle<Datum>,
     Element extends SVGGElement
-    >(selection: Selection<Element, Container, any, any>, getIconKey: (d: Datum) => string): void {
+    >(
+        selection: Selection<Element, Container, any, any>,
+        getIconKey: (d: Datum) => string
+): void {
 
     const boundsToRender = selection.data() ?? [];
     const svgNodes = selection.nodes() ?? [];

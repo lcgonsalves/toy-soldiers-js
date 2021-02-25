@@ -122,12 +122,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         this.delayRefresh = 0;
 
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
+        const iconContainerSize = buttonDiameter * 0.55;
 
         const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
             .selectAll<SVGGElement, PayloadRectangle<TargetAction<Target>>>("." + TooltipCSS.BUTTON_CLS)
             .data<PayloadRectangle<TargetAction<Target>>>(
                 actions.map((_, index) => (
-                    new PayloadRectangle(_, mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0), buttonDiameter, buttonDiameter)
+                    new PayloadRectangle(_, mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0), iconContainerSize, iconContainerSize)
                 )),
                 _ => _.payload.key
             );
@@ -179,6 +180,11 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .transition(TooltipTransitions.button_pop)
             .delay(currentlyDisplaying ? 30 : delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius);
+
+        // update position of icon too
+        dataJoin?.select(SVGTags.SVGSVGElement)
+            .attr(SVGAttrs.x, _ => _.topLeft.x)
+            .attr(SVGAttrs.y, _ => _.topLeft.y);
 
     }
 

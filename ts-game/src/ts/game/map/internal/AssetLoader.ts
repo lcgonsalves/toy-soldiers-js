@@ -48,11 +48,10 @@ class AssetLoader {
      * @param bounds
      */
     getIcon(iconName: string, bounds: Rectangle): HTMLElement | undefined {
+
         const i = this.icons.get(iconName);
         i?.setAttribute(SVGAttrs.x, bounds.topLeft.x.toString());
         i?.setAttribute(SVGAttrs.y, bounds.topRight.y.toString());
-
-        var regex = /[+-]?\d+(\.\d+)?/g;
 
         const wOption =  i?.getAttribute(SVGAttrs.width);
         const width = parseInt(wOption ? wOption : this.defaultWidth.toString());
@@ -60,38 +59,16 @@ class AssetLoader {
         const hOption =  i?.getAttribute(SVGAttrs.height);
         const height = parseInt(hOption ? hOption : this.defaultHeight.toString());
 
-        let transform: string = this.defaultScale.toString();
-        let child: Element | undefined;
-
-        if (i && i.children.length > 0) {
-            child = i.children[0];
-            const transformOpt = child.getAttribute(SVGAttrs.transform);
-            transform = transformOpt ? transformOpt : this.defaultScale.toString();
-        }
-
-        const scaleOption = transform.match(regex)?.map(_ => parseFloat(_)).pop();
-        const scale = scaleOption ? scaleOption : this.defaultScale;
-
         // find how much bigger/smaller we need to be
         const xRatio = bounds.width / width;
         const yRatio = bounds.height / height;
 
         // if we are BIGGER than bounds, then we need to SHRING (number is small, you idiot)
-        let newScale = scale * Math.min(xRatio, yRatio);
         const newWidth = width * xRatio,
               newHeight = height * yRatio;
 
-        // update <g> scale
-        child?.setAttribute(SVGAttrs.transform, `scale(${newScale})`);
-
-        // update viewbox
-        const [vboxX, vboxY] = this.defaultViewBoxDimensions;
-        i?.setAttribute(SVGAttrs.viewbox, `0 0 ${newWidth > vboxX ? newWidth : vboxX} ${newHeight > vboxY ? newHeight : vboxY}`);
-
-        // now we set the size
-        i?.setAttribute(SVGAttrs.width, (newWidth > this.defaultWidth ? newWidth : this.defaultWidth) + "px");
-        i?.setAttribute(SVGAttrs.height, (newHeight > this.defaultHeight ? newHeight : this.defaultHeight) + "px");
-
+        i?.setAttribute(SVGAttrs.width, newWidth + "px");
+        i?.setAttribute(SVGAttrs.height, newHeight + "px");
 
         return i;
     }

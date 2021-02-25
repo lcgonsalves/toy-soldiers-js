@@ -251,7 +251,7 @@ export class MapEditorController {
 
         // moves into connecting state, tracking a virtual node until either the esc key is pressed,
         // or the user clicks on a node, or the user clicks somewhere in the map.
-        const connectToAction = action<Unit>("connect", "connect", node => {
+        const connectToAction = action<Unit>("connect_", "connect", node => {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
@@ -328,7 +328,7 @@ export class MapEditorController {
         });
         connectToAction.depiction = TargetAction.depiction.main
 
-        const sayHelloAction = action<Unit>("hello", "hello", n => console.log("hello from " + n.toString()))
+        const sayHelloAction = action<Unit>("connect", "hello", n => console.log("hello from " + n.toString()))
 
         const removeAction = action<Unit>("remove", "remove", node => {
             this.locations.rm(node.id);

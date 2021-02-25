@@ -81,6 +81,10 @@ export default class Rectangle extends Coordinate {
             other._topLeft.equals(this._topLeft);
     }
 
+    toString(): string {
+        return `R (${this.topLeft.toString()}, ${this.topRight.toString()}, ${this.bottomLeft.toString()}, ${this.bottomRight.toString()} )`
+    }
+
     translateTo(x: number, y: number): Rectangle {
         const dic = this.distanceInComponents(new Coordinate(x,y));
         this.translateBy(dic.x, dic.y);
