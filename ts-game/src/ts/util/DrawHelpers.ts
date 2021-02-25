@@ -1,10 +1,12 @@
 import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
 import {ICoordinate, C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import {sq} from "ts-shared/build/lib/util/Shorthands";
-import {Selection} from "d3-selection";
+import {BaseType, Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
 import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+import {PayloadRectangle} from "ts-shared/build/lib/geometry/Payload";
+import AssetLoader from "../game/map/internal/AssetLoader";
 
 export type AnySelection = Selection<any, any, any, any>;
 
@@ -199,6 +201,43 @@ export function getTransforms(s?: AnySelection): {scale: number, translation: {x
 
 }
 
+/**
+ * The first generic refers to the datum contained within the payload. This datum must
+ * The second indicates what kind of container is being used.
+ * The third refers to the type of SVG container to which the icon will be appended to.
+ * @param selection the selection in which the icons are supposed to be rendered in
+ * @param getIconKey function should receive a datum and output a key that will be used to fetch the icon.
+ */
+export function renderIconForSelection<
+    Datum,
+    Container extends PayloadRectangle<Datum>,
+    Element extends SVGGElement
+    >(selection: Selection<Element, Container, any, any>, getIconKey: (d: Datum) => string): void {
+
+    const boundsToRender = selection.data() ?? [];
+    const svgNodes = selection.nodes() ?? [];
+
+    if (boundsToRender.length !== svgNodes.length) {
+        console.error("Incompatible number of svg nodes and associated bounds!");
+        return;
+    }
+
+    svgNodes.forEach((svgN, i) => {
+
+        const bound = boundsToRender[i];
+        const key = getIconKey(bound.payload);
+        const asset = AssetLoader.getIcon(key, bound);
+
+
+        if (asset) {
+
+            svgN.appendChild(asset);
+
+        }
+
+    });
+
+}
 
 /** shorthand for drawing a rectangle in d3 */
 export function rect(selection: AnySelection, rectConfig: RectConfig): Selection<SVGRectElement, any, any, any> {

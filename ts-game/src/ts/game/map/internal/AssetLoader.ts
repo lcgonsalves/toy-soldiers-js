@@ -30,7 +30,7 @@ class AssetLoader {
         ];
 
         // define here all asset strings
-        iconNames.forEach(assetName => svg(assetName).then(_ => {
+        iconNames.forEach(assetName => svg("/images/" + assetName).then(_ => {
 
             const e = _.documentElement;
             e.setAttribute("class", this.ICON_CLS);
@@ -81,8 +81,6 @@ class AssetLoader {
         const newWidth = width * xRatio,
               newHeight = height * yRatio;
 
-        console.log(xRatio, yRatio)
-
         // update <g> scale
         child?.setAttribute(SVGAttrs.transform, `scale(${newScale})`);
 
@@ -94,7 +92,6 @@ class AssetLoader {
         i?.setAttribute(SVGAttrs.width, (newWidth > this.defaultWidth ? newWidth : this.defaultWidth) + "px");
         i?.setAttribute(SVGAttrs.height, (newHeight > this.defaultHeight ? newHeight : this.defaultHeight) + "px");
 
-        console.log(scale, newScale);
 
         return i;
     }

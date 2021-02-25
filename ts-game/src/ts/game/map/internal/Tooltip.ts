@@ -4,7 +4,7 @@ import {
     defaultColors,
     defaultConfigurations,
     getTransforms,
-    rect,
+    rect, renderIconForSelection,
     TooltipConfig
 } from "../../../util/DrawHelpers";
 import {C, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
@@ -13,8 +13,8 @@ import Rectangle, {Square} from "ts-shared/build/lib/geometry/Rectangle";
 import SVGTags from "../../../util/SVGTags";
 import {SimpleDepiction} from "../../../util/Depiction";
 import SVGAttrs from "../../../util/SVGAttrs";
-import AssetLoader from "./AssetLoader";
-import {select} from "d3-selection";
+import {Selection} from "d3-selection";
+import {PayloadRectangle} from "ts-shared/build/lib/geometry/Payload";
 
 
 enum TooltipCSS {
@@ -78,9 +78,6 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         if (!actions.length || !this.enabled) return;
 
-        const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
-            .selectAll<SVGGElement, TargetAction<Target>>("." + TooltipCSS.BUTTON_CLS)
-            .data<TargetAction<Target>>(actions, _ => _.key);
 
         const currentlyDisplaying = this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
 
@@ -124,60 +121,61 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         this.delayRefresh = 0;
 
-
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
+
+        const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
+            .selectAll<SVGGElement, PayloadRectangle<TargetAction<Target>>>("." + TooltipCSS.BUTTON_CLS)
+            .data<PayloadRectangle<TargetAction<Target>>>(
+                actions.map((_, index) => (
+                    new PayloadRectangle(_, mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0), buttonDiameter, buttonDiameter)
+                )),
+                _ => _.payload.key
+            );
 
 
         // initialize button group
         const btnG = dataJoin?.enter()
-            .append(SVGTags.SVGGElement)
+            .append<SVGGElement>(SVGTags.SVGGElement)
             .classed(TooltipCSS.BUTTON_CLS, true);
 
         // add new button circles
-        const d = btnG?.append(SVGTags.SVGCircleElement)
-            .on("click", function(evt: any, action: TargetAction<Target>) {
-                action.apply(target);
+        btnG?.append(SVGTags.SVGCircleElement)
+            .on("click", function(evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.apply(target);
             })
-            .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
-            .attr(SVGAttrs.cy, mid.y)
+            .attr(SVGAttrs.cx, _ => _.x)
+            .attr(SVGAttrs.cy, _ => _.y)
             .attr(SVGAttrs.r, buttonRadius / 1.2)
-            .attr(SVGAttrs.fill, _ => _.depiction.fill)
-            .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
-            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
+            .attr(SVGAttrs.fill, _ => _.payload.depiction.fill)
+            .attr(SVGAttrs.stroke, _ => _.payload.depiction.stroke)
+            .attr(SVGAttrs.strokeWidth, _ => _.payload.depiction.strokeWidth)
             .transition(TooltipTransitions.button_pop)
             .delay(currentlyDisplaying ? 30 : delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius);
 
 
-        // add new button icons
-        // @ts-ignore
-        btnG?.node()?.appendChild(AssetLoader.getIcon("connect", Square(1.6).translateBy(20, 20)));
+        // append icons where available
+        if(btnG) renderIconForSelection<
+                TargetAction<Target>,
+                PayloadRectangle<TargetAction<Target>>,
+                SVGGElement
+            >(btnG, d => d.key);
 
-
-        console.log(
-            btnG?.nodes()
-                .map(_ => {
-
-                    const innerG = select(_).select(SVGTags.SVGSVGElement)
-
-                    // return scale;
-                })
-        );
 
         // remove old buttons
         dataJoin?.exit().remove();
 
         // update position and handler of buttons, in case the actions have changed.
         dataJoin?.select(SVGTags.SVGCircleElement)
-            .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
+            .attr(SVGAttrs.cx, _ => _.x)
             .attr(SVGAttrs.cy, mid.y)
             .attr(SVGAttrs.r, buttonRadius / 1.2)
-            .on("click", function(evt: any, action: TargetAction<Target>) {
-                action.apply(target);
+            .on("click", function(evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.apply(target);
             })
-            .attr(SVGAttrs.fill, _ => _.depiction.fill)
-            .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
-            .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
+            .attr(SVGAttrs.fill, _ => _.payload.depiction.fill)
+            .attr(SVGAttrs.stroke, _ => _.payload.depiction.stroke)
+            .attr(SVGAttrs.strokeWidth, _ => _.payload.depiction.strokeWidth)
             .transition(TooltipTransitions.button_pop)
             .delay(currentlyDisplaying ? 30 : delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius);
