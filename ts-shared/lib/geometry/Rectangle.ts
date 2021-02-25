@@ -217,9 +217,9 @@ export default class Rectangle extends Coordinate {
 }
 
 /**
- * Returns a simple square, with top left corner at origin.
+ * Returns a simple square, with center at origin.
  * @param size
  */
 export function Square(size: number): Rectangle {
-    return Rectangle.fromCorners(Coordinate.origin, Coordinate.origin.translateBy(size, size));
+    return Rectangle.fromCorners(Coordinate.origin.translateBy(-size / 2, -size / 2), Coordinate.origin.translateBy(size / 2, size / 2));
 }

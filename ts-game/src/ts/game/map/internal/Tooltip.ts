@@ -9,10 +9,12 @@ import {
 } from "../../../util/DrawHelpers";
 import {C, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import {IDepictable} from "../../units/UnitInterfaces";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+import Rectangle, {Square} from "ts-shared/build/lib/geometry/Rectangle";
 import SVGTags from "../../../util/SVGTags";
 import {SimpleDepiction} from "../../../util/Depiction";
 import SVGAttrs from "../../../util/SVGAttrs";
+import AssetLoader from "./AssetLoader";
+import {select} from "d3-selection";
 
 
 enum TooltipCSS {
@@ -77,7 +79,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         if (!actions.length || !this.enabled) return;
 
         const dataJoin = this.anchor?.select("." + TooltipCSS.BUTTONS_CONTAINER_CLS)
-            .selectAll<SVGCircleElement, TargetAction<Target>>("." + TooltipCSS.BUTTON_CLS)
+            .selectAll<SVGGElement, TargetAction<Target>>("." + TooltipCSS.BUTTON_CLS)
             .data<TargetAction<Target>>(actions, _ => _.key);
 
         const currentlyDisplaying = this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
@@ -125,10 +127,14 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
 
-        // add new buttons
-        dataJoin?.enter()
-            .append(SVGTags.SVGCircleElement)
-            .classed(TooltipCSS.BUTTON_CLS, true)
+
+        // initialize button group
+        const btnG = dataJoin?.enter()
+            .append(SVGTags.SVGGElement)
+            .classed(TooltipCSS.BUTTON_CLS, true);
+
+        // add new button circles
+        const d = btnG?.append(SVGTags.SVGCircleElement)
             .on("click", function(evt: any, action: TargetAction<Target>) {
                 action.apply(target);
             })
@@ -142,17 +148,33 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .delay(currentlyDisplaying ? 30 : delayMs + 30)
             .attr(SVGAttrs.r, buttonRadius);
 
+
+        // add new button icons
+        // @ts-ignore
+        btnG?.node()?.appendChild(AssetLoader.getIcon("connect", Square(1.6).translateBy(20, 20)));
+
+
+        console.log(
+            btnG?.nodes()
+                .map(_ => {
+
+                    const innerG = select(_).select(SVGTags.SVGSVGElement)
+
+                    // return scale;
+                })
+        );
+
         // remove old buttons
         dataJoin?.exit().remove();
 
         // update position and handler of buttons, in case the actions have changed.
-        dataJoin?.attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
+        dataJoin?.select(SVGTags.SVGCircleElement)
+            .attr(SVGAttrs.cx, (_, index) => mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0).x)
             .attr(SVGAttrs.cy, mid.y)
             .attr(SVGAttrs.r, buttonRadius / 1.2)
             .on("click", function(evt: any, action: TargetAction<Target>) {
                 action.apply(target);
             })
-
             .attr(SVGAttrs.fill, _ => _.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.depiction.stroke)
             .attr(SVGAttrs.strokeWidth, _ => _.depiction.strokeWidth)
@@ -167,12 +189,12 @@ export class ActionTooltip extends Rectangle implements IDepictable {
      * Can force to disappear evenwhen hovering by passing the parameter force.
      */
     unfocus(delayMs: number = 0, interrupt?: boolean): void {
-
-        if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
-
-        this.anchor?.transition(TooltipTransitions.unfocus)
-                    .delay(delayMs)
-                    .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
+        //
+        // if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
+        //
+        // this.anchor?.transition(TooltipTransitions.unfocus)
+        //             .delay(delayMs)
+        //             .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
 
     }
 

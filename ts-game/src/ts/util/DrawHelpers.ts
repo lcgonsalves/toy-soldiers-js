@@ -199,6 +199,7 @@ export function getTransforms(s?: AnySelection): {scale: number, translation: {x
 
 }
 
+
 /** shorthand for drawing a rectangle in d3 */
 export function rect(selection: AnySelection, rectConfig: RectConfig): Selection<SVGRectElement, any, any, any> {
 

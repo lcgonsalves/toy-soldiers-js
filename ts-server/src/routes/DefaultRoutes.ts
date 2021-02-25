@@ -28,6 +28,7 @@ class DefaultRoutes {
 
             // register routes here!
             router.get("/", DefaultRoutes.home);
+            router.get("/images/:filename", DefaultRoutes.img);
 
             this.serverReference = server;
             server.use(router);
@@ -43,9 +44,17 @@ class DefaultRoutes {
      * @param {Response} response
      */
     private static home(request: Request, response: Response): void {
+        console.log("Going home...")
         response.status(StatusCodes.OK);
         response.setHeader("Content-Type", "text/html");
         response.sendFile(path.join(__dirname, '../../static/ts-game-build/', 'index.html'));
+    }
+
+    private static img(request: Request, response: Response): void {
+        console.log("Received request for " + request.params.filename + ".svg image")
+        response.status(StatusCodes.OK);
+        response.setHeader("Content-Type", "image/svg+xml");
+        response.sendFile(path.join(__dirname, '../../static/img/', request.params.filename + ".svg"));
     }
 
 }

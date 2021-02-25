@@ -27,6 +27,7 @@ class DefaultRoutes {
             router.use(express_1.static(path.join(__dirname, "../../static/ts-game-build/")));
             // register routes here!
             router.get("/", DefaultRoutes.home);
+            router.get("/images/:filename", DefaultRoutes.img);
             this.serverReference = server;
             server.use(router);
             return router;
@@ -39,9 +40,16 @@ class DefaultRoutes {
      * @param {Response} response
      */
     static home(request, response) {
+        console.log("Going home...");
         response.status(StatusCodes_1.default.OK);
         response.setHeader("Content-Type", "text/html");
         response.sendFile(path.join(__dirname, '../../static/ts-game-build/', 'index.html'));
+    }
+    static img(request, response) {
+        console.log("Received request for " + request.params.filename + ".svg image");
+        response.status(StatusCodes_1.default.OK);
+        response.setHeader("Content-Type", "image/svg+xml");
+        response.sendFile(path.join(__dirname, '../../static/img/', request.params.filename + ".svg"));
     }
 }
 exports.default = new DefaultRoutes();

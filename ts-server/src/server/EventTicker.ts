@@ -1,5 +1,5 @@
 import * as SocketIO from "socket.io";
-import {WebsocketTools as WS} from "ts-shared";
+// import {WebsocketTools as WS} from "ts-shared";
 
 class EventTicker {
     private io: SocketIO.Server;
