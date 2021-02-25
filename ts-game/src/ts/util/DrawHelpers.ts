@@ -229,7 +229,7 @@ export function renderIconForSelection<
 
         const bound = boundsToRender[i];
         const key = getIconKey(bound.payload);
-        const asset = AssetLoader.getIcon(key, bound);
+        const asset = AssetLoader.getIcon(key, bound, true);
 
 
         if (asset) {

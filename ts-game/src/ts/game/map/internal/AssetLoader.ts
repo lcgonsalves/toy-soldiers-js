@@ -47,7 +47,7 @@ class AssetLoader {
      * @param iconName
      * @param bounds
      */
-    getIcon(iconName: string, bounds: Rectangle): HTMLElement | undefined {
+    getIcon(iconName: string, bounds: Rectangle, copy?: boolean): HTMLElement | undefined {
 
         const i = this.icons.get(iconName);
         i?.setAttribute(SVGAttrs.x, bounds.topLeft.x.toString());
@@ -70,7 +70,7 @@ class AssetLoader {
         i?.setAttribute(SVGAttrs.width, newWidth + "px");
         i?.setAttribute(SVGAttrs.height, newHeight + "px");
 
-        return i;
+        return copy ? i?.cloneNode(true) as HTMLElement | undefined : i;
     }
 
 }

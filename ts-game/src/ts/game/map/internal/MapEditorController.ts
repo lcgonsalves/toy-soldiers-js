@@ -251,7 +251,7 @@ export class MapEditorController {
 
         // moves into connecting state, tracking a virtual node until either the esc key is pressed,
         // or the user clicks on a node, or the user clicks somewhere in the map.
-        const connectToAction = action<Unit>("connect_", "connect", node => {
+        const connectToAction = action<Unit>("connect", "connect", node => {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
