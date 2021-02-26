@@ -155,7 +155,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .attr(SVGAttrs.r, buttonRadius);
 
 
-        // append icons where available
+        // append icons where available, run this only on enter selection to avoid appending svg copies when not needed
         if(btnG) renderIconForSelection<
                 TargetAction<Target>,
                 PayloadRectangle<TargetAction<Target>>,
@@ -193,12 +193,12 @@ export class ActionTooltip extends Rectangle implements IDepictable {
      * Can force to disappear evenwhen hovering by passing the parameter force.
      */
     unfocus(delayMs: number = 0, interrupt?: boolean): void {
-        //
-        // if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
-        //
-        // this.anchor?.transition(TooltipTransitions.unfocus)
-        //             .delay(delayMs)
-        //             .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
+
+        if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
+
+        this.anchor?.transition(TooltipTransitions.unfocus)
+                    .delay(delayMs)
+                    .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
 
     }
 

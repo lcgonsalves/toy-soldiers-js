@@ -328,7 +328,7 @@ export class MapEditorController {
         });
         connectToAction.depiction = TargetAction.depiction.main
 
-        const sayHelloAction = action<Unit>("connect", "hello", n => console.log("hello from " + n.toString()))
+        const sayHelloAction = action<Unit>("hello", "hello", n => console.log("hello from " + n.toString()))
 
         const removeAction = action<Unit>("remove", "remove", node => {
             this.locations.rm(node.id);
