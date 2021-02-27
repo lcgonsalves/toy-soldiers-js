@@ -1,8 +1,6 @@
 import * as express from "express";
-import {Express} from "express";
 import DefaultRoutes from "./routes/DefaultRoutes";
 import {createServer} from "http";
-import * as SocketIO from "socket.io";
 import EventTicker from "./server/EventTicker";
 
 /**

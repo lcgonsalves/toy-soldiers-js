@@ -1,18 +1,17 @@
-import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
-import {C, Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import {pointer, select} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
 import LocationUnit from "../../units/LocationUnit";
-import {AnySelection, defaultColors} from "../../../util/DrawHelpers";
+import {AnySelection} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
-import {action, ActionTooltip, GenericAction, TargetAction} from "./Tooltip";
-import LocationNode from "ts-shared/build/lib/graph/LocationNode";
-import { act } from "react-dom/test-utils";
-import {log} from "util";
+import {ActionTooltip} from "./Tooltip";
 import {Events} from "../../../util/Events";
+import {C, Coordinate} from "ts-shared/build/geometry/Coordinate";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import {TAction, TargetAction} from "../../../util/Action";
+import {LocationContext} from "ts-shared/build/mechanics/Location";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -234,15 +233,14 @@ export class MapEditorController {
         n.attachEdgeDepictionTo(this.edgeContainer);
         n.shouldDisplayLabel = false;
 
-        const refreshEndpoints = action("refresh_endpoints", "refresh_endpoints", () => {
+        const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
                 this.locations.nodes.forEach(nodeInContext => {
                     if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction(true);
 
                 });
-            }
-        );
+            });
 
-                // detect when nodes move and react to it
+        // detect when nodes move and react to it
         n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
         n.onDragEnd(refreshEndpoints.key, refreshEndpoints.apply);
         
@@ -251,7 +249,7 @@ export class MapEditorController {
 
         // moves into connecting state, tracking a virtual node until either the esc key is pressed,
         // or the user clicks on a node, or the user clicks somewhere in the map.
-        const connectToAction = action<Unit>("connect", "connect", node => {
+        const connectToAction = TAction<Unit>("connect", "connect", node => {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
@@ -326,11 +324,9 @@ export class MapEditorController {
             });
 
         });
-        connectToAction.depiction = TargetAction.depiction.main
+        connectToAction.depiction = TargetAction.depiction.neutral
 
-        const sayHelloAction = action<Unit>("hello", "hello", n => console.log("hello from " + n.toString()))
-
-        const removeAction = action<Unit>("remove", "remove", node => {
+        const removeAction = TAction<Unit>("remove", "remove", node => {
             this.locations.rm(node.id);
             this.actionTooltip.unfocus(0);
             this.locations.getNodesAdjacentTo(node).forEach(adj => {
@@ -344,18 +340,25 @@ export class MapEditorController {
         });
         removeAction.depiction = TargetAction.depiction.delete;
 
-        let actions = n.id === "b" ? [removeAction, connectToAction, sayHelloAction] : [removeAction, connectToAction];
+        const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
+            console.log(node.adjacent);
+        });
+        disconnectFromAction.depiction = TargetAction.depiction.neutral;
+
+        const actionsForLooseNodes = [connectToAction, removeAction];
 
         // display tooltip on hover
         n.onMouseIn("display_tooltip", () => {
+            const hasNeighbors = n.adjacent.length > 0;
+
             this.actionTooltip.focus(
                 n,
-                actions,
+                hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
                 n.coordinate.translateBy(0, -n.radius),
                 670
             )
         });
-        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250));
+        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
         n.onDragStart("hide_and_disable_tooltip", () => {
             this.actionTooltip.enabled = false;
             this.actionTooltip.unfocus(0, true);

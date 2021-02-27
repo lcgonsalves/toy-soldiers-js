@@ -2,7 +2,6 @@ import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
 import {Edge} from "./SimpleDirectedEdge";
 import WorldContext from "../mechanics/WorldContext";
-import IComparable from "../util/IComparable";
 
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {

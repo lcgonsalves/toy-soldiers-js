@@ -1,13 +1,12 @@
 import React, {Component} from 'react';
 
-
 import "../../../css/DirectedGraph.css";
 import "../../../css/Editor.css"
 
-import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
-import {Coordinate, ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import {MapEditorController} from "./internal/MapEditorController";
 import LocationUnit from "../units/LocationUnit";
+import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {LocationContext} from "ts-shared/build/mechanics/Location";
 
 
 // todo: move state to props

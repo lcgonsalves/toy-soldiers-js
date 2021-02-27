@@ -1,7 +1,6 @@
 import {svg} from "d3-fetch";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
 import SVGAttrs from "../../../util/SVGAttrs";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
+import Rectangle from "ts-shared/build/geometry/Rectangle";
 
 /**
  * Component responsible for loading backend assets into the front end.
@@ -26,7 +25,9 @@ class AssetLoader {
     constructor() {
 
         const iconNames = [
-            "connect"
+            "connect",
+            "disconnect",
+            "remove"
         ];
 
         // define here all asset strings
@@ -46,12 +47,14 @@ class AssetLoader {
      *
      * @param iconName
      * @param bounds
+     * @param copy
      */
-    getIcon(iconName: string, bounds: Rectangle, copy?: boolean): HTMLElement | undefined {
+    getIcon(iconName: string, bounds: Rectangle, color: string = "black"): HTMLElement | undefined {
 
         const i = this.icons.get(iconName);
         i?.setAttribute(SVGAttrs.x, bounds.topLeft.x.toString());
         i?.setAttribute(SVGAttrs.y, bounds.topRight.y.toString());
+        i?.children.item(0)?.setAttribute(SVGAttrs.fill, color);
 
         const wOption =  i?.getAttribute(SVGAttrs.width);
         const width = parseInt(wOption ? wOption : this.defaultWidth.toString());
@@ -70,7 +73,7 @@ class AssetLoader {
         i?.setAttribute(SVGAttrs.width, newWidth + "px");
         i?.setAttribute(SVGAttrs.height, newHeight + "px");
 
-        return copy ? i?.cloneNode(true) as HTMLElement | undefined : i;
+        return i?.cloneNode(true) as HTMLElement | undefined;
     }
 
 }

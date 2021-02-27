@@ -1,5 +1,5 @@
 import {AnySelection} from "../../util/DrawHelpers";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 
 export interface IDepictable {
     /** attaches game unit to a d3 selection */

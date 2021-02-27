@@ -1,6 +1,6 @@
 import IComparable from "../util/IComparable";
 import {Interval} from "./Interval";
-import {Coordinate, ICoordinate} from "./Coordinate";
+import {ICoordinate} from "./Coordinate";
 
 /**
  * Defines abstracts the concept of two dimensional intervals

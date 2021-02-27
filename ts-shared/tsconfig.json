@@ -5,5 +5,12 @@
     "outDir": "./build",
     "sourceMap": true,
     "watch": false
-    }
+    },
+  "include": [
+    "./lib/**/*"
+  ],
+  "exclude": [
+    "../ts-game/**/*",
+    "../ts-server/**/*"
+  ]
 }

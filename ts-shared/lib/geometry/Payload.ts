@@ -1,5 +1,4 @@
 import {Coordinate, ICoordinate} from "./Coordinate";
-import {Subject} from "rxjs";
 import Rectangle from "./Rectangle";
 
 /**

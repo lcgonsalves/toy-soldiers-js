@@ -1,12 +1,14 @@
-import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
-import {ICoordinate, C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {sq} from "ts-shared/build/lib/util/Shorthands";
-import {BaseType, Selection} from "d3-selection";
+
+import {Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-import {PayloadRectangle} from "ts-shared/build/lib/geometry/Payload";
 import AssetLoader from "../game/map/internal/AssetLoader";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import Rectangle from "ts-shared/build/geometry/Rectangle";
+import {PayloadRectangle} from "ts-shared/build/geometry/Payload";
+import {sq} from "ts-shared/build/util/Shorthands";
+import {SimpleDepiction} from "./Depiction";
 
 export type AnySelection = Selection<any, any, any, any>;
 
@@ -214,7 +216,8 @@ export function renderIconForSelection<
     Element extends SVGGElement
     >(
         selection: Selection<Element, Container, any, any>,
-        getIconKey: (d: Datum) => string
+        getIconKey: (d: Datum) => string,
+        depiction: SimpleDepiction
 ): void {
 
     const boundsToRender = selection.data() ?? [];
@@ -229,14 +232,10 @@ export function renderIconForSelection<
 
         const bound = boundsToRender[i];
         const key = getIconKey(bound.payload);
-        const asset = AssetLoader.getIcon(key, bound, true);
+        const asset = AssetLoader.getIcon(key, bound, depiction.fill);
 
 
-        if (asset) {
-
-            svgN.appendChild(asset);
-
-        }
+        if (asset) svgN.appendChild(asset);
 
     });
 
@@ -273,16 +272,16 @@ const defaultDockWidth = 90;
 const defaultDockItemSize = defaultDockWidth / 15;
 
 export const defaultColors = {
-    primary: "#5862ef",
-    secondary: "#bababa",
-    neutral: "#6d6d6d",
-    error: "#d0444b",
+    primary: "#1493ff",
+    error: "#ff3e44",
+    success: "#0fa500",
     grays: {
-        a: "#e5e5e5",
-        b: "#c0c0c0",
-        c: "#dedede",
-        d: "#d5d5d5",
-        dark: "#525252"
+        extralight: "#e5e5e5",
+        light: "#c0c0c0",
+        medium: "#a9a9a9",
+        dark: "#8c8c8c",
+        extradark: "#525252",
+        superextradark: "#282828"
     },
     text: {
         light: "#f7f7f7",
@@ -294,7 +293,7 @@ const defaultDockItemContainerConfig = new RectConfig(
     C(0,0),
     defaultDockItemSize,
     defaultDockItemSize
-).withFill(defaultColors.grays.d).withRx(0.3);
+).withFill(defaultColors.grays.light).withRx(0.3);
 
 export const defaultConfigurations = {
     /** Default configuration of a dock item container */
@@ -306,10 +305,10 @@ export const defaultConfigurations = {
         100 - 85,
         0.6,
         defaultDockItemContainerConfig,
-        defaultColors.grays.a,
-        defaultColors.grays.b
-    ).withStroke(defaultColors.grays.c),
-    tooltip: new TooltipConfig(Coordinate.origin, 1.6, 0.3).withFill(defaultColors.grays.dark).withStroke("none")
+        defaultColors.grays.extralight,
+        defaultColors.grays.light
+    ).withStroke(defaultColors.grays.medium),
+    tooltip: new TooltipConfig(Coordinate.origin, 1.6, 0.3).withFill(defaultColors.grays.extradark).withStroke("none")
 }
 
 

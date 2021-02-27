@@ -1,22 +1,20 @@
-/**
- * Represents a Location node in the front end.
- */
-import LocationNode from "ts-shared/build/lib/graph/LocationNode";
-import {Coordinate, ICoordinate, C} from "ts-shared/build/lib/geometry/Coordinate";
+
 import {select, Selection} from "d3-selection";
 import SVGTags from "../../util/SVGTags";
 import {AnySelection} from "../../util/DrawHelpers";
 import SVGAttrs from "../../util/SVGAttrs";
-import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
 import {path} from "d3-path";
 import {DragEvents, DragHandler, Handler, IDraggable, INodeUnit} from "./UnitInterfaces";
 import {DestinationInvalidError} from "../../util/Errors";
 import {drag} from "d3-drag";
 import {GameMapConfig} from "../map/GameMapHelpers";
-import WorldContext from "ts-shared/build/lib/mechanics/WorldContext";
 import {easeExpIn, easeExpOut} from "d3-ease";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import {Events} from "../../util/Events";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import Rectangle from "ts-shared/build/geometry/Rectangle";
+import WorldContext from "ts-shared/build/mechanics/WorldContext";
 
 
 type ContainerElement = SVGGElement;

@@ -1,12 +1,14 @@
-import { ICoordinate } from "ts-shared/build/lib/geometry/Coordinate";
-import { LocationContext } from "ts-shared/build/lib/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
 import { path } from "d3";
+import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import Rectangle from "ts-shared/build/geometry/Rectangle";
+import {LocationContext} from "ts-shared/build/mechanics/Location";
+
+
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
 
 enum DockCSS {
