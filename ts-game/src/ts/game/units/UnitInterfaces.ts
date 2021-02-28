@@ -10,6 +10,9 @@ export interface IDepictable {
 
     /** refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
+
+    /** toggles depiction to a highlighted depiction */
+    toggleHighlight(): void;
 }
 
 export interface IGameUnit extends IDepictable {

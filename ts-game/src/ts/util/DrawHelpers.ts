@@ -308,7 +308,7 @@ export const defaultConfigurations = {
         defaultColors.grays.extralight,
         defaultColors.grays.light
     ).withStroke(defaultColors.grays.medium),
-    tooltip: new TooltipConfig(Coordinate.origin, 1.6, 0.3).withFill(defaultColors.grays.extradark).withStroke("none")
+    tooltip: new TooltipConfig(Coordinate.origin, 2.5, 0.3).withFill(defaultColors.grays.extradark).withStroke("none")
 }
 
 

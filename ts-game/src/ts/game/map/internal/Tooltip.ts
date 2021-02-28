@@ -9,12 +9,13 @@ import {
 import {IDepictable} from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
-import {C, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {PayloadRectangle} from "ts-shared/build/geometry/Payload";
 import {TargetAction} from "../../../util/Action";
 import {SimpleDepiction} from "../../../util/Depiction";
 import {Selection, BaseType} from "d3-selection";
+import {Events} from "../../../util/Events";
 
 
 enum TooltipCSS {
@@ -45,6 +46,9 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
     public static buttonAnimationDuration: number = 250;
 
+    public get currentlyDisplaying(): boolean {
+        return this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
+    }
 
     // defines the context in which the transforms will be applied to. For example, if we have nodes that have transforms, we correct for their position
     // with this selection.
@@ -93,7 +97,44 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // save target
         this.lastFocusTarget = target;
 
-        const currentlyDisplaying = this.anchor?.attr(SVGAttrs.display) === TooltipCSS.DISPLAY_SHOW;
+        // undo contextual transforms
+        const transforms = getTransforms(this.context);
+        const untransformedTarget: ICoordinate = anchorPoint.copy.translateTo(
+            (anchorPoint.x * transforms.scale) + transforms.translation.x,
+            (anchorPoint.y * transforms.scale) + transforms.translation.y
+        )
+
+        this.translateToCoord(untransformedTarget);
+
+        // display anchor
+        if (this.currentlyDisplaying) this.anchor?.attr(SVGAttrs.display,TooltipCSS.DISPLAY_SHOW);
+        else this.anchor?.transition(TooltipTransitions.focus).delay(delayMs).attr(SVGAttrs.display,TooltipCSS.DISPLAY_SHOW);
+
+        this.setActions(actions, target, delayMs);
+
+    }
+
+    /**
+     * Override the buttons to display a new set of actions to be performed on the current target of the focus. If no
+     * actions are passed, tooltip hides.
+     * @param actions
+     * @param target
+     * @param delayMs
+     */
+    public setActions<Target extends ICoordinate>(
+        actions: TargetAction<Target>[],
+        target: Target,
+        delayMs: number
+    ) {
+
+        if (!actions.length) {
+            this.unfocus();
+        }
+
+        const {
+            topLeft,
+            bottomLeft
+        } = this;
 
         const {
             buttonMargin,
@@ -106,22 +147,6 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // set width to fit new params
         this.setWidth(newWidth);
 
-        // undo contextual transforms
-        const transforms = getTransforms(this.context);
-        const untransformedTarget: ICoordinate = anchorPoint.copy.translateTo(
-            (anchorPoint.x * transforms.scale) + transforms.translation.x,
-            (anchorPoint.y * transforms.scale) + transforms.translation.y
-        )
-
-        const {
-            topLeft,
-            bottomLeft
-        } = this.translateToCoord(untransformedTarget);
-
-        // display anchor
-        if (currentlyDisplaying) this.anchor?.attr(SVGAttrs.display,TooltipCSS.DISPLAY_SHOW);
-        else this.anchor?.transition(TooltipTransitions.refresh).delay(delayMs).attr(SVGAttrs.display,TooltipCSS.DISPLAY_SHOW);
-
         const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
         const iconContainerSize = buttonDiameter * 0.45;
 
@@ -133,7 +158,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
                 actions.map((_, index) => (
                     new PayloadRectangle(_, mid.copy.translateBy(index * (buttonDiameter + buttonMargin), 0), iconContainerSize, iconContainerSize)
                 )),
-                _ => _.payload.key
+                _ => _.payload.name
             );
 
         // initialize button group
@@ -143,8 +168,14 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         // add new button circles
         btnG?.append(SVGTags.SVGCircleElement)
-            .on("click", function(evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+            .on(Events.click, function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
                 action.payload.apply(target);
+            })
+            .on(Events.mouseenter, function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.preview(target);
+            })
+            .on(Events.mouseleave, function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.stopPreview(target);
             })
             .attr(SVGAttrs.cx, _ => _.x)
             .attr(SVGAttrs.cy, _ => _.y)
@@ -153,28 +184,24 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .attr(SVGAttrs.stroke, _ => _.payload.depiction.stroke)
             .attr(SVGAttrs.strokeWidth, _ => _.payload.depiction.strokeWidth)
             .transition(TooltipTransitions.button_pop)
-            .delay(currentlyDisplaying ? 0 : delayMs)
+            .delay(this.currentlyDisplaying ? 0 : delayMs)
             .duration(ActionTooltip.buttonAnimationDuration)
             .attr(SVGAttrs.r, buttonRadius);
 
         // append icons where available, run this only on enter selection to avoid appending svg copies when not needed
-        if(btnG) renderIconForSelection<
-                TargetAction<Target>,
-                PayloadRectangle<TargetAction<Target>>,
-                SVGGElement
-            >(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark));
+        if (btnG) renderIconForSelection<TargetAction<Target>,
+            PayloadRectangle<TargetAction<Target>>,
+            SVGGElement>(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark));
 
 
         // remove old buttons
         dataJoin?.exit().remove();
 
-        // update position and handler of buttons, in case the actions have changed.
+        // update position and handler of buttons, in case the actions have changed since the last join.
         if (dataJoin) this.updateButtonDepiction(target, dataJoin, delayMs);
 
-        // update position of icon too
-        dataJoin?.select(SVGTags.SVGSVGElement)
-            .attr(SVGAttrs.x, _ => _.topLeft.x)
-            .attr(SVGAttrs.y, _ => _.topLeft.y);
+        // refresh to match width
+        this.refresh();
 
     }
 
@@ -186,17 +213,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
 
         if (interrupt) this.anchor?.interrupt(TooltipTransitions.focus).interrupt(TooltipTransitions.button_pop);
 
-        // this.anchor?.transition(TooltipTransitions.unfocus)
-        //             .delay(delayMs)
-        //             .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
-
-    }
-
-    /**
-     * Override the buttons to display a new set of actions.
-     * @param actions
-     */
-    public setActions<Target>(actions: TargetAction<Target>): void {
+        if (!delayMs) {
+            this.anchor?.attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE)
+        } else {
+            this.anchor?.transition(TooltipTransitions.unfocus)
+                .delay(delayMs)
+                .attr(SVGAttrs.display, TooltipCSS.DISPLAY_HIDE);
+        }
 
     }
 
@@ -247,6 +270,13 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             )
             .duration(ActionTooltip.buttonAnimationDuration)
             .attr(SVGAttrs.r, buttonRadius);
+
+
+        // update position of icon too
+        dataJoin?.select(SVGTags.SVGSVGElement)
+            .attr(SVGAttrs.x, _ => _.topLeft.x)
+            .attr(SVGAttrs.y, _ => _.topLeft.y);
+
 
     }
 
@@ -366,6 +396,73 @@ export class ActionTooltip extends Rectangle implements IDepictable {
                 return p.toString();
             });
 
+
+    }
+
+    toggleHighlight(): void {
+
+        // TODO: implement
+
+        /*
+
+            Highlighting the tooltip means making it blink a few times with a yellow border around it
+            to call the attention of the user to this element.
+
+         */
+
+    }
+
+    /**
+     * Removes button element associated to action key
+     * @param actionKey
+     */
+    removeAction(actionKey: string) {
+
+        if (this.anchor) {
+
+            const {
+                topLeft,
+                bottomLeft,
+            } = this;
+
+            const {
+                buttonMargin,
+                buttonRadius
+            } = this.config;
+
+            const buttonDiameter = 2 * buttonRadius;
+
+            const s = this.anchor.selectAll<SVGGElement, PayloadRectangle<TargetAction<any>>>("." + TooltipCSS.BUTTON_CLS);
+            const remBtns = s.data().filter(x => x.payload.key !== actionKey);
+
+            const dataJoin = s.data(remBtns);
+
+            // update remaining buttons position, data join for removal and pass the join to update.
+            dataJoin.exit().remove();
+
+            // set width to fit new params
+            const newWidth: number = buttonMargin + ((remBtns.length) * (buttonDiameter + buttonMargin));
+            this.setWidth(newWidth);
+
+            const mid = topLeft.midpoint(bottomLeft).translateBy(buttonMargin + buttonRadius, 0);
+
+            remBtns.forEach((btn, i) => {
+
+                btn.translateToCoord(mid.copy.translateBy(i * (buttonDiameter + buttonMargin), 0));
+
+            });
+
+            // if new width is zero, hide
+            if (remBtns.length === 0) {
+                this.unfocus();
+                return;
+            }
+
+            this.refresh();
+            this.updateButtonDepiction(this.lastFocusTarget ?? Coordinate.origin, dataJoin, 0);
+
+
+        }
 
     }
 

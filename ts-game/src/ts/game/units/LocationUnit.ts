@@ -15,6 +15,8 @@ import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import WorldContext from "ts-shared/build/mechanics/WorldContext";
+import {playAnimation, startAnimating} from "../../util/AnimationUtil";
+import {log} from "util";
 
 
 type ContainerElement = SVGGElement;
@@ -221,7 +223,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             .classed(LocationUnitCSS.EDGE, true)
             .append<SVGPathElement>(SVGTags.SVGPathElement) // append 1 path per group
             .classed(LocationUnitCSS.EDGEPATH, true)
-            .attr(SVGAttrs.d, e => this.drawEdgePath(e, true)); // draw path for the first time
+            .attr(SVGAttrs.d, e => this.drawEdgePath(e)); // draw path for the first time
 
         // // remove previous
         this.deleteEdgeDepiction();
@@ -573,6 +575,23 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         }
 
         this.refreshEdgeDepiction();
+
+    }
+
+    toggleHighlight(): void {
+
+        // TODO: implement
+
+        /*
+
+            Highlighting a location requests animation frames to update the position of the node in the vertical
+            axis by using a ball-bouncing function that takes in the time increment and returns the height of the ball.
+
+            But for simplicity let's just make a red outline flash and stay red until the toggle highlight is clicked again.
+
+         */
+
+
 
     }
 

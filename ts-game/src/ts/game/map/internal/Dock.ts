@@ -277,6 +277,20 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
 
     }
 
+    toggleHighlight(): void {
+
+        // TODO: implement
+
+        /*
+
+            1. Upon hover, set to a var the highlighted box
+            2. Call toggleHighlight()
+            3. Change bg color of highlighted square to be lighter, while all other squares remain the base color
+
+         */
+
+    }
+
 }
 
 /**

@@ -12,6 +12,7 @@ import {C, Coordinate} from "ts-shared/build/geometry/Coordinate";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {TAction, TargetAction} from "../../../util/Action";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
+import {delay} from "rxjs/operators";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -235,7 +236,7 @@ export class MapEditorController {
 
         const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
                 this.locations.nodes.forEach(nodeInContext => {
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction(true);
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
 
                 });
             });
@@ -260,6 +261,7 @@ export class MapEditorController {
 
             // disable tooltip to not create a mess
             this.actionTooltip.enabled = false;
+            this.actionTooltip.unfocus();
 
             // make background track mouse movement and update node location
 
@@ -268,7 +270,7 @@ export class MapEditorController {
             // callback function should undo everything.
             const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
 
-                n.connectTo(node);
+                node.connectTo(n, true);
                 allLocations.forEach(_ => {
                     _.removeOnMouseClick(hook.key);
                     _.draggable = true;
@@ -341,7 +343,37 @@ export class MapEditorController {
         removeAction.depiction = TargetAction.depiction.delete;
 
         const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
-            console.log(node.adjacent);
+            // build a new action for each adjacent node
+            const newActions = node.adjacent.map((adjNode: LocationNode) => {
+                const actionName = "dc_" + adjNode.id;
+
+                return TAction<LocationNode>(
+                    actionName,
+                    actionName,
+                    () => {
+
+                        // because we do want the line to disappear, otherwise it looks weird
+                        node.disconnectFrom(adjNode, true);
+
+                        // also remove the button
+                        this.actionTooltip.removeAction(actionName);
+
+                    },
+                    {
+                        start: () => {
+                            // adjNode.toggleHighlight()
+                            console.log("highlight on " + adjNode.toString())
+                        },
+                        stop: () => {
+                            // adjNode.toggleHighlight()
+                            console.log("highlight off " + adjNode.toString())
+                        }
+                    });
+
+            });
+
+            this.actionTooltip.setActions<Unit>(newActions, node, 0);
+
         });
         disconnectFromAction.depiction = TargetAction.depiction.neutral;
 

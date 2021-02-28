@@ -17,11 +17,34 @@ export class GenericAction {
 
 export class TargetAction<Target> extends GenericAction {
 
+    /** executes the action */
     public readonly apply: (t: Target) => void;
+
+    /** previews effect of executing action */
+    public readonly preview: (t: Target) => void;
+
+    /** stops previewing effect of executing action */
+    public readonly stopPreview: (t: Target) => void;
+
+    /** how button should depict this action */
     public depiction: SimpleDepiction = TargetAction.depiction.neutral;
 
-    constructor(key: string, name: string, fn: (t: Target) => void) {
+    constructor(
+        key: string,
+        name: string,
+        fn: (t: Target) => void,
+        preview: {
+            start: (t: Target) => void,
+            stop: (t: Target) => void
+        } = {
+            start: () => {},
+            stop: () => {}
+        }
+    ) {
         super(key, name, fn);
+
+        this.preview = preview.start;
+        this.stopPreview = preview.stop;
         this.apply = fn;
     };
 
@@ -36,4 +59,12 @@ export class TargetAction<Target> extends GenericAction {
 }
 
 // shorthand the constructor
-export function TAction<Target>(key: string, name: string, fn: (t: Target) => void): TargetAction<Target> { return new TargetAction(key, name, fn) }
+export function TAction<Target>(
+    key: string,
+    name: string,
+    fn: (t: Target) => void,
+    preview?: {
+        start: (t: Target) => void,
+        stop: (t: Target) => void
+    }
+): TargetAction<Target> { return new TargetAction(key, name, fn, preview) }
