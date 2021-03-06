@@ -370,11 +370,11 @@ export class MapEditorController {
                     },
                     {
                         start: () => {
-                            adjNode.toggleHighlight();
+                            // adjNode.toggleHighlight();
                             console.log("highlight on " + adjNode.toString())
                         },
                         stop: () => {
-                            adjNode.toggleHighlight()
+                            // adjNode.toggleHighlight()
                             console.log("highlight off " + adjNode.toString())
                         }
                     });
