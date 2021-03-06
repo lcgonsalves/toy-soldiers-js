@@ -1,11 +1,14 @@
-import {IGraphEdge, IGraphNode} from "ts-shared/build/lib/graph/GraphInterfaces";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {sq} from "ts-shared/build/lib/util/Shorthands";
+
 import {Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-
+import AssetLoader from "../game/map/internal/AssetLoader";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import Rectangle from "ts-shared/build/geometry/Rectangle";
+import {PayloadRectangle} from "ts-shared/build/geometry/Payload";
+import {sq} from "ts-shared/build/util/Shorthands";
+import {SimpleDepiction} from "./Depiction";
 
 export type AnySelection = Selection<any, any, any, any>;
 
@@ -18,7 +21,6 @@ export class RectConfig {
     stroke: string = "black";
     strokeWidth: number = 0.4;
     rx: number = 0.2;
-
 
     constructor(topLeft: ICoordinate, width: number, height: number, cls: string = "") {
         this.bounds = Rectangle.fromCorners(topLeft, topLeft.copy.translateBy(width, height));
@@ -61,48 +63,28 @@ export class TooltipConfig extends RectConfig {
     tip: ICoordinate;
     tipStart: ICoordinate;
     tipEnd: ICoordinate;
-    buttonWidth: number;
-    actions: string[];
-    horizontalMargin: number;
+    buttonRadius: number = 4;
+    buttonMargin: number = 0.4;
 
-    public static buttonHeight: number = 2.5;
-    public static verticalMargin: number = 0.25;
+    get buttonDiameter(): number { return this.buttonRadius * 2 }
 
-    // todo: account for boxes inside tooltip
-
-    constructor(topLeft: ICoordinate, width: number, actions: string [], cls: string = "") {
-
+    constructor(
+        topLeft: ICoordinate, 
+        buttonRadius: number,
+        buttonMargin: number
+    ) {
+        // by default, fits 2 buttons
         super(
             topLeft,
-            width,
-            // height is calculated as x button heights + button margin, + 1 margin to start
-            (actions.length * (TooltipConfig.buttonHeight + TooltipConfig.verticalMargin)) + TooltipConfig.verticalMargin,
-            cls
+            (2 * (2 * buttonRadius)) + (3 * buttonMargin),
+            (2 * buttonRadius) + (2 * buttonMargin)
         );
 
-        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.45, 0);
-        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.45), 0);
+        this.tipStart = this.bounds.bottomLeft.copy.translateBy(this.width * 0.62, -(this.height * 0.1));
+        this.tipEnd = this.bounds.bottomRight.copy.translateBy(-(this.width * 0.62), -(this.height * 0.1));
         this.tip = this.bounds.bottomLeft.copy.translateBy(this.width / 2, 1.2);
-        this.actions = actions;
-
-        // button should take 90% of container width
-        this.buttonWidth = this.width * 0.95;
-        this.horizontalMargin = (this.width - this.buttonWidth) / 2
-
-    }
-
-    getConfigForAction(actionKey: string, color: string = this.fill, stroke: string = this.stroke): RectConfig {
-
-        const i = this.actions.indexOf(actionKey);
-        let index = i === -1 ? 0 : i;
-
-        return new RectConfig(
-            this.bounds.topLeft.copy.translateBy(
-                this.horizontalMargin,
-                TooltipConfig.verticalMargin + ((TooltipConfig.buttonHeight + TooltipConfig.verticalMargin) * index)),
-            this.buttonWidth,
-            TooltipConfig.buttonHeight
-        ).withFill(color).withStroke(stroke);
+        this.buttonRadius = buttonRadius;
+        this.rx = this.height / 2
 
     }
 
@@ -111,6 +93,11 @@ export class TooltipConfig extends RectConfig {
 
         // get distance from tip to target
         const dist = this.tip.distanceInComponents(c);
+        return this.translateBy(dist.x, dist.y);
+
+    }
+
+    translateBy(x: number, y: number): TooltipConfig {
 
         // translate all other components by the parameters
         [
@@ -119,11 +106,44 @@ export class TooltipConfig extends RectConfig {
             this.tipEnd,
             this.bounds
         ].forEach(location => {
-                location.translateBy(dist.x, dist.y)
+                location.translateBy(x, y)
         });
 
         return this;
+
     }
+
+}
+
+export class DockConfig extends RectConfig {
+    readonly margin: number;
+    readonly dockItemContainerConfig: RectConfig;
+    title: string = "Untitled";
+    secondaryColor: string;
+
+    get primaryColor(): string { return this.fill }
+
+  constructor(
+      topLeft: ICoordinate,
+      width: number,
+      height: number,
+      margin: number,
+      dockItemContainerConfig: RectConfig,
+      primaryColor: string = "#e5e5e5",
+      secondaryColor: string = primaryColor,
+      cls?: string
+    ) {
+    super(topLeft, width, height, cls);
+    this.fill = primaryColor;
+    this.secondaryColor = secondaryColor;
+    this.margin = margin;
+    this.dockItemContainerConfig = dockItemContainerConfig;
+  }
+
+  rename(x: string): this {
+      this.title = x;
+      return this;
+  }
 
 }
 
@@ -160,6 +180,67 @@ export function getCurveRadius(edge: IGraphEdge<IGraphNode, IGraphNode>, interse
     return (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
 }
 
+export function getTransforms(s?: AnySelection): {scale: number, translation: {x: number, y: number}} {
+
+    const g: SVGGElement = s?.node();
+    const hasTransforms = g?.transform.baseVal.numberOfItems == 2;
+    const translation: {
+        x: number,
+        y: number
+    } = hasTransforms ? {
+        x: g.transform.baseVal.getItem(0).matrix.e,
+        y: g.transform.baseVal.getItem(0).matrix.f
+    } : {
+        x: 0,
+        y: 0
+    };
+    const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
+
+    return {
+        translation,
+        scale
+    }
+
+}
+
+/**
+ * The first generic refers to the datum contained within the payload. This datum must
+ * The second indicates what kind of container is being used.
+ * The third refers to the type of SVG container to which the icon will be appended to.
+ * @param selection the selection in which the icons are supposed to be rendered in
+ * @param getIconKey function should receive a datum and output a key that will be used to fetch the icon.
+ */
+export function renderIconForSelection<
+    Datum,
+    Container extends PayloadRectangle<Datum>,
+    Element extends SVGGElement
+    >(
+        selection: Selection<Element, Container, any, any>,
+        getIconKey: (d: Datum) => string,
+        depiction: SimpleDepiction
+): void {
+
+    const boundsToRender = selection.data() ?? [];
+    const svgNodes = selection.nodes() ?? [];
+
+    if (boundsToRender.length !== svgNodes.length) {
+        console.error("Incompatible number of svg nodes and associated bounds!");
+        return;
+    }
+
+    svgNodes.forEach((svgN, i) => {
+
+        const bound = boundsToRender[i];
+        const key = getIconKey(bound.payload);
+        const asset = AssetLoader.getIcon(key, bound, depiction.fill);
+
+
+        if (asset) svgN.appendChild(asset);
+
+    });
+
+}
+
 /** shorthand for drawing a rectangle in d3 */
 export function rect(selection: AnySelection, rectConfig: RectConfig): Selection<SVGRectElement, any, any, any> {
 
@@ -186,3 +267,48 @@ export function rect(selection: AnySelection, rectConfig: RectConfig): Selection
         .attr(SVGAttrs.rx, rx);
 
 }
+
+const defaultDockWidth = 90;
+const defaultDockItemSize = defaultDockWidth / 15;
+
+export const defaultColors = {
+    primary: "#1493ff",
+    error: "#ff3e44",
+    success: "#0fa500",
+    grays: {
+        extralight: "#e5e5e5",
+        light: "#c0c0c0",
+        medium: "#a9a9a9",
+        dark: "#8c8c8c",
+        extradark: "#525252",
+        superextradark: "#282828"
+    },
+    text: {
+        light: "#f7f7f7",
+        dark: "#505050"
+    }
+}
+
+const defaultDockItemContainerConfig = new RectConfig(
+    C(0,0),
+    defaultDockItemSize,
+    defaultDockItemSize
+).withFill(defaultColors.grays.light).withRx(0.3);
+
+export const defaultConfigurations = {
+    /** Default configuration of a dock item container */
+    dockItemContainer: defaultDockItemContainerConfig,
+    /** Default configuration of the Dock */
+    dock: new DockConfig(
+        C(5, 85),
+        defaultDockWidth,
+        100 - 85,
+        0.6,
+        defaultDockItemContainerConfig,
+        defaultColors.grays.extralight,
+        defaultColors.grays.light
+    ).withStroke(defaultColors.grays.medium),
+    tooltip: new TooltipConfig(Coordinate.origin, 2.5, 0.3).withFill(defaultColors.grays.extradark).withStroke("none")
+}
+
+

@@ -1,20 +1,25 @@
 import {AnySelection} from "../../util/DrawHelpers";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 
-export interface IGameUnit {
-    /** the class of the outer container */
-    readonly cls: string;
-    /** sets the game unit to display debug information */
-    debugMode: boolean;
-
+export interface IDepictable {
     /** attaches game unit to a d3 selection */
     attachDepictionTo(d3selection: AnySelection): void;
 
-    /** removes the depiction from current selection */
+    /** Removes SVG element containing this depictable element. */
     deleteDepiction(): void;
 
     /** refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
+
+    /** toggles depiction to a highlighted depiction */
+    toggleHighlight(): void;
+}
+
+export interface IGameUnit extends IDepictable {
+    /** the class of the outer container */
+    readonly cls: string;
+    /** sets the game unit to display debug information */
+    debugMode: boolean;
 
 }
 

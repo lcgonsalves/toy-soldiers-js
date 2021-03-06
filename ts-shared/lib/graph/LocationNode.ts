@@ -1,6 +1,5 @@
 import AbstractNode from "./AbstractNode";
-import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
-import {Coordinate} from "../geometry/Coordinate";
+import {IGraphNode} from "./GraphInterfaces";
 
 /**
  * Represents a location or position on the map.  Is instantialized at (0,0) by default.

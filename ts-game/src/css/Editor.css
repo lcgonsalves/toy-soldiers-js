@@ -1,7 +1,5 @@
-.tooltip {
-    position: absolute;
-    top: 0px;
-    left: 0px;
+.tooltip_button {
+    cursor: pointer;
 }
 
 .map-editor {

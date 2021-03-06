@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const SocketIO = require("socket.io");
+// import {WebsocketTools as WS} from "ts-shared";
 class EventTicker {
     /**
      * Due to awkward type checking, use this constructor

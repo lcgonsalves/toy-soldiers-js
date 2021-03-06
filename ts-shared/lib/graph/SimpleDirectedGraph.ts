@@ -9,17 +9,17 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     readonly nodes: Map<string, Node> = new Map<string, Node>();
     public onAdd: (n: Node) => void;
 
-    constructor(step?: number) {
+    constructor(step?: number, width: number = 200, height: number = 200) {
 
         const s = step ? step : 1;
 
-        this.domain = new Domain(new Interval(-100, 100, s), new Interval(-100, 100, s));
+        this.domain = new Domain(new Interval(- (width / 2), (width / 2), s), new Interval(- (height / 2), (height / 2), s));
         this.onAdd = () => {}
 
     }
 
     // shorthand for converting it to an array
-    public nodeArr(): Node[] {
+    public all(): Node[] {
         return [ ...this.nodes.values() ];
     }
 
@@ -39,7 +39,7 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
     containsNodeAtLocation(location: ICoordinate): boolean {
 
-        for (let node of this.nodeArr()) {
+        for (let node of this.all()) {
             if (node.distance(location) === 0)
                 return true;
         }
@@ -60,7 +60,7 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
         if (other instanceof SimpleDirectedGraph) {
 
-            const array = this.nodeArr();
+            const array = this.all();
             for (let i = 0; i < array.length; i++) {
                 if (!this.contains(array[i].id)) return false;
             }
@@ -78,7 +78,7 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
     getNodesAtPosition(location: ICoordinate): Node[] {
         const out = [];
-        this.nodeArr().forEach((node, _) => {
+        this.all().forEach((node, _) => {
             if (node.distance(location) === 0) out.push(node);
         });
         return out;
@@ -90,12 +90,12 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     }
 
     getNodesInVicinity(center: ICoordinate, radius: number): Node[] {
-        return this.nodeArr().filter((n): boolean => n.distance(center) <= radius);
+        return this.all().filter((n): boolean => n.distance(center) <= radius);
     }
 
     getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): Node[] {
         const {from, to} = e;
-        let intersects = this.nodeArr().filter(n => {
+        let intersects = this.all().filter(n => {
             const isNotFromNode = !n.equals(from);
             const isNotToNode = !n.equals(to);
 
@@ -108,7 +108,7 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
     getNodesAdjacentTo(node: IGraphNode): Node[] {
 
-        return this.nodeArr().filter(nodeInGraph => nodeInGraph.isAdjacent(node));
+        return this.all().filter(nodeInGraph => nodeInGraph.isAdjacent(node));
 
     }
 

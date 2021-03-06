@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "watch": "tsc -w",
-    "start": "node build/index.js start",
+    "start": "tsc; node build/index.js start",
     "update-shared": "npm run build --prefix ../ts-shared && npm install ../ts-shared"
   },
   "repository": {

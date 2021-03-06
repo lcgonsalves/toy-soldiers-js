@@ -1,5 +1,5 @@
 import {SocketEvent, SocketEventCode, SocketEventResponse} from "./EventTypes";
-import {Subscription, Subject, Observable, fromEvent} from "rxjs";
+import {Subscription, fromEvent} from "rxjs";
 import * as SocketIO from "socket.io";
 import * as SocketIOClient from "socket.io-client";
 

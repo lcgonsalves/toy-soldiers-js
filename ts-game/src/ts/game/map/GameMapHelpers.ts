@@ -1,7 +1,7 @@
 import {D3DragEvent, DraggedElementBaseType} from "d3-drag";
 import {BaseType, Selection} from "d3-selection";
 import {zoom, ZoomBehavior, ZoomedElementBaseType} from "d3-zoom";
-import {ICoordinate} from "ts-shared/build/lib/geometry/Coordinate";
+import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 
 // shorthand types
 export type NodeDragHandler<E extends DraggedElementBaseType, N extends Node> = (elem: E, evt: D3DragEvent<E, N, any>, dataPoint: N) => void

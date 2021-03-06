@@ -2,19 +2,22 @@ import {Coordinate, ICoordinate} from "./Coordinate";
 import {Interval} from "./Interval";
 import Domain from "./Domain";
 
+export enum RectangleCorners {
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    CENTER
+}
+
 /**
  * Defines a rectangle. Does not support rotations.
  */
 export default class Rectangle extends Coordinate {
-    private _topLeft: ICoordinate;
-    private _bottomLeft: ICoordinate;
-    private _topRight: ICoordinate;
-    private _bottomRight: ICoordinate;
-    // length divided in two parameters: x and y
-    private _length: {
-        x: number,
-        y: number
-    };
+    private readonly _topLeft: ICoordinate;
+    private readonly _bottomLeft: ICoordinate;
+    private readonly _topRight: ICoordinate;
+    private readonly _bottomRight: ICoordinate;
 
     get topLeft(): ICoordinate {
         return this._topLeft;
@@ -33,9 +36,14 @@ export default class Rectangle extends Coordinate {
     }
 
     get length(): { x: number; y: number } {
-        return this._length;
+        return {
+            x: this.width,
+            y: this.height
+        }
     }
 
+    get width(): number { return this.topLeft.distance(this.topRight) }
+    get height(): number { return this.topLeft.distance(this.bottomLeft) }
 
     constructor(topLeft: ICoordinate, topRight: ICoordinate, bottomLeft: ICoordinate, bottomRight: ICoordinate) {
 
@@ -46,10 +54,6 @@ export default class Rectangle extends Coordinate {
         this._topRight = topRight.copy;
         this._bottomRight = bottomRight.copy;
         this._bottomLeft = bottomLeft.copy;
-        this._length = {
-            x: topLeft.distance(topRight),
-            y: topLeft.distance(bottomLeft)
-        };
 
     }
 
@@ -75,6 +79,10 @@ export default class Rectangle extends Coordinate {
             other._bottomLeft.equals(this._bottomLeft) &&
             other._topRight.equals(this._topRight) &&
             other._topLeft.equals(this._topLeft);
+    }
+
+    toString(): string {
+        return `R (${this.topLeft.toString()}, ${this.topRight.toString()}, ${this.bottomLeft.toString()}, ${this.bottomRight.toString()} )`
     }
 
     translateTo(x: number, y: number): Rectangle {
@@ -116,4 +124,106 @@ export default class Rectangle extends Coordinate {
         return d.contains(other);
     }
 
+    /** Sets new width, shrinking/expanding from a given anchor point, defaulting in the center */
+    setWidth(newWidth: number, anchorPoint: RectangleCorners = RectangleCorners.CENTER): this {
+        const {
+            CENTER,
+            TOP_LEFT,
+            TOP_RIGHT,
+            BOTTOM_LEFT,
+            BOTTOM_RIGHT
+        } = RectangleCorners;
+
+        const {
+            topLeft,
+            topRight,
+            bottomLeft,
+            bottomRight
+        } = this;
+
+        // positive if expanding, negative if shrink
+        const amountToExpand = newWidth - this.width;
+
+        switch(anchorPoint) {
+            // expand points equally away from center, half of the difference
+            case CENTER:
+                topLeft.translateBy(-(amountToExpand / 2), 0);
+                topRight.translateBy(amountToExpand / 2, 0);
+                bottomLeft.translateBy(-(amountToExpand / 2), 0);
+                bottomRight.translateBy(amountToExpand / 2, 0);
+                break;
+            
+            case TOP_LEFT:
+            case BOTTOM_LEFT:
+                topRight.translateBy(amountToExpand, 0);
+                bottomRight.translateBy(amountToExpand, 0);
+                break;
+
+            case TOP_RIGHT:
+            case BOTTOM_RIGHT:
+                topLeft.translateBy(-amountToExpand, 0);
+                bottomLeft.translateBy(-amountToExpand, 0);
+                break;
+            
+            default:
+                throw new Error("Invalid anchor point.");
+        }
+        return this;
+    }
+
+    /** Sets new width, shrinking/expanding from a given anchor point, defaulting in the center */
+    setHeight(newHeight: number, anchorPoint: RectangleCorners = RectangleCorners.CENTER): this {
+        const {
+            CENTER,
+            TOP_LEFT,
+            TOP_RIGHT,
+            BOTTOM_LEFT,
+            BOTTOM_RIGHT
+        } = RectangleCorners;
+
+        const {
+            topLeft,
+            topRight,
+            bottomLeft,
+            bottomRight
+        } = this;
+
+        // positive if expanding, negative if shrink
+        const amountToExpand = newHeight - this.width;
+
+        switch(anchorPoint) {
+            // expand points equally away from center, half of the difference
+            case CENTER:
+                topLeft.translateBy(0, -(amountToExpand / 2));
+                topRight.translateBy(0, -(amountToExpand / 2));
+                bottomLeft.translateBy(0, amountToExpand / 2);
+                bottomRight.translateBy(0, amountToExpand / 2);
+                break;
+
+            case BOTTOM_RIGHT:
+            case BOTTOM_LEFT:
+                topRight.translateBy(-amountToExpand, 0);
+                topLeft.translateBy(-amountToExpand, 0);
+                break;
+
+            case TOP_RIGHT:
+            case TOP_LEFT:
+                bottomRight.translateBy(amountToExpand, 0);
+                bottomLeft.translateBy(amountToExpand, 0);
+                break;
+
+            default:
+                throw new Error("Invalid anchor point.");
+        }
+        return this;
+    }
+
+}
+
+/**
+ * Returns a simple square, with center at origin.
+ * @param size
+ */
+export function Square(size: number): Rectangle {
+    return Rectangle.fromCorners(Coordinate.origin.translateBy(-size / 2, -size / 2), Coordinate.origin.translateBy(size / 2, size / 2));
 }

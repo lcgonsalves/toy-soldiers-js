@@ -1,15 +1,18 @@
-import {LocationContext} from "ts-shared/build/lib/mechanics/Location";
-import {C, Coordinate} from "ts-shared/build/lib/geometry/Coordinate";
-import {pointer, select, Selection} from "d3-selection";
+import {pointer, select} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
-import LocationUnit, {LocationUnitCSS} from "../../units/LocationUnit";
-import {AnySelection, rect, RectConfig, TooltipConfig} from "../../../util/DrawHelpers";
-import Rectangle from "ts-shared/build/lib/geometry/Rectangle";
-import MenuContext from "./MenuContext";
-import LocationNode from "ts-shared/build/lib/graph/LocationNode";
+import LocationUnit from "../../units/LocationUnit";
+import {AnySelection} from "../../../util/DrawHelpers";
+import Dock from "./Dock";
+import {ActionTooltip} from "./Tooltip";
+import {Events} from "../../../util/Events";
+import {C, Coordinate} from "ts-shared/build/geometry/Coordinate";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import {TAction, TargetAction} from "../../../util/Action";
+import {LocationContext} from "ts-shared/build/mechanics/Location";
+import {delay} from "rxjs/operators";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -44,20 +47,23 @@ enum MapEditorControllerCSS {
  */
 export class MapEditorController {
     // contexts
-    public readonly nodeContext: LocationContext<LocationUnit>;
+    public readonly locations: LocationContext<LocationUnit>;
+    public readonly dock: Dock<LocationUnit> = new Dock("Map Elements");
 
     // anchors
     private readonly edgeContainer: AnySelection;
     private readonly nodeContainer: AnySelection;
     private readonly mainGroup: AnySelection;
+    private readonly bgGroup: AnySelection;
 
     private readonly zoomHandlers: Map<string, (scale: number, x: number, y: number) => void> = new Map<string, (scale: number, x: number, y: number) => void>();
 
-    private tooltipFocusedOn: LocationUnit | undefined;
+    // tooltip reference
+    private readonly actionTooltip: ActionTooltip = new ActionTooltip();
 
     // putting all of the boilerplate in here
     constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
-        this.nodeContext = nodeContext;
+        this.locations = nodeContext;
 
         const gridCoords = {
             topL: new Coordinate(nodeContext.domain.x.min, nodeContext.domain.y.min),
@@ -85,12 +91,15 @@ export class MapEditorController {
             .attr(SVGAttrs.height, bgCoords.topL.distance(bgCoords.bottomL))
             .attr(SVGAttrs.fill, config.backgroundColor);
 
+        this.bgGroup = backgroundElement;
+
         const mainGroup = select(anchor)
             .append(SVGTags.SVGGElement)
             .classed(MapEditorControllerCSS.MAIN_ELEM, true);
 
         this.mainGroup = mainGroup;
 
+        // init zoom
         backgroundElement.call(
             zoom<any, unknown>()
                 .scaleExtent([0.5, 2])
@@ -113,7 +122,7 @@ export class MapEditorController {
             .attr(SVGAttrs.id, MapEditorControllerCSS.GRID_ID)
             .attr(SVGAttrs.pointerEvents, MapEditorControllerCSS.POINTER_EVENTS);
 
-
+        // draw background
         gridGroup.append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, gridCoords.topL.x)
             .attr(SVGAttrs.y, gridCoords.topL.y)
@@ -122,8 +131,8 @@ export class MapEditorController {
             .attr(SVGAttrs.fill, config.foregroundColor);
 
         const drawGrid = (context: Path): Path => {
-            const xDomain = this.nodeContext.domain.x,
-                yDomain = this.nodeContext.domain.y;
+            const xDomain = this.locations.domain.x,
+                yDomain = this.locations.domain.y;
 
             for (let col = xDomain.min; xDomain.contains(col); col += xDomain.step) {
                 context.moveTo(col, yDomain.min);
@@ -152,51 +161,48 @@ export class MapEditorController {
             .attr(SVGAttrs.id, MapEditorControllerCSS.NODE_CONTAINER_ID)
             .classed(MapEditorControllerCSS.NODE_CONTAINER_CLS, true);
 
-        // attach nodes already in context to group
-        nodeContext.nodes.forEach(n => this.initializeLocationNode(n));
+        
+        // instantiate tooltip
+        this.initializeTooltip(anchor);
 
         // append and instantiate all elements of the bottom menu
         this.initBottomMenu(anchor);
 
-        // instantiate tooltip
-        this.initializeTooltip(anchor);
+        // attach nodes already in context to group
+        nodeContext.nodes.forEach(n => this.initializeLocationNode(n));
         
     }
 
     /** Constructs and mounts bottom menu */
     private initBottomMenu(anchor: SVGSVGElement): void {
-        // todo: make generic for types and content of buttons
-        const mainContainerProperties = new RectConfig(
-            C(5, 82),
-            90,
-            100 - 85
+
+        const {dock} = this;
+        dock.register(
+            "Basic Location Node A",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 6)
         );
 
-        const makeTemporaryNode = (): LocationUnit => {
+        dock.register(
+            "Basic Location Node B",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 2)
+        );
 
-            const n = new LocationUnit(
-                "click_to_change_name",
-                "temp_node_" + (this.nodeContext.nodes.size + 1),
-                Rectangle.fromCorners(
-                    prevBoxConfig.bounds.topLeft,
-                    prevBoxConfig.bounds.topLeft.copy.translateBy(prevBoxConfig.height, prevBoxConfig.width)
-                ),
-                prevBoxConfig.height * 0.35
-            );
+        dock.register(
+            "Basic Location Node C",
+            "A simple node signifying a location in the x-y plane.",
+            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 12)
+        );
 
-            n.shouldDisplayLabel = false;
+        dock.attachDepictionTo(select(anchor));
 
-            return n;
-        };
-
-
-        const menuContext: MenuContext = new MenuContext(mainContainerProperties);
-        menuContext.onNodeRemoval = (node: LocationUnit) => {
-            this.nodeContext.add(node);
-
+        dock.onNodePlacement = (node: LocationUnit) => {
+            this.locations.add(node);
+        
             // reverse transforms to place node in correct coordinate
             const g: SVGGElement = this.mainGroup.node();
-            const hasTransforms = g.transform.baseVal.numberOfItems == 2;
+            const hasTransforms = g.transform.baseVal.numberOfItems === 2;
             const translation: {
                 x: number,
                 y: number
@@ -208,388 +214,212 @@ export class MapEditorController {
                 y: 0
             };
             const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
-
-
+        
+            console.log(node.toString());
+            
             node.translateBy(-(translation.x), -(translation.y));
             node.translateTo(node.x / scale, node.y / scale);
-
+        
             this.initializeLocationNode(node);
-
-            // create new temporary node in its place
-            const temporaryNode = makeTemporaryNode();
-            menuContext.add(temporaryNode);
-            temporaryNode.attachDepictionTo(gameUnitBox);
-
+        
         };
-
-        const selection = select(anchor)
-            .append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.BOTTOM_MENU, true);
-
-
-        // main container
-        rect(selection, mainContainerProperties);
-        const gameUnitBox = selection.append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.GAME_UNIT_BOX, true);
-
-        // add boxes
-        const boxLength = mainContainerProperties.height / 2.5;
-        const prevBoxConfig = new RectConfig(mainContainerProperties.bounds.topLeft.copy.translateBy(1,1), boxLength, boxLength);
-        prevBoxConfig.stroke = "none";
-        prevBoxConfig.fill = "#dbdbdb"
-        const boxSelection = rect(gameUnitBox, prevBoxConfig);
-        const temporaryNode = makeTemporaryNode();
-        menuContext.add(temporaryNode);
-        temporaryNode.attachDepictionTo(gameUnitBox);
 
     }
 
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
-    private initializeLocationNode(n: LocationUnit): void {
+    private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         // attach depictions
         n.attachDepictionTo(this.nodeContainer);
         n.attachEdgeDepictionTo(this.edgeContainer);
-        n.shouldDisplayLabel = true;
+        n.shouldDisplayLabel = false;
 
-        const refreshEndpoints = {
-            key: "refresh_edge_endpoints",
-            apply: () => {
-
-                this.nodeContext.nodes.forEach(nodeInContext => {
-
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction(true);
+        const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
+                this.locations.nodes.forEach(nodeInContext => {
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
 
                 });
-
-            }
-        }
+            });
 
         // detect when nodes move and react to it
         n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
         n.onDragEnd(refreshEndpoints.key, refreshEndpoints.apply);
+        
+
+        // allowed actions upon every node
+
+        // moves into connecting state, tracking a virtual node until either the esc key is pressed,
+        // or the user clicks on a node, or the user clicks somewhere in the map.
+        const connectToAction = TAction<Unit>("connect", "connect", node => {
+
+            // create virtual node
+            const mouseTrackerNodeID = "tracker";
+            const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, mouseTrackerNodeID, node, 1);
+
+            // connect to it
+            node.connectTo(mouseTrackerNode);
+
+            // disable tooltip to not create a mess
+            this.actionTooltip.enabled = false;
+            this.actionTooltip.unfocus();
+
+            // make this node undraggable
+            node.draggable = false;
+
+            // make background track mouse movement and update node location
+
+            // attach a listener to this node to detect clicks.
+            // clicking on this node should create a connection
+            // callback function should undo everything.
+            const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
+
+                node.connectTo(n, true);
+
+                allLocations.forEach(_ => {
+                    _.removeOnMouseClick(hook.key);
+                    _.draggable = true;
+                });
+                node.draggable = true;
+
+                this.bgGroup?.on(Events.mousemove, null);
+                node.disconnectFrom(mouseTrackerNode);
+                select("body").on(Events.keydown, null);
+                this.actionTooltip.enabled = true;
+
+
+            });
+
+            // prepare nodes for connection
+            const allLocations = this.locations.all().filter(l => !l.overlaps(node));
+            allLocations.forEach(l => {
+
+                // now they are listening for that sweet sweet click
+                l.onMouseClick(hook.key, () => hook.apply(l));
+
+                // now they stop being draggable
+                l.draggable = false;
+
+            });
+
+
+            this.bgGroup?.on(Events.mousemove, function(evt: any) {
+
+                const [x, y] = pointer(evt);
+                const eventCoordinate = C(x, y);
+
+                // magnet zone
+                const magnetZone = 5;
+                const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
+                closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
+
+                node.refreshEdgeDepiction();
+
+            });
+
+            // listen for esc press, stop all when pressed
+            select("body").on(Events.keydown, e => {
+                if (e.code === "Escape") {
+
+                    allLocations.forEach(_ => {
+                        _.removeOnMouseClick(hook.key);
+                        _.draggable = true;
+                    });
+                    node.draggable = true;
+
+                    this.bgGroup?.on(Events.mousemove, null);
+                    node.disconnectFrom(mouseTrackerNode);
+                    select("body").on(Events.keydown, null);
+                    this.actionTooltip.enabled = true;
+
+                }
+            });
+
+        });
+        connectToAction.depiction = TargetAction.depiction.neutral
+
+        const removeAction = TAction<Unit>("remove", "remove", node => {
+            this.locations.rm(node.id);
+            this.actionTooltip.unfocus(0);
+            this.locations.getNodesAdjacentTo(node).forEach(adj => {
+                node.disconnectFrom(adj, true);
+                console.log(adj.adjacent);
+                adj.refreshEdgeDepiction();
+            });
+
+            node.deleteDepiction();
+
+        });
+        removeAction.depiction = TargetAction.depiction.delete;
+
+        const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
+            // build a new action for each adjacent node
+            const newActions = node.adjacent.map((adjNode) => {
+                const actionName = "dc_" + adjNode.id;
+
+                return TAction<LocationNode>(
+                    actionName,
+                    actionName,
+                    () => {
+
+                        // because we do want the line to disappear, otherwise it looks weird
+                        node.disconnectFrom(adjNode, true);
+
+                        // also remove the button
+                        this.actionTooltip.removeAction(actionName);
+
+                    },
+                    {
+                        start: () => {
+                            adjNode.toggleHighlight();
+                            console.log("highlight on " + adjNode.toString())
+                        },
+                        stop: () => {
+                            adjNode.toggleHighlight()
+                            console.log("highlight off " + adjNode.toString())
+                        }
+                    });
+
+            });
+
+            this.actionTooltip.setActions<Unit>(newActions, node, 0);
+
+        });
+        disconnectFromAction.depiction = TargetAction.depiction.neutral;
+
+        const actionsForLooseNodes = [connectToAction, removeAction];
+
+        // display tooltip on hover
+        n.onMouseIn("display_tooltip", () => {
+            const hasNeighbors = n.adjacent.length > 0;
+
+            this.actionTooltip.focus(
+                n,
+                hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
+                n.coordinate.translateBy(0, -n.radius),
+                670
+            )
+        });
+        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
+        n.onDragStart("hide_and_disable_tooltip", () => {
+            this.actionTooltip.enabled = false;
+            this.actionTooltip.unfocus(0, true);
+        });
+        n.onDragEnd("re_enable_tooltip", () => {
+            this.actionTooltip.enabled = true;
+        });
 
     }
 
     /** instantiates the tooltip */
     private initializeTooltip(anchor: SVGSVGElement): void {
 
-        // todo: I gotta expose these methdos so new nodes can have the tooltip focus on them too.
+        const {actionTooltip} = this;
 
-        /** when remove button is clicked, this is what happens */
-        const removeNode = {
-            key: "remove_node",
-            apply: (n: LocationUnit) => {
+        // attach depiction so tooltip shows up
+        actionTooltip.attachDepictionTo(select(anchor));
 
-                this.nodeContext.rm(n.id);
-                const adj = this.nodeContext.getNodesAdjacentTo(n);
-
-                adj.forEach(adj => adj.disconnectFrom(n, true))
-
-                n.deleteDepiction();
-                n.deleteEdgeDepiction();
-
-                setCurrentNode(undefined);
-
-                hideTooltip.apply(0)();
-
-            },
-            btnColor: "#c86969"
-        };
-
-        const startConnection = {
-            key: "start_connection",
-            apply: (n: LocationUnit) => {
-
-                // hide overlay
-                hideTooltip.apply(0)();
-
-                const context = this.nodeContext;
-
-                // connect to temporary invisible node to follow mouse
-                const temp = new LocationNode("temp", 0, n.x, n.y);
-                n.connectTo(temp);
-
-                // create listener on background to track mouse movement
-                select(anchor).select("." + MapEditorControllerCSS.BG_ELEM)
-                    .on("mousemove", function (evt: any) {
-
-                        const [x,y] = pointer(evt);
-                        const pointerCoordinate = C(x, y);
-
-
-                        const possibleTargets = context.getNodesInVicinity(pointerCoordinate,5);
-
-                        temp.translateToCoord(possibleTargets.length > 0 ? possibleTargets[0] : pointerCoordinate);
-                        n.refreshEdgeDepiction();
-
-
-                        deactivateTooltipReactivity();
-
-                        for (let target of possibleTargets) {
-
-                            const callbackName = "allow_attachment";
-
-                            target.draggable = false;
-
-                            target.onMouseClick(callbackName, () => {
-
-                                // disable mouse tracker
-                                select(anchor).select("." + MapEditorControllerCSS.BG_ELEM)
-                                    .on("mousemove", null);
-
-                                // connect!
-                                n.connectTo(target);
-
-                                // disconnect from other
-                                n.disconnectFrom(temp);
-
-                                context.nodeArr().forEach(n => {
-
-                                    n.draggable = true;
-                                    n.removeOnMouseClick(callbackName);
-
-                                })
-
-
-                                activateTooltipReactivity();
-
-                            });
-
-                        }
-
-                    });
-
-
-            },
-            btnColor: "#3489db"
-        };
-
-        const hideTooltip = {
-            key: "hide_tooltip",
-            apply: (delay: number = 1000) => () => {
-                selection.interrupt(showTooltip.key)
-                    .transition(hideTooltip.key)
-                    .delay(delay)
-                    .attr(SVGAttrs.display, LocationUnitCSS.NONE);
-            }
-        };
-
-        const showTooltip = {
-            key: "show_tooltip",
-            apply: (delay: number = 1000) => () => selection
-                .interrupt(hideTooltip.key)
-                .transition(showTooltip.key)
-                .delay(delay)
-                .duration(0)
-                .attr(SVGAttrs.display, LocationUnitCSS.INLINE)
-        };
-
-        const moveTooltipToNode = {
-            key: "move_tooltip_to_node",
-            apply: (delay: number, node: LocationUnit) => () => {
-                // assign current node to this
-                setCurrentNode(node);
-
-                // reverse transforms to place node in correct coordinate
-                const g: SVGGElement = this.mainGroup.node();
-                const hasTransforms = g.transform.baseVal.numberOfItems == 2;
-                const translation: {
-                    x: number,
-                    y: number
-                } = hasTransforms ? {
-                    x: g.transform.baseVal.getItem(0).matrix.e,
-                    y: g.transform.baseVal.getItem(0).matrix.f
-                } : {
-                    x: 0,
-                    y: 0
-                };
-                const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
-
-                // move bounding square to node
-                const target = new Coordinate(node.x, node.y - node.radius - 0.4);
-                // properties.translateToCoord(target);
-
-                properties.translateToCoord(target.translateTo(target.x * scale, target.y * scale));
-                properties.translateToCoord(target.translateBy(translation.x, translation.y));
-
-                // update attributes accordingly
-                showTooltip.apply(delay)()
-
-                mainTooltipContainer
-                    .transition()
-                    .delay(delay)
-                    .duration(0)
-                    .attr(SVGAttrs.x, properties.bounds.topLeft.x)
-                    .attr(SVGAttrs.y, properties.bounds.topLeft.y);
-
-                actionBtnRect
-                    .transition()
-                    .delay(delay)
-                    .duration(0)
-                    .attr(SVGAttrs.x, (action) => properties.getConfigForAction(action.key).bounds.topLeft.x)
-                    .attr(SVGAttrs.y, (action) => properties.getConfigForAction(action.key).bounds.topLeft.y)
-                    .attr(SVGAttrs.stroke, "none")
-                    .attr(SVGAttrs.fill, (action) => action.btnColor);
-
-                actionBtnLabel
-                    .transition()
-                    .delay(delay)
-                    .duration(0)
-                    .attr(SVGAttrs.x, (action) => {
-                        const bounds = properties.getConfigForAction(action.key).bounds;
-
-                        const centerBottom = bounds.bottomLeft.midpoint(bounds.bottomRight);
-                        const centerTop = bounds.topLeft.midpoint(bounds.topRight);
-
-                        return centerBottom.midpoint(centerTop).x
-
-                    })
-                    .attr(SVGAttrs.y, (action) => {
-                        const bounds = properties.getConfigForAction(action.key).bounds;
-
-                        const centerBottom = bounds.bottomLeft.midpoint(bounds.bottomRight);
-                        const centerTop = bounds.topLeft.midpoint(bounds.topRight);
-
-                        return centerBottom.midpoint(centerTop).y + (centerBottom.distance(centerTop) / 5)
-                    })
-                    .attr("text-anchor", "middle")
-                    .attr(SVGAttrs.fill, "white");
-
-                tip.transition()
-                    .delay(delay)
-                    .duration(0)
-                    .attr(SVGAttrs.d, () => {
-                        const p = path();
-
-                        p.moveTo(properties.tipStart.x, properties.tipStart.y);
-                        p.lineTo(properties.tip.x, properties.tip.y);
-                        p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
-
-                        return p.toString();
-                    });
-
-            }
-        }
-
-        // when graph zooms, move tooltip to node
-        this.zoomHandlers.set(hideTooltip.key, hideTooltip.apply(0))
-
-        const actions: NodeAction[] = [
-            startConnection,
-            removeNode
-        ];
-
-        const properties = new TooltipConfig(
-            C(0,2),
-            15,
-            actions.map(_ => _.key)
-        ).withFill("black");
-
-        const selection = select(anchor)
-            .append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.TOOLTIP, true)
-            .attr(SVGAttrs.display, LocationUnitCSS.NONE)
-            .on("mouseover", () => selection.interrupt(hideTooltip.key))
-            .on("mouseleave", hideTooltip.apply());
-
-        const mainTooltipContainer = rect(selection, properties);
-
-        const getCurrentNode = () => {
-            return this.tooltipFocusedOn;
-        };
-
-        const setCurrentNode = (n: LocationUnit | undefined) => {
-            this.tooltipFocusedOn = n;
-        }
-
-        // setInterval(() => console.log(getCurrentNode()), 1000);
-
-        // map each action to a button
-        const actionButtons = selection
-            .selectAll("." + MapEditorControllerCSS.TOOLTIP_ACTION_BUTTON)
-            .data<NodeAction>(actions, (a: any) => a.key)
-            .enter()
-            .append(SVGTags.SVGGElement)
-            .classed(MapEditorControllerCSS.TOOLTIP_ACTION_BUTTON, true)
-            .on("click", function ()  {
-                const action = select<any, NodeAction>(this).datum();
-                const n = getCurrentNode();
-
-                if (n)
-                    action.apply(n);
-
-            });
-
-        // draw tip, starting from half - 5%, going down x units, up into half + 5%, close
-        const tip = selection.append<SVGPathElement>(SVGTags.SVGPathElement)
-            .attr(SVGAttrs.fill, properties.fill)
-            .attr(SVGAttrs.d, () => {
-                const p = path();
-
-                p.moveTo(properties.tipStart.x, properties.tipStart.y);
-                p.lineTo(properties.tip.x, properties.tip.y);
-                p.lineTo(properties.tipEnd.x, properties.tipEnd.y);
-
-                return p.toString();
-            });
-
-        const actionBtnRect: Selection<SVGRectElement, {
-            key: string,
-            btnColor: string
-        }, any, any> = rect(actionButtons, properties.getConfigForAction(""));
-
-
-        const actionBtnLabel = actionButtons
-            .append(SVGTags.SVGTextElement)
-            .text(action => action.key)
-            // .attr(SVGAttrs.fontSize, 1.5)
-            .attr(SVGAttrs.width, action => properties.getConfigForAction(action.key).width)
-            .attr(SVGAttrs.height, action => properties.getConfigForAction(action.key).height);
-
-        const activateTooltipReactivityFor = (node: LocationUnit) => {
-
-            node.onMouseIn(moveTooltipToNode.key, moveTooltipToNode.apply(400, node));
-
-            node.onMouseOut(hideTooltip.key, hideTooltip.apply());
-
-            node.onDragStart(hideTooltip.key, hideTooltip.apply(0));
-
-            node.onDragEnd(moveTooltipToNode.key, moveTooltipToNode.apply(0, node));
-
-        }
-
-        this.nodeContext.onAdd = activateTooltipReactivityFor;
-
-        const activateTooltipReactivity = () => {
-
-            // handle reactivity
-            for (let node of this.nodeContext.nodeArr()) {
-
-                // assign local variable
-                activateTooltipReactivityFor(node);
-
-            }
-
-        }
-
-        const deactivateTooltipReactivity = () => {
-
-            for (let node of this.nodeContext.nodeArr()) {
-
-                node.removeOnMouseIn(moveTooltipToNode.key);
-
-                node.removeOnMouseOut(hideTooltip.key);
-
-                node.removeOnDragStart(hideTooltip.key);
-
-                node.removeOnDragEnd(moveTooltipToNode.key);
-
-            }
-
-        }
-
-        activateTooltipReactivity();
+        // associate context so the tooltip knows how to correct its position
+        actionTooltip.setContext(this.mainGroup);
 
     }
     
