@@ -254,7 +254,7 @@ export class MapEditorController {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
-            const mouseTrackerNode = new LocationNode(mouseTrackerNodeID, 1, node.x, node.y);
+            const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, mouseTrackerNodeID, node, 1);
 
             // connect to it
             node.connectTo(mouseTrackerNode);
@@ -262,6 +262,9 @@ export class MapEditorController {
             // disable tooltip to not create a mess
             this.actionTooltip.enabled = false;
             this.actionTooltip.unfocus();
+
+            // make this node undraggable
+            node.draggable = false;
 
             // make background track mouse movement and update node location
 
@@ -271,14 +274,18 @@ export class MapEditorController {
             const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
 
                 node.connectTo(n, true);
+
                 allLocations.forEach(_ => {
                     _.removeOnMouseClick(hook.key);
                     _.draggable = true;
                 });
+                node.draggable = true;
+
                 this.bgGroup?.on(Events.mousemove, null);
                 node.disconnectFrom(mouseTrackerNode);
                 select("body").on(Events.keydown, null);
                 this.actionTooltip.enabled = true;
+
 
             });
 
@@ -317,6 +324,8 @@ export class MapEditorController {
                         _.removeOnMouseClick(hook.key);
                         _.draggable = true;
                     });
+                    node.draggable = true;
+
                     this.bgGroup?.on(Events.mousemove, null);
                     node.disconnectFrom(mouseTrackerNode);
                     select("body").on(Events.keydown, null);
@@ -344,7 +353,7 @@ export class MapEditorController {
 
         const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
             // build a new action for each adjacent node
-            const newActions = node.adjacent.map((adjNode: LocationNode) => {
+            const newActions = node.adjacent.map((adjNode) => {
                 const actionName = "dc_" + adjNode.id;
 
                 return TAction<LocationNode>(
@@ -361,11 +370,11 @@ export class MapEditorController {
                     },
                     {
                         start: () => {
-                            // adjNode.toggleHighlight()
+                            adjNode.toggleHighlight();
                             console.log("highlight on " + adjNode.toString())
                         },
                         stop: () => {
-                            // adjNode.toggleHighlight()
+                            adjNode.toggleHighlight()
                             console.log("highlight off " + adjNode.toString())
                         }
                     });
