@@ -4,7 +4,7 @@ import SVGTags from "../../util/SVGTags";
 import {AnySelection} from "../../util/DrawHelpers";
 import SVGAttrs from "../../util/SVGAttrs";
 import {path} from "d3-path";
-import {DragEvents, DragHandler, Handler, IDraggable, INodeUnit} from "./UnitInterfaces";
+import {DragHandler, Handler, INodeUnit} from "./UnitInterfaces";
 import {DestinationInvalidError} from "../../util/Errors";
 import {drag} from "d3-drag";
 import {GameMapConfig} from "../map/GameMapHelpers";
@@ -15,8 +15,7 @@ import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import WorldContext from "ts-shared/build/mechanics/WorldContext";
-import {playAnimation, startAnimating} from "../../util/AnimationUtil";
-import {log} from "util";
+import {DragEvents, IDraggable} from "./Draggable";
 
 
 type ContainerElement = SVGGElement;
@@ -41,17 +40,21 @@ export enum LocationUnitCSS {
  * - Has simple drag mechanics that can be toggled.
  * - Has a label that can be displayed or hidden on command.
  */
-export default class LocationUnit extends LocationNode implements INodeUnit, IDraggable {
+export default class LocationUnit extends LocationNode implements INodeUnit {
 
     // getters
     get name(): string {
         return this._name;
     }
 
+    snapSelf(): void {
+        this.worldContext.snap(this);
+    }
+
+
     private _name: string;
-    protected anchor: LocationUnitSelection<LocationUnit> | undefined;
+    public anchor: Selection<SVGGElement, this, any, any> | undefined;
     protected edgeAnchor: LocationUnitSelection<Edge> | undefined;
-    protected debugAnchor:LocationUnitSelection<LocationUnit> | undefined;
     protected config: GameMapConfig = GameMapConfig.default;
     protected scale: number = 1;
 
@@ -69,8 +72,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     protected readonly onMouseClickHandlersHandlers: Map<string, Handler> = new Map<string, any>();
 
     public shouldDisplayLabel: boolean = false;
-
-    private _debugMode: boolean = false;
 
     /** returns true if element is draggable (i.e. has default handlers in place) */
     get draggable(): boolean {
@@ -93,36 +94,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
             this.dragEndHandlers.set(key, () => {});
         }
 
-    }
-
-    get debugMode(): boolean {
-        return this._debugMode;
-    }
-
-    set debugMode(turnOn: boolean) {
-        this._debugMode = turnOn;
-
-        if (!turnOn) {
-
-            console.log("Turning off debug mode, removing all debug elements associated with this unit.");
-            this.debugAnchor?.selectAll("*").remove();
-
-        } else if (this.debugAnchor === undefined) {
-
-            if (this.anchor === undefined) {
-                console.error("Unable to attach debug anchor when unit has no anchor. Please run attachDepictionTo() in order to render debug elements.");
-            } else {
-
-                console.log("No debug anchor found, appending debug `g` element.");
-                this.debugAnchor = this.anchor.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, LocationUnitCSS.DEBUG_NODE);
-                console.log("Turning on debug mode, ready to render debug elements...");
-            }
-
-        } else {
-
-            console.log("Turning on debug mode, ready to render debug elements...");
-
-        }
     }
 
     get edges(): Edge[] {
@@ -152,7 +123,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
     constructor(name: string, id: string, position: ICoordinate, size: number) {
         super(id, size, position.x, position.y);
         this._name = name;
-        this.lastDragCursorPosition = this.copy;
+        this.lastDragCursorPosition = this.coordinate;
     }
 
     /**
@@ -161,7 +132,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
      */
     attachDepictionTo(d3selection: AnySelection): void {
         const anchor = d3selection.append<ContainerElement>(SVGTags.SVGGElement);
-        this.initDebug(anchor);
 
         // if there's a context associated, snap to value
         this.worldContext?.snap(this);
@@ -180,7 +150,7 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.deleteDepiction();
 
         // data join
-        this.anchor = anchor.datum<LocationUnit>(this);
+        this.anchor = anchor.datum(this);
 
         // circle
         this.anchor.append<SVGCircleElement>(SVGTags.SVGCircleElement)
@@ -512,7 +482,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         return this.onMouseClickHandlersHandlers.delete(actionName);
     }
 
-
     applyAllHandlers(handlers: Map<string, Handler>): Handler {
 
         return function (this: SVGGElement, event: any) {
@@ -664,123 +633,6 @@ export default class LocationUnit extends LocationNode implements INodeUnit, IDr
         this.translateToCoord(this.unscaledPosition);
         this.scale = 1;
         return this;
-    }
-
-    // DEBUGGING METHODS
-
-    renderDebugHelpers(
-        points: IGraphNode[],
-        lines: IGraphEdge<IGraphNode, IGraphNode>[]
-    ): void {
-
-        if (this.debugAnchor !== undefined && this.debugMode) {
-
-            const debugPathAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + LocationUnitCSS.DEBUG_EDGE)
-                .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
-
-            const debugPathTextAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphEdge<IGraphNode, IGraphNode>>("." + LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_EDGE)
-                .data<IGraphEdge<IGraphNode, IGraphNode>>(lines, _ => _.id);
-
-            const debugCircleAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphNode>("." + LocationUnitCSS.DEBUG_NODE)
-                .data<IGraphNode>(points, _ => _.id);
-
-            const debugCircleTextAnchor = this.debugAnchor
-                .selectAll<SVGGElement, IGraphNode>("." + LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_NODE)
-                .data<IGraphNode>(points, _ => _.id);
-
-            debugPathAnchor.enter()
-                .append(SVGTags.SVGPathElement)
-                .classed(LocationUnitCSS.DEBUG_NODE, true)
-                .attr(SVGAttrs.id, _ => _.id)
-                .attr(SVGAttrs.d, (edge: IGraphEdge<IGraphNode, IGraphNode>) => {
-                    const ctx = path();
-
-                    ctx.moveTo(edge.from.x, edge.from.y);
-                    ctx.lineTo(edge.to.x, edge.to.y);
-
-                    return ctx.toString();
-                })
-                .each( e => {
-
-                    const selfRef = `[${this._name}, id: ${this.id}] `
-                    console.log(`${selfRef} ${e.id}: 
-                    midpoint = ${e.midpoint}
-                    size = ${e.size}`);
-
-                });
-
-
-            debugPathAnchor.attr(SVGAttrs.d, (edge: IGraphEdge<IGraphNode, IGraphNode>) => {
-                const ctx = path();
-
-                ctx.moveTo(edge.from.x, edge.from.y);
-                ctx.lineTo(edge.to.x, edge.to.y);
-
-                return ctx.toString();
-            });
-
-            debugPathAnchor.exit().remove();
-
-            debugPathTextAnchor.enter()
-                .append(SVGTags.SVGTextElement)
-                .classed(LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_EDGE, true)
-                .attr(SVGAttrs.x, _ => _.midpoint.x)
-                .attr(SVGAttrs.y, _ => _.midpoint.y)
-                .text(e => e.id + "_debug");
-
-            debugPathTextAnchor
-                .attr(SVGAttrs.x, _ => _.midpoint.x)
-                .attr(SVGAttrs.y, _ => _.midpoint.y);
-
-            debugPathTextAnchor.exit().remove();
-
-            debugCircleAnchor.enter()
-                .append(SVGTags.SVGCircleElement)
-                .classed(LocationUnitCSS.DEBUG_NODE, true)
-                .attr(SVGAttrs.cx, n => n.x)
-                .attr(SVGAttrs.cy, n => n.y)
-                .attr(SVGAttrs.r, n => n.radius)
-                .each(n => {
-
-                    const selfRef = `[${this._name}, id: ${this.id}] `
-                    console.log(`${selfRef} ${n.id}: ${n.toString()} 
-                    radius = ${n.radius}`);
-
-                });
-
-            debugCircleAnchor
-                .attr(SVGAttrs.cx, n => n.x)
-                .attr(SVGAttrs.cy, n => n.y)
-                .attr(SVGAttrs.r, n => n.radius);
-
-            debugCircleAnchor.exit().remove();
-
-            debugCircleTextAnchor.enter()
-                .append(SVGTags.SVGTextElement)
-                .classed(LocationUnitCSS.DEBUG_TEXT + LocationUnitCSS.DEBUG_NODE, true)
-                .attr(SVGAttrs.x, _ => _.x + _.radius + 0.8)
-                .attr(SVGAttrs.y, _ => _.y + (_.radius / 3))
-                .text(n => ` ${n.toString()} ${n.id}_debug`);
-
-            debugCircleTextAnchor
-                .attr(SVGAttrs.x, _ => _.x + _.radius + 0.8)
-                .attr(SVGAttrs.y, _ => _.y + (_.radius / 3));
-
-            debugCircleTextAnchor.exit().remove();
-
-
-        }
-
-    }
-
-    initDebug(d3selection: AnySelection): void {
-        if (!this.debugAnchor && this.debugMode)
-            this.debugAnchor =
-                d3selection.append<ContainerElement>(SVGTags.SVGGElement).attr(SVGAttrs.id, LocationUnitCSS.DEBUG_NODE);
-
     }
 
 }

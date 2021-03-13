@@ -19,8 +19,9 @@ export default class LocationNode extends AbstractNode implements IGraphNode {
     }
 
     /** A shallow copy of the LocationNode, matching in ID and location */
-    get copy(): LocationNode {
-        return new LocationNode(this.id, this.radius, this.x, this.y);
+    get copy(): this {
+        // @ts-ignore
+        return new this.constructor(this.id, this.radius, this.x, this.y);
     }
 
     connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {

@@ -81,6 +81,6 @@ export default abstract class AbstractNode
      * that when you extend this class; It also does not define what equality looks like, so overriding the
      * equals method is also recommended.
      */
-    abstract get copy(): AbstractNode;
+    abstract get copy(): this;
 
 }

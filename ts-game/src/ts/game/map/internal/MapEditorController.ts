@@ -93,14 +93,16 @@ export class MapEditorController {
 
         this.bgGroup = backgroundElement;
 
-        const mainGroup = select(anchor)
+        const mainGroup = select<SVGGElement, undefined>(anchor)
             .append(SVGTags.SVGGElement)
             .classed(MapEditorControllerCSS.MAIN_ELEM, true);
 
         this.mainGroup = mainGroup;
 
+        const setMainGroupTransform = (transform: string) => mainGroup.attr("transform", transform);
+
         // init zoom
-        backgroundElement.call(
+        select("." + MapEditorControllerCSS.BG_ELEM).call(
             zoom<any, unknown>()
                 .scaleExtent([0.5, 2])
                 .translateExtent([
@@ -108,12 +110,8 @@ export class MapEditorController {
                     [bgCoords.bottomR.x + config.zoomBuffer, bgCoords.bottomR.y + config.zoomBuffer]
                 ])
                 .on("zoom", (event: any) => {
+                    console.log(event.transform.toString());
                     mainGroup.attr("transform", event.transform.toString());
-
-                    for (let handler of this.zoomHandlers.values()) {
-                        handler(event.transform.k, event.transform.x, event.transform.y);
-                    }
-
                 })
         );
 

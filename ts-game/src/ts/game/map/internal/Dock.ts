@@ -31,12 +31,16 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
      * A function that is called once a node is placed outside of the bounds of the menu.
      */
     public onNodePlacement: (node: LocationUnit) => void = () => { };
-    private anchor: AnySelection | undefined;
+    public anchor: AnySelection | undefined;
 
     constructor(name?: string, config: DockConfig = defaultConfigurations.dock) {
         super();
         if (name) config.rename(name);
         this.config = config;
+    }
+
+    snapSelf(): void {
+        // makes no semantic sense to snap the dock.
     }
 
     snap(node: AcceptedUnits): ICoordinate {
@@ -235,7 +239,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
             .text(this.config.title)
             .attr(SVGAttrs.x, textStart.x)
             .attr(SVGAttrs.y, textStart.y)
-            .attr(SVGAttrs.alignment, SVGAttrs.options.alignment.middle)
+            .attr(SVGAttrs.alignment, SVGAttrs.alignment_middle)
             .style(SVGAttrs.fontSize, fontSize);
 
         // @ts-ignore

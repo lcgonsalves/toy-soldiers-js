@@ -39,7 +39,7 @@ enum TooltipTransitions {
 export class ActionTooltip extends Rectangle implements IDepictable {
 
     private readonly config: TooltipConfig;
-    private anchor: AnySelection | undefined;
+    public anchor: AnySelection | undefined;
     private lastFocusTarget: ICoordinate | undefined;
 
     public enabled: boolean = true;
@@ -203,6 +203,12 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // refresh to match width
         this.refresh();
 
+    }
+
+    snapSelf(): void {
+        // no snapping if there's no focus target
+        if (this.lastFocusTarget)
+            this.translateToCoord(this.lastFocusTarget);
     }
 
     /**

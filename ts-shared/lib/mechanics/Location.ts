@@ -36,7 +36,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         const errorMessage = "Somehow I fucked up the math. If you see this error, you fucked up the math. Go fix the code";
 
         // make a copy
-        const c = this.domain.snap(coordinate.copy);
+        const c = this.domain.snap(coordinate.simple);
 
         // if this one works, yeet. no need to proceed further
         if (!this.containsNodeAtLocation(c)) return coordinate.translateToCoord(c);
@@ -121,9 +121,10 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         }
 
         const startingSquare = [topL, topR, bottomL, bottomR].find(_ => _.overlaps(coordinate));
+        console.log([topL, topR, bottomL, bottomR], coordinate)
 
         // somehow none of the starting squares contains the original coord...
-        if (!startingSquare) throw new Error(errorMessage);
+        if (!startingSquare) return // throw new Error(errorMessage);
         else {
             const finalCoord = findClosestAvailableCoordinateRec(startingSquare);
             return coordinate.translateToCoord(finalCoord);
