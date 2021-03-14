@@ -3,7 +3,7 @@ import {IDepictable} from "./UnitInterfaces";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import {Subject, Subscription} from "rxjs"
 import {drag} from "d3-drag";
-import {select} from "d3-selection";
+import {ISnappable} from "ts-shared/build/util/ISnappable";
 
 /**
  * An element that, when dragged with a mouse, will translate to the mouse position.
@@ -61,7 +61,7 @@ export interface DragConfig {
  * Injects drag behavior and handlers to a depictable coordinate-like Base class.
  * @param Base the base class.
  */
-function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(Base: T) {
+export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate & ISnappable>>(Base: T) {
     return class Draggable extends Base implements IDraggable {
 
         public config: DragConfig = {
@@ -76,16 +76,18 @@ function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(
         // keeping track of the subscriptions
         private defaultHandlers: Subscription[] = [];
 
-        // we must track the last cursor position in order to properly drag independently from the transform of the group
-        private readonly lastDragCursorPosition: ICoordinate = Coordinate.origin;
+        // tracks curson position in order to properly drag independently from the transform of the group
+        private lastDragCursorPosition: ICoordinate | undefined;
 
         initializeDrag(): void {
+
+            // initialize cursor position tracker
+            if (!this.lastDragCursorPosition) this.lastDragCursorPosition = Coordinate.origin;
 
             const {
                 $dragStart,
                 $dragEnd,
                 $dragging,
-                lastDragCursorPosition,
                 config
             } = this;
 
@@ -96,18 +98,21 @@ function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(
                     $dragStart.subscribe((e: DragEvent) => {
 
                         // simply initialize (or reset) the last cursor position
-                        lastDragCursorPosition.translateToCoord(e.position);
+                        this.lastDragCursorPosition?.translateToCoord(e.position);
+
+                        // move to initial position.
+                        this.translateToCoord(e.position);
 
                         // set grabbed class for visual handling
-                        select(e.element).classed(DragCSS.GRABBED, true);
+                        this.anchor?.classed(DragCSS.GRABBED, true);
 
                     }),
                     $dragging.subscribe((e: DragEvent) => {
 
                         /* distance to be translated must be calculated between last "virtual position", i.e. the scaled down
                            position of the mouse (the original event coordinates, since the event happens within a transformed SVG group). */
-                        const unscaledDistance = lastDragCursorPosition.distanceInComponents(e.position);
-                        lastDragCursorPosition.translateToCoord(e.position);
+                        const unscaledDistance = this.lastDragCursorPosition?.distanceInComponents(e.position) ?? this.distanceInComponents(e.position);
+                        this.lastDragCursorPosition?.translateToCoord(e.position);
 
                         config.snapWhileDragging ?
                             this.snapSelf() :
@@ -116,8 +121,10 @@ function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(
                     }),
                     $dragEnd.subscribe((e: DragEvent) => {
 
+                        this.lastDragCursorPosition?.translateToCoord(e.position);
+
                         // remove grabbed class for visual handling
-                        select(e.element).classed(DragCSS.GRABBED, true);
+                        this.anchor?.classed(DragCSS.GRABBED, false);
 
                         // translate to final coordinate
                         config.snapOnEnd ?

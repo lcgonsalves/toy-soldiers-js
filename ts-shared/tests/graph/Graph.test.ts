@@ -13,8 +13,8 @@ describe("Graph Implementation", function () {
 
 
     const g: IGraph<IGraphNode> = new SimpleDirectedGraph(undefined, 200, 200);
-    const na: IGraphNode = new LocationNode("node a", 35, defaultNodePositions.na.x, defaultNodePositions.na.y);
-    const nb: IGraphNode = new LocationNode("node b", 35, defaultNodePositions.nb.x, defaultNodePositions.nb.y);
+    const na: IGraphNode = new LocationNode("node a");
+    const nb: IGraphNode = new LocationNode("node b");
 
     beforeEach(function () {
 

@@ -1,5 +1,6 @@
+import {ISerializable, SerializableObject, SObj} from "ts-shared/build/util/ISerializable";
 
-export class SimpleDepiction {
+export class SimpleDepiction implements ISerializable {
     
     public readonly fill: string;
     public readonly stroke: string;
@@ -10,5 +11,19 @@ export class SimpleDepiction {
         this.stroke = stroke
         this.strokeWidth = strokeWidth
     }
+
+    /** Returns a string representing the instance of this object at the time of serialization */
+    get serialize(): string {
+        return this.simplified.toString();
+    }
+
+    get simplified(): SerializableObject {
+        return SObj({
+            fill: this.fill,
+            stroke: this.stroke,
+            strokeWidth: this.strokeWidth
+        });
+    }
+
 
 }

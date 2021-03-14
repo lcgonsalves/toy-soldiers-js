@@ -121,7 +121,6 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         }
 
         const startingSquare = [topL, topR, bottomL, bottomR].find(_ => _.overlaps(coordinate));
-        console.log([topL, topR, bottomL, bottomR], coordinate)
 
         // somehow none of the starting squares contains the original coord...
         if (!startingSquare) return // throw new Error(errorMessage);

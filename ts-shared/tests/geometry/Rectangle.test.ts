@@ -185,7 +185,7 @@ describe("Rectangles", function () {
 
     });
 
-    const positionBeforeSnap = new LocationNode("pre", 1, 1.00001, 1.00001);
+    const positionBeforeSnap = new LocationNode("pre");
 
     function testPoints<N extends LocationNode>(ctx: LocationContext<N>, unacceptableCoordinates: N[], distance?: number) {
         // can't overlap any of the noes
@@ -225,8 +225,8 @@ describe("Rectangles", function () {
             // add nodes such that the first square is completely filled
             for (let x = ctx.domain.x.min + margin, i = 1; x <= (ctx.domain.x.max - margin); x += ctx.domain.x.step) {
                 for (let y = ctx.domain.y.min + margin; y <= (ctx.domain.y.max - margin); y += ctx.domain.y.step, i++) {
-                    if (x === 5 && y === 5) ctx.add(new LocationNode(exceptionID, 0.8, x, y));
-                    else ctx.add(new LocationNode("location node " + i, 2, x, y));
+                    if (x === 5 && y === 5) ctx.add(new LocationNode(exceptionID));
+                    else ctx.add(new LocationNode("location node " + i));
                 }
             }
 
@@ -247,7 +247,7 @@ describe("Rectangles", function () {
 
         // simple context, step of 1
         const ctx = new LocationContext(1);
-        const n = new LocationNode("node A", 1, 1, 1);
+        const n = new LocationNode("node A");
 
         // add a node at (1, 1)
         ctx.add(n);
@@ -264,10 +264,10 @@ describe("Rectangles", function () {
         const ctx = new LocationContext(1);
 
         // add nodes such that the first square is completely filled
-        ctx.add(new LocationNode("node top left", 1, 1, 1));
-        ctx.add(new LocationNode("node top right", 1, 1, 2));
-        ctx.add(new LocationNode("node bottom left", 1, 2, 1));
-        ctx.add(new LocationNode("node bottom right", 1, 2, 2));
+        ctx.add(new LocationNode("node top left"));
+        ctx.add(new LocationNode("node top right"));
+        ctx.add(new LocationNode("node bottom left"));
+        ctx.add(new LocationNode("node bottom right"));
 
 
         // can't overlap any of the noes

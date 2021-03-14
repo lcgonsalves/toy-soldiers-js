@@ -1,11 +1,28 @@
 import Vector from "../util/Vector";
 import IComparable from "../util/IComparable";
+import {ISerializable, SerializableObject, SObj} from "../util/ISerializable";
+
+/**
+ * Interface for components that have translate() methods.
+ */
+export interface IMovable {
+
+    /** Changes value of current coordinate to given x-y value */
+    translateTo (x: number, y: number): ICoordinate;
+
+    /** adds values to given coordinate */
+    translateBy (x: number, y: number): ICoordinate;
+
+    /** Changes value of current coordinate to given x-y value */
+    translateToCoord (other: ICoordinate): ICoordinate;
+
+}
 
 /**
  * Defines properties of two dimensional points and operations
  * between them.
  */
-export interface ICoordinate extends IComparable {
+export interface ICoordinate extends IComparable, IMovable {
     readonly x: number;
     readonly y: number;
     readonly copy: this;
@@ -46,15 +63,6 @@ export interface ICoordinate extends IComparable {
     /** Returns a vector perpendicular to the vector between this coordinate and other */
     perpendicularVector(other: ICoordinate, ccw?: boolean): Vector;
 
-    /** Changes value of current coordinate to given x-y value */
-    translateTo(x: number, y: number): ICoordinate;
-
-    /** adds values to given coordinate */
-    translateBy(x: number, y: number): ICoordinate;
-
-    /** Changes value of current coordinate to given x-y value */
-    translateToCoord(other: ICoordinate): ICoordinate;
-
     /** Returns true if the given ICoordinate shares the same coordinates */
     overlaps(other: ICoordinate): boolean;
 
@@ -66,7 +74,7 @@ export interface ICoordinate extends IComparable {
 
 }
 
-export class Coordinate implements ICoordinate {
+export class Coordinate implements ICoordinate, ISerializable {
 
     public get y(): number {
         return this._y;
@@ -91,6 +99,16 @@ export class Coordinate implements ICoordinate {
     constructor(x: number, y: number) {
         this._x = x;
         this._y = y;
+    }
+
+    /**
+     * Centralizing all super calls that mutate x and y values in this function for better maintainability.
+     * @param newPos
+     * @private
+     */
+    private setPosition(newPos: {x: number, y: number}): void {
+        this._x = newPos.x;
+        this._y = newPos.y;
     }
 
     /**
@@ -139,8 +157,7 @@ export class Coordinate implements ICoordinate {
     }
 
     translateTo(x: number, y: number): ICoordinate {
-        this._x = x;
-        this._y = y;
+        this.setPosition({x, y});
         return this;
     }
 
@@ -151,7 +168,8 @@ export class Coordinate implements ICoordinate {
     }
 
     translateToCoord(other: ICoordinate): ICoordinate {
-        return this.translateTo(other.x, other.y);
+        this.setPosition(other);
+        return this;
     }
 
     overlaps(other: ICoordinate): boolean {
@@ -169,8 +187,10 @@ export class Coordinate implements ICoordinate {
     }
 
     translateBy(x: number, y: number): ICoordinate {
-        this._x += x;
-        this._y += y;
+        this.setPosition({
+            x: x + this.x,
+            y: y + this.y
+        });
         return this;
     }
 
@@ -181,6 +201,18 @@ export class Coordinate implements ICoordinate {
     toString(): string {
         return `(${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
     }
+
+    get serialize(): string {
+        return this.simplified.toString();
+    }
+
+    get simplified(): SerializableObject {
+        return SObj({
+            x: this.x,
+            y: this.y
+        });
+    }
+
 
 }
 

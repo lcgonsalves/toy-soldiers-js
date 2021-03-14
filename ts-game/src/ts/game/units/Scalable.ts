@@ -1,7 +1,7 @@
-import {C, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {C, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {IDepictable} from "./UnitInterfaces";
+import {IDepictable, IDepictableWithSprite} from "./UnitInterfaces";
 import SVGAttrs from "../../util/SVGAttrs";
 
 /**
@@ -34,20 +34,27 @@ export interface IScalable {
 
 }
 
+interface Acceptable<Element extends SVGGElement>
+    extends IDepictable<Element>, ICoordinate {}
+
 /**
  * @mixin
  *
- * Injects scalable behavior and expands class Base to have the hability to scale to fit bounds.
+ * Injects scalable behavior and expands class Base to have the hability to scale to fit bounds. Default translation method
+ * now takes into account transforms on this Unit.
+ *
  * @param Base
  * @constructor
  */
-function ScalableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(Base: T) {
-    return class Scalable extends Base implements IScalable {
+export function ScalableUnit<
+    Element extends SVGGElement,
+    T extends GenericConstructor<IDepictableWithSprite<Element> & ICoordinate>>(Base: T) {
+    return class Scalable extends Base implements IScalable, IMovable {
 
         private _scale: number = 1;
 
         get scale(): number { return this._scale };
-        get unscaledPosition(): ICoordinate { return this.copy.translateTo(this.x * this.scale, this.y * this.scale) };
+        get unscaledPosition(): ICoordinate { return C(this.x, this.y).translateTo(this.x * this.scale, this.y * this.scale) };
 
         resetScale(): this {
             this.translateToCoord(this.unscaledPosition);
@@ -79,6 +86,7 @@ function ScalableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(B
                 // update position to reverse scaling
                 this.translateToScaledCoord(this);
 
+
             } else console.warn(`Unable to scale element. Anchor (${this.anchor}) or Container (${container}) are falsy.`);
 
             return this;
@@ -86,15 +94,26 @@ function ScalableUnit<T extends GenericConstructor<IDepictable & ICoordinate>>(B
         }
 
         translateByScaled(x: number, y: number): this {
-            this.translateBy(x / this.scale, y / this.scale);
+            super.translateBy(x / this.scale, y / this.scale);
             return this;
         }
 
         translateToScaledCoord(other: ICoordinate): this {
-            this.translateToCoord(C(other.x / this.scale, other.y / this.scale));
+            super.translateToCoord(C(other.x / this.scale, other.y / this.scale));
             return this;
         }
 
+        translateBy(x: number, y: number): ICoordinate {
+            return this.translateByScaled(x, y);
+        }
+
+        translateTo(x: number, y: number): ICoordinate {
+            return this.translateToScaledCoord(C(x, y));
+        }
+
+        translateToCoord(other: ICoordinate): ICoordinate {
+            return this.translateToScaledCoord(other);
+        }
 
     }
 }

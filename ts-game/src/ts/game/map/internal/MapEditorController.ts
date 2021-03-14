@@ -3,7 +3,7 @@ import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
-import LocationUnit from "../../units/LocationUnit";
+import DeprecatedLocationUnit from "../../units/DeprecatedLocationUnit";
 import {AnySelection} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
 import {ActionTooltip} from "./Tooltip";
@@ -13,6 +13,10 @@ import LocationNode from "ts-shared/build/graph/LocationNode";
 import {TAction, TargetAction} from "../../../util/Action";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import {delay} from "rxjs/operators";
+import {CompositeShape} from "../../shape/ShapeUtil";
+import {SimpleDepiction} from "../../../util/Depiction";
+import {CircleShape} from "../../shape/CircleShape";
+import {DepictableLocationNode, DraggableLocationNode, ScalableLocationNode} from "../../units/LocationUnit";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -23,7 +27,7 @@ interface MapEditorMapConfig {
 
 interface NodeAction {
     key: string,
-    apply: (n: LocationUnit) => void
+    apply: (n: DeprecatedLocationUnit) => void
 }
 
 enum MapEditorControllerCSS {
@@ -47,8 +51,9 @@ enum MapEditorControllerCSS {
  */
 export class MapEditorController {
     // contexts
-    public readonly locations: LocationContext<LocationUnit>;
-    public readonly dock: Dock<LocationUnit> = new Dock("Map Elements");
+    public readonly deprecatedlocations: LocationContext<DeprecatedLocationUnit>;
+
+    public readonly dock: Dock = new Dock("Map Elements");
 
     // anchors
     private readonly edgeContainer: AnySelection;
@@ -56,20 +61,18 @@ export class MapEditorController {
     private readonly mainGroup: AnySelection;
     private readonly bgGroup: AnySelection;
 
-    private readonly zoomHandlers: Map<string, (scale: number, x: number, y: number) => void> = new Map<string, (scale: number, x: number, y: number) => void>();
-
     // tooltip reference
     private readonly actionTooltip: ActionTooltip = new ActionTooltip();
 
     // putting all of the boilerplate in here
-    constructor(nodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
-        this.locations = nodeContext;
+    constructor(deprecatedNodeContext: LocationContext<DeprecatedLocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
+        this.deprecatedlocations = deprecatedNodeContext;
 
         const gridCoords = {
-            topL: new Coordinate(nodeContext.domain.x.min, nodeContext.domain.y.min),
-            topR: new Coordinate(nodeContext.domain.x.max, nodeContext.domain.y.min),
-            bottomL: new Coordinate(nodeContext.domain.x.min, nodeContext.domain.y.max),
-            bottomR: new Coordinate(nodeContext.domain.x.max, nodeContext.domain.y.max)
+            topL: new Coordinate(deprecatedNodeContext.domain.x.min, deprecatedNodeContext.domain.y.min),
+            topR: new Coordinate(deprecatedNodeContext.domain.x.max, deprecatedNodeContext.domain.y.min),
+            bottomL: new Coordinate(deprecatedNodeContext.domain.x.min, deprecatedNodeContext.domain.y.max),
+            bottomR: new Coordinate(deprecatedNodeContext.domain.x.max, deprecatedNodeContext.domain.y.max)
         }
 
         // defines extents of background
@@ -110,7 +113,6 @@ export class MapEditorController {
                     [bgCoords.bottomR.x + config.zoomBuffer, bgCoords.bottomR.y + config.zoomBuffer]
                 ])
                 .on("zoom", (event: any) => {
-                    console.log(event.transform.toString());
                     mainGroup.attr("transform", event.transform.toString());
                 })
         );
@@ -129,8 +131,8 @@ export class MapEditorController {
             .attr(SVGAttrs.fill, config.foregroundColor);
 
         const drawGrid = (context: Path): Path => {
-            const xDomain = this.locations.domain.x,
-                yDomain = this.locations.domain.y;
+            const xDomain = this.deprecatedlocations.domain.x,
+                yDomain = this.deprecatedlocations.domain.y;
 
             for (let col = xDomain.min; xDomain.contains(col); col += xDomain.step) {
                 context.moveTo(col, yDomain.min);
@@ -167,7 +169,7 @@ export class MapEditorController {
         this.initBottomMenu(anchor);
 
         // attach nodes already in context to group
-        nodeContext.nodes.forEach(n => this.initializeLocationNode(n));
+        deprecatedNodeContext.nodes.forEach(n => this.initializeLocationNode(n));
         
     }
 
@@ -178,25 +180,25 @@ export class MapEditorController {
         dock.register(
             "Basic Location Node A",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 6)
+            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
         );
 
         dock.register(
             "Basic Location Node B",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 2)
+            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
         );
 
         dock.register(
             "Basic Location Node C",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(name, id, C(x, y), 12)
+            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
         );
 
         dock.attachDepictionTo(select(anchor));
 
-        dock.onNodePlacement = (node: LocationUnit) => {
-            this.locations.add(node);
+        const onNodePlacement = (node: DeprecatedLocationUnit) => {
+            this.deprecatedlocations.add(node);
         
             // reverse transforms to place node in correct coordinate
             const g: SVGGElement = this.mainGroup.node();
@@ -225,7 +227,7 @@ export class MapEditorController {
     }
 
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
-    private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
+    private initializeLocationNode<Unit extends DeprecatedLocationUnit>(n: Unit): void {
 
         // attach depictions
         n.attachDepictionTo(this.nodeContainer);
@@ -233,7 +235,7 @@ export class MapEditorController {
         n.shouldDisplayLabel = false;
 
         const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
-                this.locations.nodes.forEach(nodeInContext => {
+                this.deprecatedlocations.nodes.forEach(nodeInContext => {
                     if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
 
                 });
@@ -252,7 +254,7 @@ export class MapEditorController {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
-            const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, mouseTrackerNodeID, node, 1);
+            const mouseTrackerNode = new DeprecatedLocationUnit(mouseTrackerNodeID, mouseTrackerNodeID, node, 1);
 
             // connect to it
             node.connectTo(mouseTrackerNode);
@@ -288,7 +290,7 @@ export class MapEditorController {
             });
 
             // prepare nodes for connection
-            const allLocations = this.locations.all().filter(l => !l.overlaps(node));
+            const allLocations = this.deprecatedlocations.all().filter(l => !l.overlaps(node));
             allLocations.forEach(l => {
 
                 // now they are listening for that sweet sweet click
@@ -336,9 +338,9 @@ export class MapEditorController {
         connectToAction.depiction = TargetAction.depiction.neutral
 
         const removeAction = TAction<Unit>("remove", "remove", node => {
-            this.locations.rm(node.id);
+            this.deprecatedlocations.rm(node.id);
             this.actionTooltip.unfocus(0);
-            this.locations.getNodesAdjacentTo(node).forEach(adj => {
+            this.deprecatedlocations.getNodesAdjacentTo(node).forEach(adj => {
                 node.disconnectFrom(adj, true);
                 console.log(adj.adjacent);
                 adj.refreshEdgeDepiction();

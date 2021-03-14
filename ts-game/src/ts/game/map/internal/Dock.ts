@@ -1,4 +1,4 @@
-import LocationUnit from "../../units/LocationUnit";
+import DeprecatedLocationUnit from "../../units/DeprecatedLocationUnit";
 import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
@@ -7,6 +7,8 @@ import { path } from "d3";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import {IScalable} from "../../units/Scalable";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
@@ -21,16 +23,13 @@ enum DockCSS {
 /**
  * Implementation of a menu that can instantiate Units.
  */
-export default class Dock<AcceptedUnits extends LocationUnit> extends LocationContext<AcceptedUnits> implements IDepictable {
+export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepictable = (LocationNode & IScalable & IDepictable)>
+    extends LocationContext<AcceptedUnits> implements IDepictable {
 
     private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
     private itemsCreated: number = 0;
     public readonly config: DockConfig;
 
-    /**
-     * A function that is called once a node is placed outside of the bounds of the menu.
-     */
-    public onNodePlacement: (node: LocationUnit) => void = () => { };
     public anchor: AnySelection | undefined;
 
     constructor(name?: string, config: DockConfig = defaultConfigurations.dock) {
@@ -39,9 +38,6 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
         this.config = config;
     }
 
-    snapSelf(): void {
-        // makes no semantic sense to snap the dock.
-    }
 
     snap(node: AcceptedUnits): ICoordinate {
 
@@ -58,29 +54,19 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
             this.rm(node.id);
 
             // remove menu scale
-            node.rmScale();
-
-            // generate new instance
-            const associatedMenuItem = this.registeredItems.get(node.name);
-            if (associatedMenuItem) {
-                const newInstance = this.instantiate(associatedMenuItem);
-                const {anchor} = this;
-
-                // if we have an anchor available, render object
-                if (anchor) {
-                    newInstance.attachDepictionTo(anchor);
-                    newInstance.scaleToFit(associatedMenuItem.container);
-                }
-            }
-
-            // rename old instance
-            node.rename("New " + assignedItem.title);
+            node.resetScale();
 
             // de-sociate depiction from this container
             node.deleteDepiction();
 
+            // generate new instance
+            const associatedMenuItem = this.registeredItems.get(node.name);
+            if (associatedMenuItem) this.instantiate(associatedMenuItem);
+
+            // rename old instance
+            node.rename("New " + assignedItem.title);
+
             // external handler
-            this.onNodePlacement(node);
 
             // return
             return node;
@@ -89,7 +75,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
 
     }
 
-    add(...n: LocationUnit[]): this {
+    add(...n: AcceptedUnits[]): this {
         console.error("You cannot add items to the menu context manually.");
         return this;
     }
@@ -161,13 +147,16 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
         this.instantiate(item);
     }
 
-    private instantiate(item: DockItem<AcceptedUnits>): LocationUnit {
+    private instantiate(item: DockItem<AcceptedUnits>): AcceptedUnits {
 
         const {container, title, id} = item;
         const gameUnitInstance = item.make(container.x, container.y, title + this.itemsCreated, id);
+
         // passing ID as name, means that this node is associated with this menu item
         super.add(gameUnitInstance);
+
         if (this.anchor) gameUnitInstance.attachDepictionTo(this.anchor);
+        gameUnitInstance.scaleToFit(container);
 
         this.itemsCreated++;
 
@@ -198,6 +187,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
             .append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, _ => _.container.topLeft.x)
             .attr(SVGAttrs.y, _ => _.container.topLeft.y)
+            .attr("center", c =>`( ${c.container.x}, ${c.container.y} )`)
             .attr(SVGAttrs.width, _ => _.container.width)
             .attr(SVGAttrs.height, _ => _.container.height)
             .attr(SVGAttrs.fill, config.dockItemContainerConfig.fill)

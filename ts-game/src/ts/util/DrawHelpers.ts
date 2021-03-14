@@ -289,6 +289,23 @@ export const defaultColors = {
     }
 }
 
+export const defaultDepictions = {
+    grays: {
+        light: new SimpleDepiction(
+            defaultColors.grays.light,
+            defaultColors.grays.dark
+        ),
+        medium: new SimpleDepiction(
+            defaultColors.grays.medium,
+            defaultColors.grays.dark
+        ),
+        dark: new SimpleDepiction(
+            defaultColors.grays.dark,
+            defaultColors.grays.extradark
+        ),
+    }
+}
+
 const defaultDockItemContainerConfig = new RectConfig(
     C(0,0),
     defaultDockItemSize,

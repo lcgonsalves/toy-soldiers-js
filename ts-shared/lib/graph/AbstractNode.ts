@@ -2,6 +2,7 @@ import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
 import {Edge} from "./SimpleDirectedEdge";
 import WorldContext from "../mechanics/WorldContext";
+import {SerializableObject, SObj} from "../util/ISerializable";
 
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {
@@ -26,6 +27,9 @@ export default abstract class AbstractNode
         return this._id;
     }
 
+    /**
+     * @deprecated Radius should no longer be considered since size of node is determined from its depiction.
+     */
     get radius(): number {
         return this._radius;
     }
@@ -82,5 +86,15 @@ export default abstract class AbstractNode
      * equals method is also recommended.
      */
     abstract get copy(): this;
+
+    get simplified(): SerializableObject {
+        return SObj({
+            x: this.x,
+            y: this.y,
+            id: this.id,
+            radius: this.radius,
+            adj: this.adjacent.map(_ => _.id)
+        });
+    }
 
 }

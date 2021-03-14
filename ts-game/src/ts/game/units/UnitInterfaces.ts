@@ -1,17 +1,20 @@
 import {AnySelection} from "../../util/DrawHelpers";
 import {Selection} from "d3-selection";
-import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {IDraggable} from "./Draggable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import AbstractNode from "ts-shared/build/graph/AbstractNode";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import {ICopiable} from "ts-shared/build/util/ISerializable";
+import SVGAttrs from "../../util/SVGAttrs";
+import SVGTags from "../../util/SVGTags";
 
 /**
  * Encompasses operations for mounting and unmounting from UI.
  */
-export interface IDepictable {
+export interface IDepictable<E extends SVGElement = SVGGElement> {
 
     /** Depictable elements may be unanchored at any point */
-    readonly anchor: Selection<SVGGElement, this, any, any>  | undefined;
+    readonly anchor: Selection<E, any, any, any>  | undefined;
 
     /** Attaches game unit to a d3 selection, appending elements and assigning event handlers. */
     attachDepictionTo(d3selection: AnySelection): void;
@@ -22,35 +25,88 @@ export interface IDepictable {
     /** Refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
 
-    /** Translates element to the snapping coordinate, as defined in the implementation. */
-    snapSelf(): void;
+}
+
+export interface IDepictableWithSprite<E extends SVGElement = SVGGElement>
+    extends IDepictable<E> {
+
+    /** Shape, or composite shape, or other IDepictable (if my code works) can be used to represent this object. */
+    readonly sprite: (IDepictable & IMovable & ICopiable) | undefined;
 
 }
+
 
 /**
  * Attaches functionality to allow class Base to have a depiction
  * @param Base the base class
  *
+ * @param sprite
  * @constructor
  */
-export function DepictableUnit<T extends GenericConstructor<AbstractNode>>(
-    Base: T
-) {
-    // @ts-ignore
-    return class Depictable extends Base implements IDepictable {
+export function DepictableUnit<
+    T extends GenericConstructor<LocationNode>,
+    S extends IDepictable & IMovable & ICopiable
+    >(Base: T, sprite: S /* TODO: = SampleShapes.example */ ) {
 
-        readonly anchor: Selection<SVGGElement, this, any, any> | undefined;
+    return class Depictable extends Base implements IDepictableWithSprite, IMovable {
+
+        anchor: Selection<SVGGElement, IDepictable, any, any> | undefined;
+        sprite: (IDepictable & IMovable & ICopiable) | undefined;
 
         attachDepictionTo(d3selection: AnySelection): void {
+
+            // preprocess selection – add a svg group to contain everything
+            const container = d3selection.append<SVGGElement>(SVGTags.SVGGElement)
+                .classed(this.name, true);
+            this.anchor = container;
+
+            // if we haven't grabbed a copy of the sprite yet, we do it now.
+            if (!this.sprite) this.sprite = sprite.duplicate();
+
+            // we translate the sprite to the unit
+            this.sprite.translateToCoord(this);
+
+            // then we attach it to the selection
+            this.sprite.attachDepictionTo(container);
+
         }
 
         deleteDepiction(): void {
+            this.sprite?.deleteDepiction();
+            this.anchor?.selectAll("*").remove();
+            this.anchor?.remove();
         }
 
         refresh(): void {
+            this.sprite?.refresh();
         }
 
-        snapSelf(): void {
+        // TODO: watch changes in position reactively
+        translateBy(x: number, y: number): ICoordinate {
+            const dest = super.translateBy(x, y);
+            // translate sprite
+            this.sprite?.translateBy(x, y);
+
+            this.refresh();
+            return dest;
+        }
+
+        translateTo(x: number, y: number): ICoordinate {
+            const dest = super.translateTo(x, y);
+            // translate sprite
+            this.sprite?.translateTo(x, y);
+
+            this.refresh();
+            return dest;
+        }
+
+        translateToCoord(other: ICoordinate): ICoordinate {
+            const dest = super.translateToCoord(other);
+            // translate sprite
+            this.sprite?.translateToCoord(other);
+
+            this.refresh();
+            return dest;
         }
 
     }
