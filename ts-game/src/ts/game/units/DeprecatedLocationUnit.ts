@@ -16,9 +16,9 @@ import LocationNode from "ts-shared/build/graph/LocationNode";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import WorldContext from "ts-shared/build/mechanics/WorldContext";
 import {DragEvents} from "./Draggable";
-import {CompositeShape} from "../shape/ShapeUtil";
 import {CircleShape} from "../shape/CircleShape";
 import {ISnappable} from "ts-shared/build/util/ISnappable";
+import {CompositeShape} from "../shape/CompositeShape";
 
 
 type ContainerElement = SVGGElement;
@@ -123,7 +123,7 @@ export default class DeprecatedLocationUnit extends LocationNode implements INod
 
         this.lastDragCursorPosition = this.coordinate;
         // @ts-ignore
-        this.shape = new CompositeShape("simple_circle", [new CircleShape(this)])
+        this.shape = new CompositeShape("simple_circle", [new CircleShape(1, this)])
     }
 
     /**

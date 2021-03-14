@@ -72,13 +72,14 @@ export function ScalableUnit<
 
                 // 30% padding to give the container some breathing room
                 const padding = 0.3;
+                const maxIncrease = 1.35;
                 const paddedBounds = bounds.copy.setWidth(bounds.width * (1-padding)).setHeight(bounds.height * (1-padding));
 
                 const currentBounds = bbox;
                 const xRatio = paddedBounds.width / currentBounds.width;
                 const yRatio = paddedBounds.height / currentBounds.height;
 
-                const ratio = Math.min(xRatio, yRatio);
+                const ratio = Math.min(xRatio, yRatio, maxIncrease);
                 this._scale = ratio;
 
                 this.anchor.attr(SVGAttrs.transform, `scale(${ratio})`);

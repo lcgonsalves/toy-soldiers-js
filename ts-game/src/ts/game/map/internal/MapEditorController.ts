@@ -4,7 +4,7 @@ import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
 import DeprecatedLocationUnit from "../../units/DeprecatedLocationUnit";
-import {AnySelection} from "../../../util/DrawHelpers";
+import {AnySelection, getTransforms} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
 import {ActionTooltip} from "./Tooltip";
 import {Events} from "../../../util/Events";
@@ -12,11 +12,7 @@ import {C, Coordinate} from "ts-shared/build/geometry/Coordinate";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {TAction, TargetAction} from "../../../util/Action";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
-import {delay} from "rxjs/operators";
-import {CompositeShape} from "../../shape/ShapeUtil";
-import {SimpleDepiction} from "../../../util/Depiction";
-import {CircleShape} from "../../shape/CircleShape";
-import {DepictableLocationNode, DraggableLocationNode, ScalableLocationNode} from "../../units/LocationUnit";
+import LocationUnit from "../../units/LocationUnit";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -51,7 +47,7 @@ enum MapEditorControllerCSS {
  */
 export class MapEditorController {
     // contexts
-    public readonly deprecatedlocations: LocationContext<DeprecatedLocationUnit>;
+    public readonly deprecatedlocations: LocationContext<LocationUnit>;
 
     public readonly dock: Dock = new Dock("Map Elements");
 
@@ -65,7 +61,7 @@ export class MapEditorController {
     private readonly actionTooltip: ActionTooltip = new ActionTooltip();
 
     // putting all of the boilerplate in here
-    constructor(deprecatedNodeContext: LocationContext<DeprecatedLocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
+    constructor(deprecatedNodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
         this.deprecatedlocations = deprecatedNodeContext;
 
         const gridCoords = {
@@ -101,8 +97,6 @@ export class MapEditorController {
             .classed(MapEditorControllerCSS.MAIN_ELEM, true);
 
         this.mainGroup = mainGroup;
-
-        const setMainGroupTransform = (transform: string) => mainGroup.attr("transform", transform);
 
         // init zoom
         select("." + MapEditorControllerCSS.BG_ELEM).call(
@@ -180,42 +174,32 @@ export class MapEditorController {
         dock.register(
             "Basic Location Node A",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
+            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
         );
 
         dock.register(
             "Basic Location Node B",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
+            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
         );
 
         dock.register(
             "Basic Location Node C",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new DraggableLocationNode(id, C(x, y), name)
+            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
         );
 
         dock.attachDepictionTo(select(anchor));
 
-        const onNodePlacement = (node: DeprecatedLocationUnit) => {
+        // todo: hook this up to node placement observable
+        const onNodePlacement = (node: LocationUnit) => {
             this.deprecatedlocations.add(node);
         
             // reverse transforms to place node in correct coordinate
-            const g: SVGGElement = this.mainGroup.node();
-            const hasTransforms = g.transform.baseVal.numberOfItems === 2;
-            const translation: {
-                x: number,
-                y: number
-            } = hasTransforms ? {
-                x: g.transform.baseVal.getItem(0).matrix.e,
-                y: g.transform.baseVal.getItem(0).matrix.f
-            } : {
-                x: 0,
-                y: 0
-            };
-            const scale: number = hasTransforms ? g.transform.baseVal.getItem(1).matrix.a : 1;
-        
-            console.log(node.toString());
+            const {
+                translation,
+                scale
+            } = getTransforms(this.mainGroup);
             
             node.translateBy(-(translation.x), -(translation.y));
             node.translateTo(node.x / scale, node.y / scale);
@@ -227,23 +211,23 @@ export class MapEditorController {
     }
 
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
-    private initializeLocationNode<Unit extends DeprecatedLocationUnit>(n: Unit): void {
+    private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         // attach depictions
         n.attachDepictionTo(this.nodeContainer);
-        n.attachEdgeDepictionTo(this.edgeContainer);
-        n.shouldDisplayLabel = false;
+        // n.attachEdgeDepictionTo(this.edgeContainer);
 
         const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
                 this.deprecatedlocations.nodes.forEach(nodeInContext => {
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) nodeInContext.refreshEdgeDepiction();
+                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) {}
+                        // nodeInContext.refreshEdgeDepiction();
 
                 });
             });
 
         // detect when nodes move and react to it
-        n.onDrag(refreshEndpoints.key, refreshEndpoints.apply);
-        n.onDragEnd(refreshEndpoints.key, refreshEndpoints.apply);
+        n.onDrag(refreshEndpoints.apply);
+        n.onDragEnd(refreshEndpoints.apply);
         
 
         // allowed actions upon every node
@@ -264,7 +248,7 @@ export class MapEditorController {
             this.actionTooltip.unfocus();
 
             // make this node undraggable
-            node.draggable = false;
+            // node.draggable = false;
 
             // make background track mouse movement and update node location
 
@@ -276,10 +260,10 @@ export class MapEditorController {
                 node.connectTo(n, true);
 
                 allLocations.forEach(_ => {
-                    _.removeOnMouseClick(hook.key);
-                    _.draggable = true;
+                    // _.removeOnMouseClick(hook.key);
+                    // _.draggable = true;
                 });
-                node.draggable = true;
+                // node.draggable = true;
 
                 this.bgGroup?.on(Events.mousemove, null);
                 node.disconnectFrom(mouseTrackerNode);
@@ -294,10 +278,10 @@ export class MapEditorController {
             allLocations.forEach(l => {
 
                 // now they are listening for that sweet sweet click
-                l.onMouseClick(hook.key, () => hook.apply(l));
+                // l.onMouseClick(hook.key, () => hook.apply(l));
 
                 // now they stop being draggable
-                l.draggable = false;
+                // l.draggable = false;
 
             });
 
@@ -312,7 +296,7 @@ export class MapEditorController {
                 const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
                 closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
 
-                node.refreshEdgeDepiction();
+                // node.refreshEdgeDepiction();
 
             });
 
@@ -321,10 +305,10 @@ export class MapEditorController {
                 if (e.code === "Escape") {
 
                     allLocations.forEach(_ => {
-                        _.removeOnMouseClick(hook.key);
-                        _.draggable = true;
+                        // _.removeOnMouseClick(hook.key);
+                        // _.draggable = true;
                     });
-                    node.draggable = true;
+                    // node.draggable = true;
 
                     this.bgGroup?.on(Events.mousemove, null);
                     node.disconnectFrom(mouseTrackerNode);
@@ -343,7 +327,7 @@ export class MapEditorController {
             this.deprecatedlocations.getNodesAdjacentTo(node).forEach(adj => {
                 node.disconnectFrom(adj, true);
                 console.log(adj.adjacent);
-                adj.refreshEdgeDepiction();
+                // adj.refreshEdgeDepiction();
             });
 
             node.deleteDepiction();
@@ -356,7 +340,7 @@ export class MapEditorController {
             const newActions = node.adjacent.map((adjNode) => {
                 const actionName = "dc_" + adjNode.id;
 
-                return TAction<LocationNode>(
+                return TAction<LocationUnit>(
                     actionName,
                     actionName,
                     () => {
@@ -389,22 +373,23 @@ export class MapEditorController {
         const actionsForLooseNodes = [connectToAction, removeAction];
 
         // display tooltip on hover
-        n.onMouseIn("display_tooltip", () => {
-            const hasNeighbors = n.adjacent.length > 0;
+        // n.onMouseIn("display_tooltip", () => {
+        //     const hasNeighbors = n.adjacent.length > 0;
+        //
+        //     this.actionTooltip.focus(
+        //         n,
+        //         hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
+        //         n.coordinate.translateBy(0, -n.radius),
+        //         670
+        //     )
+        // });
+        // n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
 
-            this.actionTooltip.focus(
-                n,
-                hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
-                n.coordinate.translateBy(0, -n.radius),
-                670
-            )
-        });
-        n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
-        n.onDragStart("hide_and_disable_tooltip", () => {
+        n.onDragStart(() => {
             this.actionTooltip.enabled = false;
             this.actionTooltip.unfocus(0, true);
         });
-        n.onDragEnd("re_enable_tooltip", () => {
+        n.onDragEnd(() => {
             this.actionTooltip.enabled = true;
         });
 

@@ -11,8 +11,9 @@ export class CircleShape extends AbstractShape<SVGCircleElement> {
     protected radius: number;
 
     constructor(
-        center: ICoordinate = Coordinate.origin,
         radius: number = 1,
+        // TODO
+        center: ICoordinate = Coordinate.origin,
         depiction: SimpleDepiction = defaultDepictions.grays.light
     ) {
         super(SVGTags.SVGCircleElement, depiction);
@@ -22,7 +23,7 @@ export class CircleShape extends AbstractShape<SVGCircleElement> {
 
     duplicate(): this {
         // @ts-ignore
-        return new this.constructor(this.center, this.radius, this.depiction);
+        return new this.constructor(this.radius, this.center.copy, this.depiction);
     }
 
     refreshAttributes(): void {

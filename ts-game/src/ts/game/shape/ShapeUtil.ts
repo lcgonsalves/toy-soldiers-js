@@ -1,11 +1,10 @@
 import {SimpleDepiction} from "../../util/Depiction";
-import SVGTags from "../../util/SVGTags";
-import {select, Selection} from "d3-selection";
+import {Selection} from "d3-selection";
 import {ICopiable, ISerializable, SerializableObject, SObj} from "ts-shared/build/util/ISerializable";
 import SVGAttrs from "../../util/SVGAttrs";
 import {AnySelection} from "../../util/DrawHelpers";
 import {IDepictable} from "../units/UnitInterfaces";
-import {C, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
+import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 
 
 /**
@@ -24,9 +23,9 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
     readonly name: string;
     readonly depiction: SimpleDepiction;
 
-    private _anchor: Selection<AssociatedSVGElement, this, any, any> | undefined;
+    private _anchor: Selection<AssociatedSVGElement, any, any, any> | undefined;
 
-    get anchor(): Selection<AssociatedSVGElement, this, any, any> | undefined {
+    get anchor(): Selection<AssociatedSVGElement, any, any, any> | undefined {
         return this._anchor;
     }
 
@@ -118,82 +117,3 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
 
 }
 
-export class CompositeShape implements IDepictable, IMovable, ICopiable {
-
-    readonly name: string;
-    readonly layers: AbstractShape[] = [];
-
-    get cls(): string { return "." + this.name }
-
-    constructor(name: string, layers: AbstractShape[]) {
-        const suffix = "_shape";
-
-        this.name = name.endsWith(suffix) ? name : name + "_shape";
-        this.layers = layers;
-    }
-
-    translateBy(x: number, y: number): ICoordinate {
-        this.layers.forEach(_ => _.translateBy(x,y));
-
-        // todo: review this return value
-        return C(x,y);
-    }
-
-    translateTo(x: number, y: number): ICoordinate {
-        this.layers.forEach(_ => _.translateTo(x,y));
-
-        return C(x,y);
-    }
-
-    translateToCoord(other: ICoordinate): ICoordinate {
-        this.layers.forEach(_ => _.translateToCoord(other));
-
-        return other;
-    }
-
-    private _anchor: Selection<SVGGElement, this, any, any> | undefined;
-
-    get anchor(): Selection<SVGGElement, this, any, any> | undefined {
-        return this._anchor;
-    }
-
-    attachDepictionTo(d3selection: AnySelection): void {
-
-        this._anchor = d3selection.append<SVGGElement>(SVGTags.SVGGElement)
-            .classed(this.name, true);
-
-         this.refresh();
-
-    }
-
-    deleteDepiction(): void {
-
-        this.anchor?.remove();
-        this._anchor = undefined;
-
-    }
-
-    refresh(): void {
-
-        const dataJoin = this.anchor?.selectAll<any, AbstractShape>("*")
-            .data<AbstractShape>(this.layers, _ => _.serialize);
-
-        dataJoin?.enter().each(function (shape) {
-            shape.attachDepictionTo(select(this));
-        });
-
-        dataJoin?.each(function (shape) {
-            shape.refresh();
-        });
-
-        dataJoin?.exit().remove();
-
-    }
-
-    duplicate(): this {
-        // @ts-ignore
-        return new this.constructor(this.name, this.layers.map(_ => _.duplicate()));
-    }
-
-
-}

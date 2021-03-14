@@ -4,10 +4,9 @@ import "../../../css/DirectedGraph.css";
 import "../../../css/Editor.css"
 
 import {MapEditorController} from "./internal/MapEditorController";
-import DeprecatedLocationUnit from "../units/DeprecatedLocationUnit";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
-import {DepictableLocationNode} from "../units/LocationUnit";
+import LocationUnit from "../units/LocationUnit";
 
 
 // todo: move state to props
@@ -26,7 +25,7 @@ type ReactSVGRef = React.RefObject<SVGSVGElement>;
 
 class GameMapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
-    nodeContext: LocationContext<DeprecatedLocationUnit> = new LocationContext<DeprecatedLocationUnit>(10);
+    nodeContext: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(10);
     private svgElement: ReactSVGRef = React.createRef();
     public static readonly cssClass: string = "map-editor";
 
@@ -35,12 +34,12 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
 
         // conversion from LocationNode to LocationUnit will occur in the websocket util
 
-        const a = new DeprecatedLocationUnit("Location A", "b", new Coordinate(40, 40),2);
-        const b = new DeprecatedLocationUnit("Location B", "b", new Coordinate(40, 40),2);
-        const c = new DeprecatedLocationUnit("Location C", "c", new Coordinate(20, 20),2);
-        const d = new DeprecatedLocationUnit("Location D", "d", new Coordinate(44, 37),2);
+        const a = new LocationUnit("b", new Coordinate(40, 40), "Location A");
+        const b = new LocationUnit("b", new Coordinate(40, 40), "Location B");
+        const c = new LocationUnit("c", new Coordinate(20, 20), "Location C");
+        const d = new LocationUnit("d", new Coordinate(44, 37), "Location D");
 
-        // a.connectTo(b);
+        a.connectTo(b);
 
         const locations = [
             a,

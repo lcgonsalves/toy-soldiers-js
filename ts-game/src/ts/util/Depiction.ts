@@ -25,5 +25,19 @@ export class SimpleDepiction implements ISerializable {
         });
     }
 
+    /** @immutable */
+    setFill(fill: string): SimpleDepiction {
+        return new SimpleDepiction(fill, this.stroke, this.strokeWidth);
+    }
+
+    /** @immutable */
+    setStroke(stroke: string): SimpleDepiction {
+        return new SimpleDepiction(this.fill, stroke, this.strokeWidth);
+    }
+
+    /** @immutable */
+    setStrokeWidth(strokeWidth: number): SimpleDepiction {
+        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth)
+    }
 
 }

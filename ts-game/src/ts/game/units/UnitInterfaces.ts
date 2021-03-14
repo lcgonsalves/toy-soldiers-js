@@ -7,6 +7,7 @@ import LocationNode from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGAttrs from "../../util/SVGAttrs";
 import SVGTags from "../../util/SVGTags";
+import {Observable, Subscription} from "rxjs";
 
 /**
  * Encompasses operations for mounting and unmounting from UI.
@@ -27,33 +28,41 @@ export interface IDepictable<E extends SVGElement = SVGGElement> {
 
 }
 
-export interface IDepictableWithSprite<E extends SVGElement = SVGGElement>
+export interface IDepictableWithSprite<E extends SVGElement = SVGGElement, S = {}>
     extends IDepictable<E> {
 
     /** Shape, or composite shape, or other IDepictable (if my code works) can be used to represent this object. */
-    readonly sprite: (IDepictable & IMovable & ICopiable) | undefined;
+    readonly sprite: S | undefined
 
 }
 
 
 /**
- * Attaches functionality to allow class Base to have a depiction
+ * Attaches functionality to allow class Base to have a depiction. By defaults, auto-updates depiction upon position changes.
  * @param Base the base class
  *
  * @param sprite
  * @constructor
  */
 export function DepictableUnit<
-    T extends GenericConstructor<LocationNode>,
-    S extends IDepictable & IMovable & ICopiable
-    >(Base: T, sprite: S /* TODO: = SampleShapes.example */ ) {
+    E extends SVGElement,
+    T extends GenericConstructor<LocationNode> = GenericConstructor<LocationNode>,
+    S extends IDepictable<E> & IMovable & ICopiable = IDepictable<E> & IMovable & ICopiable
+    >(Base: T, sprite: S) {
 
-    return class Depictable extends Base implements IDepictableWithSprite, IMovable {
+    return class Depictable extends Base implements IDepictableWithSprite<SVGGElement, S>, IMovable, ICoordinate {
 
-        anchor: Selection<SVGGElement, IDepictable, any, any> | undefined;
-        sprite: (IDepictable & IMovable & ICopiable) | undefined;
+        anchor: Selection<SVGGElement, IDepictable<E>, any, any> | undefined;
+        sprite: S | undefined;
+        refreshOnPositionUpdate: Subscription | undefined;
 
         attachDepictionTo(d3selection: AnySelection): void {
+
+            // subscribe to position updates
+            this.refreshOnPositionUpdate = this.onChange(_ => {
+                this.sprite?.translateToCoord(_);
+                this.refresh();
+            });
 
             // preprocess selection – add a svg group to contain everything
             const container = d3selection.append<SVGGElement>(SVGTags.SVGGElement)
@@ -61,10 +70,16 @@ export function DepictableUnit<
             this.anchor = container;
 
             // if we haven't grabbed a copy of the sprite yet, we do it now.
-            if (!this.sprite) this.sprite = sprite.duplicate();
+            if (!this.sprite)
+                this.sprite = sprite.duplicate();
 
             // we translate the sprite to the unit
             this.sprite.translateToCoord(this);
+
+            // @ts-ignore
+            const spriteCenter = this.sprite["center"] as ICoordinate;
+
+            console.log()
 
             // then we attach it to the selection
             this.sprite.attachDepictionTo(container);
@@ -81,32 +96,27 @@ export function DepictableUnit<
             this.sprite?.refresh();
         }
 
-        // TODO: watch changes in position reactively
-        translateBy(x: number, y: number): ICoordinate {
-            const dest = super.translateBy(x, y);
-            // translate sprite
-            this.sprite?.translateBy(x, y);
+        /**
+         * Subscribes to a given observable, and at every emission, refreshes this depictable.
+         * Optionally also calls additional `observer` function.
+         * @param observableGetter
+         * @param observer
+         */
+        refreshOn<T>(
+            observableGetter: (self: this) => Observable<T>,
+            observer?: (update: T) => void
+        ): Subscription {
 
-            this.refresh();
-            return dest;
-        }
+            return observableGetter(this).subscribe((t: T) => {
 
-        translateTo(x: number, y: number): ICoordinate {
-            const dest = super.translateTo(x, y);
-            // translate sprite
-            this.sprite?.translateTo(x, y);
+                // refresh on update
+                this.refresh();
 
-            this.refresh();
-            return dest;
-        }
+                // call accompanying function
+                if (!!observer) observer(t);
 
-        translateToCoord(other: ICoordinate): ICoordinate {
-            const dest = super.translateToCoord(other);
-            // translate sprite
-            this.sprite?.translateToCoord(other);
+            });
 
-            this.refresh();
-            return dest;
         }
 
     }

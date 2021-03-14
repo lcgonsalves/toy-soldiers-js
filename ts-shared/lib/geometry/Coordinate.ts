@@ -1,6 +1,7 @@
 import Vector from "../util/Vector";
 import IComparable from "../util/IComparable";
 import {ISerializable, SerializableObject, SObj} from "../util/ISerializable";
+import {Subject, Subscription} from "rxjs";
 
 /**
  * Interface for components that have translate() methods.
@@ -72,6 +73,12 @@ export interface ICoordinate extends IComparable, IMovable {
     /** corresponding string representation */
     toString(): string;
 
+    /**
+     * Handle events where the coordinate changes position.
+     * @param handler
+     */
+    onChange(handler: (ICoordinate) => void): Subscription;
+
 }
 
 export class Coordinate implements ICoordinate, ISerializable {
@@ -96,6 +103,9 @@ export class Coordinate implements ICoordinate, ISerializable {
     private _x: number;
     private _y: number;
 
+    // observable that fires a reference to this instance every time its position changes
+    private $positionChange: Subject<ICoordinate> | undefined;
+
     constructor(x: number, y: number) {
         this._x = x;
         this._y = y;
@@ -109,6 +119,9 @@ export class Coordinate implements ICoordinate, ISerializable {
     private setPosition(newPos: {x: number, y: number}): void {
         this._x = newPos.x;
         this._y = newPos.y;
+
+        // notify observable if we have any listeners
+        if (this.$positionChange) this.$positionChange.next(this);
     }
 
     /**
@@ -211,6 +224,15 @@ export class Coordinate implements ICoordinate, ISerializable {
             x: this.x,
             y: this.y
         });
+    }
+
+    onChange(handler: (ICoordinate) => void): Subscription {
+
+        // only instantiate a subject when needed.
+        if (!this.$positionChange) this.$positionChange = new Subject<this>();
+
+        return this.$positionChange.subscribe(handler);
+
     }
 
 

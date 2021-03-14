@@ -1,26 +1,21 @@
 import {DepictableUnit} from "./UnitInterfaces";
 import LocationNode from "ts-shared/build/graph/LocationNode";
-import {CompositeShape} from "../shape/ShapeUtil";
-import {CircleShape} from "../shape/CircleShape";
 import {ScalableUnit} from "./Scalable";
 import {DraggableUnit} from "./Draggable";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {AnySelection} from "../../util/DrawHelpers";
+import {SampleShapes} from "../shape/CompositeShape";
 
-// TODO: REMOVE
-// @ts-ignore
-const debugDepic = new CompositeShape("sprite", [new CircleShape(this, 5)]);
+// mixin all necessary features into the parent class
+export default class LocationUnit
+    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGCircleElement>(LocationNode, SampleShapes.dot))) {
 
-export class DepictableLocationNode extends DepictableUnit(LocationNode, debugDepic) {}
-
-export class ScalableLocationNode extends ScalableUnit(DepictableLocationNode) {}
-
-export class DraggableLocationNode extends DraggableUnit(ScalableLocationNode) {
-
+    // declare constructor so the code-analysis doesn't freak out
     constructor(id: string, position?: ICoordinate, name?: string) {
         super(id, position, name);
     }
 
+    // tie initialize drag into attachment of depiction.
     attachDepictionTo(d3selection: AnySelection) {
         super.attachDepictionTo(d3selection);
 
@@ -28,6 +23,3 @@ export class DraggableLocationNode extends DraggableUnit(ScalableLocationNode) {
     }
 
 }
-
-
-
