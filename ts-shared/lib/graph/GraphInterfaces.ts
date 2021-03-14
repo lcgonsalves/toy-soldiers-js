@@ -219,3 +219,14 @@ export interface IGraph<Node extends IGraphNode>
     onAdd: (node: Node) => void;
 
 }
+
+/**
+ * When u connectTo but pass a node of the wrong type.
+ */
+export class IncompatibleTargetError extends Error {
+
+    constructor(message?: string) {
+        super("Target of connection is incompatible" + message ? `: ${message}` : ".");
+    }
+
+}
