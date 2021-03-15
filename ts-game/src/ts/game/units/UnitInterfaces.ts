@@ -3,16 +3,14 @@ import {Selection} from "d3-selection";
 import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {IDraggable} from "./Draggable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import LocationNode, {IWorldNode} from "ts-shared/build/graph/LocationNode";
+import LocationNode from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGTags from "../../util/SVGTags";
 import {Observable, Subscription} from "rxjs";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
-import LocationUnit from "./LocationUnit";
-import {AbstractShape} from "../shape/ShapeUtil";
 
 /**
- * Encompasses operations for mounting and unmounting from UI.
+ * Encompasses operations for mounting, unmounting, and updating element UI.
  */
 export interface IDepictable<E extends SVGElement = SVGGElement> {
 
@@ -125,19 +123,6 @@ export function DepictableUnit<
     }
 }
 
-export interface IGameUnit extends IDepictable {
-    /** the class of the outer container */
-    readonly cls: string;
-
-}
-
-export interface INodeUnit extends IGameUnit {
-    /** Attaches depictions of game unit edges to selection */
-    attachEdgeDepictionTo(d3selection: AnySelection): void;
-
-    /** */
-    deleteEdgeDepiction(): void;
-}
 
 export type DragHandler = (evt: any, n: IDraggable, coords: ICoordinate) => void
 export type Handler = (this: SVGGElement, event: any) => void

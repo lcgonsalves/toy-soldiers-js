@@ -6,7 +6,14 @@ import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {AnySelection} from "../../util/DrawHelpers";
 import {SampleShapes} from "../shape/Premade";
 
-// mixin all necessary features into the parent class
+
+/** #################################### *
+ *      Construct Depictable Location    *
+ *  #################################### */
+
+/**
+ *  Represent a valid location, where other units can be placed.
+ */
 export default class LocationUnit
     extends DraggableUnit(ScalableUnit(DepictableUnit<SVGCircleElement>(LocationNode, SampleShapes.dot))) {
 
@@ -18,7 +25,6 @@ export default class LocationUnit
     // tie initialize drag into attachment of depiction.
     attachDepictionTo(d3selection: AnySelection) {
         super.attachDepictionTo(d3selection);
-
         this.initializeDrag();
     }
 
