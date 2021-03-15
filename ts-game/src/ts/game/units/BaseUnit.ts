@@ -25,7 +25,7 @@ const towers = [
     tower.duplicate().translateBy(0, 8)
 ];
 const outerConnector = new LineShape([...towers.map(_ => _.center), tower.center]);
-const background = new RectangleShape(Rectangle.fromCorners(tower.center, towers[2].center));
+const background = new RectangleShape(Rectangle.fromCorners(tower.center, towers[2].center), defaultDepictions.grays.dark.setOpacity(0.45));
 
 const baseDepiction = new CompositeShape("base", [background, outerConnector, ...towers] as AbstractShape[]);
 

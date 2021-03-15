@@ -100,12 +100,14 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
         const {
             fill,
             stroke,
-            strokeWidth
+            strokeWidth,
+            opacity
         } = SVGAttrs;
 
         this.anchor?.attr(fill, this.depiction.fill)
             .attr(stroke, this.depiction.stroke)
-            .attr(strokeWidth, this.depiction.strokeWidth);
+            .attr(strokeWidth, this.depiction.strokeWidth)
+            .attr(opacity, this.depiction.opacity);
 
         this.refreshAttributes();
 

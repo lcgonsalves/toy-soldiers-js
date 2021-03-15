@@ -50,10 +50,10 @@ export class TargetAction<Target> extends GenericAction {
 
     // default kinds of action depictions
     public static depiction = {
-        main: new SimpleDepiction(defaultColors.primary),
-        delete: new SimpleDepiction(defaultColors.error),
-        success: new SimpleDepiction(defaultColors.success),
-        neutral: new SimpleDepiction(defaultColors.grays.light)
+        main: new SimpleDepiction(defaultColors.primary, "none", 1, 1),
+        delete: new SimpleDepiction(defaultColors.error, "none", 1, 1),
+        success: new SimpleDepiction(defaultColors.success, "none", 1, 1),
+        neutral: new SimpleDepiction(defaultColors.grays.light, "none", 1, 1)
     }
 
 }

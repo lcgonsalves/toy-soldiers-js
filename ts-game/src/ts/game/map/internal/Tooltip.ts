@@ -191,7 +191,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // append icons where available, run this only on enter selection to avoid appending svg copies when not needed
         if (btnG) renderIconForSelection<TargetAction<Target>,
             PayloadRectangle<TargetAction<Target>>,
-            SVGGElement>(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark));
+            SVGGElement>(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark, "none", 1, 1));
 
 
         // remove old buttons

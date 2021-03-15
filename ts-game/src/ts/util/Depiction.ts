@@ -5,6 +5,7 @@ export class SimpleDepiction implements ISerializable {
     public readonly fill: string;
     public readonly stroke: string;
     public readonly strokeWidth: number;
+    public readonly opacity: number;
     public readonly clickable: boolean;
     public readonly hoverable: boolean;
 
@@ -12,12 +13,14 @@ export class SimpleDepiction implements ISerializable {
         fill: string = "none",
         stroke: string = "none",
         strokeWidth: number = 1,
-        clickable: boolean = false,
-        hoverable: boolean = false
+        opacity: number = 1,
+        hoverable: boolean = false,
+        clickable: boolean = false
     ) {
-        this.fill = fill
-        this.stroke = stroke
-        this.strokeWidth = strokeWidth
+        this.fill = fill;
+        this.stroke = stroke;
+        this.strokeWidth = strokeWidth;
+        this.opacity = opacity;
         this.clickable = clickable;
         this.hoverable = hoverable;
     }
@@ -32,6 +35,7 @@ export class SimpleDepiction implements ISerializable {
             fill: this.fill,
             stroke: this.stroke,
             strokeWidth: this.strokeWidth,
+            opacity: this.opacity,
             clickable: this.clickable,
             hoverable: this.hoverable
         });
@@ -39,27 +43,32 @@ export class SimpleDepiction implements ISerializable {
 
     /** @immutable */
     setFill(fill: string): SimpleDepiction {
-        return new SimpleDepiction(fill, this.stroke, this.strokeWidth);
+        return new SimpleDepiction(fill, this.stroke, this.strokeWidth, this.opacity);
     }
 
     /** @immutable */
     setStroke(stroke: string): SimpleDepiction {
-        return new SimpleDepiction(this.fill, stroke, this.strokeWidth);
+        return new SimpleDepiction(this.fill, stroke, this.strokeWidth, this.opacity);
     }
 
     /** @immutable */
     setStrokeWidth(strokeWidth: number): SimpleDepiction {
-        return new SimpleDepiction(this.fill, this.stroke, strokeWidth)
+        return new SimpleDepiction(this.fill, this.stroke, strokeWidth, this.opacity)
     }
 
     /** @immutable */
     setClickable(val: boolean): SimpleDepiction {
-        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, val, this.hoverable);
+        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, this.opacity, this.hoverable, val);
     }
 
     /** @immutable */
     setHoverable(val: boolean): SimpleDepiction {
-        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, this.clickable, val)
+        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, this.opacity, val, this.clickable)
+    }
+
+    /** @immutable */
+    setOpacity(val: number): SimpleDepiction {
+        return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, val, this.hoverable, this.clickable)
     }
 
 }
