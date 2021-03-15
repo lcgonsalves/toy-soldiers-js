@@ -46,10 +46,17 @@ enum MapEditorControllerCSS {
  * AKA: dumping zone for stuff I have no clue where should be defined.
  */
 export class MapEditorController {
-    // contexts
-    public readonly deprecatedlocations: LocationContext<LocationUnit>;
 
-    public readonly dock: Dock = new Dock("Map Elements");
+    // valid locations on the map for things to exist
+    public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(5);
+
+    // REGISTER ITEMS INTO DOCK //
+
+    public readonly dock: Dock<
+        // ## ADD ACCEPTED TYPES HERE
+        LocationUnit
+
+    > = new Dock("Map Elements");
 
     // anchors
     private readonly edgeContainer: AnySelection;
@@ -61,14 +68,13 @@ export class MapEditorController {
     private readonly actionTooltip: ActionTooltip = new ActionTooltip();
 
     // putting all of the boilerplate in here
-    constructor(deprecatedNodeContext: LocationContext<LocationUnit>, anchor: SVGSVGElement, config: MapEditorMapConfig) {
-        this.deprecatedlocations = deprecatedNodeContext;
+    constructor(anchor: SVGSVGElement, config: MapEditorMapConfig) {
 
         const gridCoords = {
-            topL: new Coordinate(deprecatedNodeContext.domain.x.min, deprecatedNodeContext.domain.y.min),
-            topR: new Coordinate(deprecatedNodeContext.domain.x.max, deprecatedNodeContext.domain.y.min),
-            bottomL: new Coordinate(deprecatedNodeContext.domain.x.min, deprecatedNodeContext.domain.y.max),
-            bottomR: new Coordinate(deprecatedNodeContext.domain.x.max, deprecatedNodeContext.domain.y.max)
+            topL: new Coordinate(this.locations.domain.x.min, this.locations.domain.y.min),
+            topR: new Coordinate(this.locations.domain.x.max, this.locations.domain.y.min),
+            bottomL: new Coordinate(this.locations.domain.x.min, this.locations.domain.y.max),
+            bottomR: new Coordinate(this.locations.domain.x.max, this.locations.domain.y.max)
         }
 
         // defines extents of background
@@ -125,8 +131,8 @@ export class MapEditorController {
             .attr(SVGAttrs.fill, config.foregroundColor);
 
         const drawGrid = (context: Path): Path => {
-            const xDomain = this.deprecatedlocations.domain.x,
-                yDomain = this.deprecatedlocations.domain.y;
+            const xDomain = this.locations.domain.x,
+                yDomain = this.locations.domain.y;
 
             for (let col = xDomain.min; xDomain.contains(col); col += xDomain.step) {
                 context.moveTo(col, yDomain.min);
@@ -163,7 +169,7 @@ export class MapEditorController {
         this.initBottomMenu(anchor);
 
         // attach nodes already in context to group
-        deprecatedNodeContext.nodes.forEach(n => this.initializeLocationNode(n));
+        this.locations.nodes.forEach(n => this.initializeLocationNode(n));
         
     }
 
@@ -177,48 +183,58 @@ export class MapEditorController {
             (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
         );
 
-        dock.register(
-            "Basic Location Node B",
-            "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
-        );
-
-        dock.register(
-            "Basic Location Node C",
-            "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
-        );
+        // dock.register(
+        //     "Basic Location Node B",
+        //     "A simple node signifying a location in the x-y plane.",
+        //     (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
+        // );
+        //
+        // dock.register(
+        //     "Basic Location Node C",
+        //     "A simple node signifying a location in the x-y plane.",
+        //     (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
+        // );
 
         dock.attachDepictionTo(select(anchor));
 
         // todo: hook this up to node placement observable
-        const onNodePlacement = (node: LocationUnit) => {
-            this.deprecatedlocations.add(node);
-        
-            // reverse transforms to place node in correct coordinate
-            const {
-                translation,
-                scale
-            } = getTransforms(this.mainGroup);
-            
-            node.translateBy(-(translation.x), -(translation.y));
-            node.translateTo(node.x / scale, node.y / scale);
-        
+        dock.onNodePlacement((node) => {
+            console.log(node.toString());
+
             this.initializeLocationNode(node);
-        
-        };
+        });
+
+
+        // debug
+        this.initializeLocationNode(new LocationUnit("test b", C(10, 10)))
+        this.initializeLocationNode(new LocationUnit("test a", C(75, 75)))
 
     }
 
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
     private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
+        this.locations.add(n);
+
+        // reverse transforms to place node in correct coordinate
+        const {
+            translation,
+            scale
+        } = getTransforms(this.mainGroup);
+
+        console.log(`translate: (${translation.x}, ${translation.y}) scale: ${scale}`);
+        n.translateTo(
+            ((n.x / scale) - translation.x),
+            ((n.y / scale) - translation.y)
+        );
+
+        n.snapSelf();
+
         // attach depictions
         n.attachDepictionTo(this.nodeContainer);
-        // n.attachEdgeDepictionTo(this.edgeContainer);
 
         const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
-                this.deprecatedlocations.nodes.forEach(nodeInContext => {
+                this.locations.nodes.forEach(nodeInContext => {
                     if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) {}
                         // nodeInContext.refreshEdgeDepiction();
 
@@ -274,7 +290,7 @@ export class MapEditorController {
             });
 
             // prepare nodes for connection
-            const allLocations = this.deprecatedlocations.all().filter(l => !l.overlaps(node));
+            const allLocations = this.locations.all().filter(l => !l.overlaps(node));
             allLocations.forEach(l => {
 
                 // now they are listening for that sweet sweet click
@@ -322,9 +338,9 @@ export class MapEditorController {
         connectToAction.depiction = TargetAction.depiction.neutral
 
         const removeAction = TAction<Unit>("remove", "remove", node => {
-            this.deprecatedlocations.rm(node.id);
+            this.locations.rm(node.id);
             this.actionTooltip.unfocus(0);
-            this.deprecatedlocations.getNodesAdjacentTo(node).forEach(adj => {
+            this.locations.getNodesAdjacentTo(node).forEach(adj => {
                 node.disconnectFrom(adj, true);
                 console.log(adj.adjacent);
                 // adj.refreshEdgeDepiction();

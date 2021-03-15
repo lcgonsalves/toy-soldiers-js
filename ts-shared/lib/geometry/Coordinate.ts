@@ -28,6 +28,13 @@ export interface ICoordinate extends IComparable, IMovable {
     readonly y: number;
     readonly copy: this;
 
+    /**
+     * Centralizing all super calls that mutate x and y values in this function for better maintainability.
+     * @param newPos
+     * @private
+     */
+    setPosition(newPos: {x: number, y: number}): void;
+
     /** Returns a simple shallow copy of this coordinate (just x, and y) */
     readonly simple: ICoordinate;
 
@@ -116,7 +123,7 @@ export class Coordinate implements ICoordinate, ISerializable {
      * @param newPos
      * @private
      */
-    private setPosition(newPos: {x: number, y: number}): void {
+    public setPosition(newPos: {x: number, y: number}): void {
         this._x = newPos.x;
         this._y = newPos.y;
 

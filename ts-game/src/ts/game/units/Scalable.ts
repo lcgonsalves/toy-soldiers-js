@@ -57,7 +57,7 @@ export function ScalableUnit<
         get unscaledPosition(): ICoordinate { return C(this.x, this.y).translateTo(this.x * this.scale, this.y * this.scale) };
 
         resetScale(): this {
-            this.translateToCoord(this.unscaledPosition);
+            this.setPosition(this.unscaledPosition);
             this._scale = 1;
             return this;
         }

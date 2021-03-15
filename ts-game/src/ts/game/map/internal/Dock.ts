@@ -9,6 +9,8 @@ import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {IScalable} from "../../units/Scalable";
+import {Subject, Subscription} from "rxjs";
+import LocationUnit from "../../units/LocationUnit";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
@@ -29,6 +31,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
     private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
     private itemsCreated: number = 0;
     public readonly config: DockConfig;
+    private $nodePlacement: Subject<AcceptedUnits> = new Subject();
 
     public anchor: AnySelection | undefined;
 
@@ -50,6 +53,8 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         else if (!assignedItem) throw new Error("No menu item assigned to this node.");
         else if (!assignedBox) throw new Error("No assigned box found.");
         else {
+            // NODE PLACEMENT
+
             // remove from this graph
             this.rm(node.id);
 
@@ -67,6 +72,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
             node.rename("New " + assignedItem.title);
 
             // external handler
+            this.$nodePlacement.next(node);
 
             // return
             return node;
@@ -283,6 +289,10 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
 
          */
 
+    }
+
+    onNodePlacement(handler: (node: AcceptedUnits) => void): Subscription {
+        return this.$nodePlacement.subscribe(handler);
     }
 
 }
