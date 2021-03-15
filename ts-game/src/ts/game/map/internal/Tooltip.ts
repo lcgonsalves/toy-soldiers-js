@@ -39,7 +39,7 @@ enum TooltipTransitions {
 export class ActionTooltip extends Rectangle implements IDepictable {
 
     private readonly config: TooltipConfig;
-    private anchor: AnySelection | undefined;
+    public anchor: AnySelection | undefined;
     private lastFocusTarget: ICoordinate | undefined;
 
     public enabled: boolean = true;
@@ -191,7 +191,7 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // append icons where available, run this only on enter selection to avoid appending svg copies when not needed
         if (btnG) renderIconForSelection<TargetAction<Target>,
             PayloadRectangle<TargetAction<Target>>,
-            SVGGElement>(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark));
+            SVGGElement>(btnG, d => d.key, new SimpleDepiction(defaultColors.grays.superextradark, "none", 1, 1));
 
 
         // remove old buttons
@@ -203,6 +203,12 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         // refresh to match width
         this.refresh();
 
+    }
+
+    snapSelf(): void {
+        // no snapping if there's no focus target
+        if (this.lastFocusTarget)
+            this.translateToCoord(this.lastFocusTarget);
     }
 
     /**

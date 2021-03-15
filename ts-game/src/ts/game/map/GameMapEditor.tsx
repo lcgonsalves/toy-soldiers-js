@@ -4,9 +4,9 @@ import "../../../css/DirectedGraph.css";
 import "../../../css/Editor.css"
 
 import {MapEditorController} from "./internal/MapEditorController";
-import LocationUnit from "../units/LocationUnit";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
+import LocationUnit from "../units/LocationUnit";
 
 
 // todo: move state to props
@@ -25,29 +25,11 @@ type ReactSVGRef = React.RefObject<SVGSVGElement>;
 
 class GameMapEditor extends Component<GameMainProps, GameMainState> {
     state: GameMainState;
-    nodeContext: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(10);
     private svgElement: ReactSVGRef = React.createRef();
     public static readonly cssClass: string = "map-editor";
 
     constructor(props: any) {
         super(props);
-
-        // conversion from LocationNode to LocationUnit will occur in the websocket util
-        const a = new LocationUnit("Location A", "a", new Coordinate(10, 10),2);
-        const b = new LocationUnit("Location B", "b", new Coordinate(40, 40),2);
-        const c = new LocationUnit("Location C", "c", new Coordinate(20, 20),2);
-        const d = new LocationUnit("Location D", "d", new Coordinate(44, 37),2);
-
-        a.connectTo(b);
-
-        const locations = [
-            a,
-            b,
-            c,
-            d
-        ];
-
-        this.nodeContext.add(...locations);
 
         this.state = {
             displayTooltip: false,
@@ -70,7 +52,7 @@ class GameMapEditor extends Component<GameMainProps, GameMainState> {
                 zoomBuffer: 25,
             };
 
-            new MapEditorController(this.nodeContext, d3ReactAnchor, conf);
+            new MapEditorController(d3ReactAnchor, conf);
 
 
         }

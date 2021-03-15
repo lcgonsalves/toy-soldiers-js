@@ -1,33 +1,28 @@
 
-export default abstract class SVGAttrs {
-
-    public static readonly cx: string = "cx";
-    public static readonly cy: string = "cy";
-    public static readonly r: string = "r";
-    public static readonly x: string = "x";
-    public static readonly y: string = "y";
-    public static readonly d: string = "d";
-    public static readonly id: string = "id";
-    public static readonly width: string = "width";
-    public static readonly height: string = "height";
-    public static readonly fill: string = "fill";
-    public static readonly pointerEvents: string = "pointer-events";
-    public static readonly strokeWidth: string = "stroke-width";
-    public static readonly stroke: string = "stroke";
-    public static readonly rx: string = "rx";
-    public static readonly display: string = "display";
-    public static readonly opacity: string = "opacity";
-    public static readonly fontSize: string = "font-size";
-    public static readonly transform: string = "transform";
-    public static readonly alignment: string = "alignment-baseline";
-    public static readonly viewbox: string = "viewBox";
-
-    static options = {
-        alignment: {
-            middle: "middle",
-            center: "center"
-        }
-    }
-
+enum SVGAttrs {
+    cx  = "cx",
+    cy  = "cy",
+    r  = "r",
+    x  = "x",
+    y  = "y",
+    d  = "d",
+    id  = "id",
+    width  = "width",
+    height  = "height",
+    fill  = "fill",
+    pointerEvents  = "pointer-events",
+    strokeWidth  = "stroke-width",
+    stroke  = "stroke",
+    rx  = "rx",
+    display  = "display",
+    opacity  = "opacity",
+    fontSize  = "font-size",
+    transform  = "transform",
+    alignment  = "alignment-baseline",
+    viewbox  = "viewBox",
+    alignment_middle = "middle",
+    alignment_center = "center"
 }
+
+export default SVGAttrs;
 

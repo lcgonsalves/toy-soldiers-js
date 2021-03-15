@@ -3,6 +3,7 @@ import {ILine} from "../geometry/Line";
 import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
 import Vector from "../util/Vector";
+import {ISerializable} from "../util/ISerializable";
 
 /**
  * Generically describes items that have graph node properties. They can be
@@ -14,7 +15,7 @@ import Vector from "../util/Vector";
  * are also aware of neighboring nodes.
  */
 export interface IGraphNode
-    extends ICoordinate, IComparable {
+    extends ICoordinate, IComparable, ISerializable {
 
     // attributes and getters
 
@@ -24,7 +25,8 @@ export interface IGraphNode
     readonly adjacent: IGraphNode[];
     /** returns unique identifier of this node */
     readonly id: string;
-    /** the physical size of this node */
+    /** @deprecated use depiction to determine size
+     * the physical size of this node */
     radius: number;
 
     // methods
@@ -208,12 +210,20 @@ export interface IGraph<Node extends IGraphNode>
      * If "from" is connected to "to", returns any nodes that are
      * intersecting with the edge. Otherwise returns an empty array.
      *
-     * @param {DeprecatedNode} from
-     * @param {DeprecatedNode} to
+     * @param e
      */
     getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): IGraphNode[];
 
-    /** Function that is run for each node that gets added */
-    onAdd: (node: Node) => void;
+
+}
+
+/**
+ * When u connectTo but pass a node of the wrong type.
+ */
+export class IncompatibleTargetError extends Error {
+
+    constructor(message?: string) {
+        super("Target of connection is incompatible" + message ? `: ${message}` : ".");
+    }
 
 }

@@ -1,4 +1,3 @@
-import LocationUnit from "../../units/LocationUnit";
 import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";
@@ -7,6 +6,10 @@ import { path } from "d3";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import {IScalable} from "../../units/Scalable";
+import {Subject, Subscription} from "rxjs";
+import LocationUnit from "../../units/LocationUnit";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
@@ -21,17 +24,15 @@ enum DockCSS {
 /**
  * Implementation of a menu that can instantiate Units.
  */
-export default class Dock<AcceptedUnits extends LocationUnit> extends LocationContext<AcceptedUnits> implements IDepictable {
+export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepictable = (LocationNode & IScalable & IDepictable)>
+    extends LocationContext<AcceptedUnits> implements IDepictable {
 
     private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
     private itemsCreated: number = 0;
     public readonly config: DockConfig;
+    private $nodePlacement: Subject<AcceptedUnits> = new Subject();
 
-    /**
-     * A function that is called once a node is placed outside of the bounds of the menu.
-     */
-    public onNodePlacement: (node: LocationUnit) => void = () => { };
-    private anchor: AnySelection | undefined;
+    public anchor: AnySelection | undefined;
 
     constructor(name?: string, config: DockConfig = defaultConfigurations.dock) {
         super();
@@ -39,44 +40,39 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
         this.config = config;
     }
 
+
     snap(node: AcceptedUnits): ICoordinate {
 
         const assignedItem = this.registeredItems.get(node.name);
         const assignedBox = assignedItem?.container;
         const menuBounds = this.config.bounds;
 
-        if (assignedBox && menuBounds.overlaps(node.unscaledPosition))
+        // if node is either above the menu, or the predicate function returns false, snap it back into the box
+        if ((assignedItem && assignedBox) && (menuBounds.overlaps(node.unscaledPosition()) || !assignedItem.placementPredicate(node)))
             return node.translateToScaledCoord(assignedBox);
         else if (!assignedItem) throw new Error("No menu item assigned to this node.");
         else if (!assignedBox) throw new Error("No assigned box found.");
         else {
+            // NODE PLACEMENT
+
             // remove from this graph
             this.rm(node.id);
 
             // remove menu scale
-            node.rmScale();
-
-            // generate new instance
-            const associatedMenuItem = this.registeredItems.get(node.name);
-            if (associatedMenuItem) {
-                const newInstance = this.instantiate(associatedMenuItem);
-                const {anchor} = this;
-
-                // if we have an anchor available, render object
-                if (anchor) {
-                    newInstance.attachDepictionTo(anchor);
-                    newInstance.scaleToFit(associatedMenuItem.container);
-                }
-            }
-
-            // rename old instance
-            node.rename("New " + assignedItem.title);
+            node.resetScale();
 
             // de-sociate depiction from this container
             node.deleteDepiction();
 
+            // generate new instance
+            const associatedMenuItem = this.registeredItems.get(node.name);
+            if (associatedMenuItem) this.instantiate(associatedMenuItem);
+
+            // rename old instance
+            node.rename("New " + assignedItem.title);
+
             // external handler
-            this.onNodePlacement(node);
+            this.$nodePlacement.next(node);
 
             // return
             return node;
@@ -85,7 +81,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
 
     }
 
-    add(...n: LocationUnit[]): this {
+    add(...n: AcceptedUnits[]): this {
         console.error("You cannot add items to the menu context manually.");
         return this;
     }
@@ -137,17 +133,12 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
     public register<NewUnit extends AcceptedUnits>(
         title: string,
         description: string,
-        constructor: UnitConstructor<NewUnit>
+        constructor: UnitConstructor<NewUnit>,
+        placementPredicate: (unit: NewUnit) => boolean = () => false
     ): void {
         const id = "menu_item_" + this.registeredItems.size;
         const container = this.getNextBox(this.registeredItems.size);
-        const item = new DockItem<NewUnit>(
-            id,
-            title,
-            description,
-            constructor,
-            container
-        );
+        const item = new DockItem<NewUnit>(id, title, description, constructor, placementPredicate, container);
 
         this.registeredItems.set(
             id,
@@ -157,13 +148,16 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
         this.instantiate(item);
     }
 
-    private instantiate(item: DockItem<AcceptedUnits>): LocationUnit {
+    private instantiate<NewUnit extends AcceptedUnits>(item: DockItem<NewUnit>): AcceptedUnits {
 
         const {container, title, id} = item;
         const gameUnitInstance = item.make(container.x, container.y, title + this.itemsCreated, id);
+
         // passing ID as name, means that this node is associated with this menu item
         super.add(gameUnitInstance);
+
         if (this.anchor) gameUnitInstance.attachDepictionTo(this.anchor);
+        gameUnitInstance.scaleToFit(container);
 
         this.itemsCreated++;
 
@@ -194,6 +188,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
             .append(SVGTags.SVGRectElement)
             .attr(SVGAttrs.x, _ => _.container.topLeft.x)
             .attr(SVGAttrs.y, _ => _.container.topLeft.y)
+            .attr("center", c =>`( ${c.container.x}, ${c.container.y} )`)
             .attr(SVGAttrs.width, _ => _.container.width)
             .attr(SVGAttrs.height, _ => _.container.height)
             .attr(SVGAttrs.fill, config.dockItemContainerConfig.fill)
@@ -235,7 +230,7 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
             .text(this.config.title)
             .attr(SVGAttrs.x, textStart.x)
             .attr(SVGAttrs.y, textStart.y)
-            .attr(SVGAttrs.alignment, SVGAttrs.options.alignment.middle)
+            .attr(SVGAttrs.alignment, SVGAttrs.alignment_middle)
             .style(SVGAttrs.fontSize, fontSize);
 
         // @ts-ignore
@@ -257,8 +252,8 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
 
     }
 
-    // TODO: implement
     deleteDepiction(): void {
+        this.anchor?.remove();
     }
 
     // TODO: finish implementation, update text content
@@ -277,18 +272,8 @@ export default class Dock<AcceptedUnits extends LocationUnit> extends LocationCo
 
     }
 
-    toggleHighlight(): void {
-
-        // TODO: implement
-
-        /*
-
-            1. Upon hover, set to a var the highlighted box
-            2. Call toggleHighlight()
-            3. Change bg color of highlighted square to be lighter, while all other squares remain the base color
-
-         */
-
+    onNodePlacement(handler: (node: AcceptedUnits) => void): Subscription {
+        return this.$nodePlacement.subscribe(handler);
     }
 
 }
@@ -304,6 +289,7 @@ class DockItem<NewUnit> {
     title: string;
     description: string;
     make: UnitConstructor<NewUnit>;
+    placementPredicate: (unit: any) => boolean
     container: Rectangle;
 
     constructor(
@@ -311,12 +297,14 @@ class DockItem<NewUnit> {
         title: string,
         description: string,
         makeFunction: UnitConstructor<NewUnit>,
+        placementPredicate: (unit: NewUnit) => boolean,
         container: Rectangle
     ) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.make = makeFunction;
+        this.placementPredicate = placementPredicate;
         this.container = container;
     }
 }

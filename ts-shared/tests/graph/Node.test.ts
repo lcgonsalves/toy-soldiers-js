@@ -6,9 +6,9 @@ import {LocationContext} from "../../lib/mechanics/Location";
 
 describe("Baseline Node Functionality", function () {
 
-    const a: IGraphNode = new LocationNode("a", 10);
-    const b: IGraphNode = new LocationNode("b", 10);
-    const c: IGraphNode = new LocationNode("c", 10);
+    const a: IGraphNode = new LocationNode("a");
+    const b: IGraphNode = new LocationNode("b");
+    const c: IGraphNode = new LocationNode("c");
 
     const allNodes = [a,b,c];
 
@@ -80,9 +80,9 @@ describe("Baseline Node Functionality", function () {
 
 describe("Generic edge implementation with location node", function () {
 
-    const a: LocationNode = new LocationNode("a", 10, 10, 10);
-    const b: LocationNode = new LocationNode("b", 10, 20, 10);
-    const c: LocationNode = new LocationNode("c", 10, 30, 10);
+    const a: LocationNode = new LocationNode("a");
+    const b: LocationNode = new LocationNode("b");
+    const c: LocationNode = new LocationNode("c");
 
     a.connectTo(c);
 

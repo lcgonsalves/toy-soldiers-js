@@ -68,8 +68,9 @@ export default class Rectangle extends Coordinate {
 
     }
 
-    get copy(): Rectangle {
-        return new Rectangle(this._topLeft, this._topRight, this._bottomLeft, this._bottomRight);
+    get copy(): this {
+        // @ts-ignore
+        return new this.constructor(this._topLeft, this._topRight, this._bottomLeft, this._bottomRight);
     }
 
     equals(other: ICoordinate): boolean {
