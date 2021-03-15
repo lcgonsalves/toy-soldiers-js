@@ -11,6 +11,13 @@ import {LineShape} from "../shape/LineShape";
 import {AbstractShape} from "../shape/ShapeUtil";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {RectangleShape} from "../shape/RectangleShape";
+import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import {Observable, Subject, Subscription} from "rxjs";
+
+
+/** #################################### *
+ *       Initialize Unit Depiction       *
+ *  #################################### */
 
 const primitives = {
     tower: defaultDepictions.grays.light.setStrokeWidth(0.5).setHoverable(true),
@@ -29,8 +36,21 @@ const background = new RectangleShape(Rectangle.fromCorners(tower.center, towers
 
 const baseDepiction = new CompositeShape("base", [background, outerConnector, ...towers] as AbstractShape[]);
 
+/** #################################### *
+ *        Construct Depictable Base      *
+ *  #################################### */
+
+export interface BaseUnitHoverEvent {
+    /** The base where the hover event was triggered */
+    base: BaseUnit,
+
+    /** The specific coordinate where the hover event happened. Use this to focus the tooltip on specific elements of the sprite. */
+    focus: ICoordinate
+}
+
 export default class BaseUnit
-    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGGElement, GenericConstructor<Base>>(Base, baseDepiction))) {
+    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGGElement, GenericConstructor<Base>>(Base, baseDepiction)))
+    implements IClickable<BaseUnit>, IHoverable<BaseUnitHoverEvent> {
 
     // declare constructor so the code-analysis doesn't freak out
     constructor(id: string, position?: ICoordinate, name?: string) {
@@ -42,6 +62,33 @@ export default class BaseUnit
         super.attachDepictionTo(d3selection);
         this.initializeDrag();
 
+        /* TODO:
+               - properly emit hover events
+               - block click events when drag is enabled
+               - hook these observables to tooltip
+                    - when hovering in center, focus on center
+                    - when hovering on a tower, focus on tower
+
+         */
+
     }
+
+    readonly $click: Observable<BaseUnit> = new Subject();
+    readonly $mouseEnter: Observable<BaseUnitHoverEvent> = new Subject();
+    readonly $mouseLeave: Observable<BaseUnitHoverEvent> = new Subject();
+
+    onClick(observer: (evt: BaseUnit) => void): Subscription {
+        return this.$click.subscribe(observer);
+    }
+
+    onMouseEnter(observer: (evt: BaseUnitHoverEvent) => void): Subscription {
+        return this.$mouseEnter.subscribe(observer);
+    }
+
+    onMouseLeave(observer: (evt: BaseUnitHoverEvent) => void): Subscription {
+        return this.$mouseLeave.subscribe(observer);
+    }
+
+
 
 }
