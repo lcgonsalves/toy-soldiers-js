@@ -7,17 +7,9 @@ import {SerializableObject, SObj} from "../util/ISerializable";
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {
 
-    /** identifier for kind of node */
-    abstract readonly key: string;
-
     protected readonly _edges: Map<IGraphNode, IGraphEdge<IGraphNode, IGraphNode>> = new Map();
     protected readonly _id: string;
     protected readonly _radius: number;
-    private _worldContext: WorldContext<IGraphNode>;
-
-    get worldContext(): WorldContext<IGraphNode> {
-        return this._worldContext;
-    }
     get adjacent(): IGraphNode[] {
         return [ ...this._edges.keys() ];
     }
@@ -37,10 +29,6 @@ export default abstract class AbstractNode
         return this._radius;
     }
 
-    public setWorldContext<CNode extends IGraphNode>(value: WorldContext<CNode>) {
-        this._worldContext = value;
-    }
-
     /**
      * Shallow equals. A node's identity is not based upon the edges it is connected to, only its location
      * and identification.
@@ -56,15 +44,6 @@ export default abstract class AbstractNode
         this._radius = radius;
     }
 
-    /**
-     * Associates this node to a world context. I don't know why I'm naming it so
-     * cryptically. :D
-     * @param worldContext
-     */
-    associate(worldContext: WorldContext<IGraphNode>): AbstractNode {
-        this.setWorldContext(worldContext);
-        return this;
-    }
 
     connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
         if (!this.isAdjacent(other)) this._edges.set(other, Edge<AbstractNode, N>(this, other));

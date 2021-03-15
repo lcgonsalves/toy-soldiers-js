@@ -46,19 +46,19 @@ export class LineShape extends AbstractShape<SVGPathElement> {
 
     }
 
-    translateToCoord(other: ICoordinate): ICoordinate {
+    translateToCoord(other: ICoordinate): this {
         this.points.forEach(_ => _.translateToCoord(other));
-        return other;
+        return this;
     }
 
-    translateBy(x: number, y: number): ICoordinate {
+    translateBy(x: number, y: number): this {
         this.points.forEach(_ => _.translateBy(x, y));
-        return C(x, y);
+        return this;
     }
 
-    translateTo(x: number, y: number): ICoordinate {
+    translateTo(x: number, y: number): this {
         this.points.forEach(_ => _.translateTo(x, y));
-        return C(x, y);
+        return this;
     }
 
     get center(): ICoordinate {

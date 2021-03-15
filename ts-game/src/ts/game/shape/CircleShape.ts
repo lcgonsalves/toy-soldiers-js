@@ -8,7 +8,7 @@ import {AbstractShape} from "./ShapeUtil";
 export class CircleShape extends AbstractShape<SVGCircleElement> {
 
     public readonly center: ICoordinate;
-    
+
     protected radius: number;
 
     constructor(
@@ -19,6 +19,8 @@ export class CircleShape extends AbstractShape<SVGCircleElement> {
         super(SVGTags.SVGCircleElement, depiction);
         this.center = center;
         this.radius = radius;
+
+        this.center.onChange(() => this.refreshAttributes());
     }
 
     duplicate(): this {
@@ -34,25 +36,19 @@ export class CircleShape extends AbstractShape<SVGCircleElement> {
 
     }
 
-    translateBy(x: number, y: number): ICoordinate {
-        let destination = this.center.translateBy(x, y);
-        this.refresh();
-
-        return destination;
+    translateBy(x: number, y: number): this {
+        this.center.translateBy(x, y);
+        return this;
     }
 
-    translateTo(x: number, y: number): ICoordinate {
-        let destination = this.center.translateTo(x, y);
-        this.refresh();
-
-        return destination;
+    translateTo(x: number, y: number): this {
+        this.center.translateTo(x, y);
+        return this;
     }
 
-    translateToCoord(other: ICoordinate): ICoordinate {
-        let destination = this.center.translateToCoord(other);
-        this.refresh();
-
-        return destination;
+    translateToCoord(other: ICoordinate): this {
+        this.center.translateToCoord(other);
+        return this;
     }
 
 }

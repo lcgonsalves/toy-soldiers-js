@@ -3,11 +3,13 @@ import {Selection} from "d3-selection";
 import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {IDraggable} from "./Draggable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import LocationNode from "ts-shared/build/graph/LocationNode";
+import LocationNode, {IWorldNode} from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGTags from "../../util/SVGTags";
 import {Observable, Subscription} from "rxjs";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import LocationUnit from "./LocationUnit";
+import {AbstractShape} from "../shape/ShapeUtil";
 
 /**
  * Encompasses operations for mounting and unmounting from UI.
@@ -36,7 +38,7 @@ export interface IDepictableWithSprite<E extends SVGElement = SVGGElement, S = {
 
 }
 
-export type Sprite<E extends SVGElement> = IDepictable<E> & IMovable & ICopiable & IClickable<ICoordinate> & IHoverable<ICoordinate>
+export type Sprite<E extends SVGElement> = IDepictable<E> & IMovable<any> & ICopiable & IClickable<ICoordinate> & IHoverable<ICoordinate>
 
 /**
  * Attaches functionality to allow class Base to have a depiction. By defaults, auto-updates depiction upon position changes.

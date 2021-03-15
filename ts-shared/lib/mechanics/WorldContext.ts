@@ -13,7 +13,5 @@ export default abstract class WorldContext<Unit extends IGraphNode> extends Simp
      */
     public abstract snap(coordinate: ICoordinate): ICoordinate;
 
-    onAdd: (n: Unit) => void = (n: Unit): void => {}
-
 }
 

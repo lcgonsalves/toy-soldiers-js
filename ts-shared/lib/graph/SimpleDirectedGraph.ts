@@ -7,14 +7,18 @@ import {IGraph, IGraphEdge, IGraphNode} from "./GraphInterfaces";
 export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGraph<Node> {
     readonly domain: Domain;
     readonly nodes: Map<string, Node> = new Map<string, Node>();
-    public onAdd: (n: Node) => void;
+    readonly width: number;
+    readonly height: number;
+    get step(): number { return this.domain.x.step }
 
     constructor(step?: number, width: number = 200, height: number = 200) {
 
         const s = step ? step : 1;
 
         this.domain = new Domain(new Interval(- (width / 2), (width / 2), s), new Interval(- (height / 2), (height / 2), s));
-        this.onAdd = () => {}
+
+        this.height = height;
+        this.width = width;
 
     }
 

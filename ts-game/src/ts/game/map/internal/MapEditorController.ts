@@ -14,6 +14,7 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
 import {IDepictable} from "../../units/UnitInterfaces";
+import {Base, BaseContext} from "ts-shared/build/mechanics/Base";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -45,7 +46,9 @@ export class MapEditorController {
 
     // valid locations on the map for things to exist
     public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(15, 300, 300);
-    public readonly bases: LocationContext<BaseUnit> = new LocationContext<BaseUnit>(15, 300, 300);
+
+    // context where bases exist
+    public readonly bases: BaseContext<BaseUnit> = new BaseContext<BaseUnit>(this.locations);
 
     // REGISTER ITEMS INTO DOCK //
 
@@ -212,14 +215,13 @@ export class MapEditorController {
                 return b;
             },
             // base units can be placed only on top of unoccupied location units
-            (base) => this.locations.getNodesInVicinity(base.unscaledPosition(this.mainGroup), 5).length > 0 && !this.bases.getNodesInVicinity(base.unscaledPosition(this.mainGroup), 5).length
+            (base) => {
+                const step = this.locations.domain.x.step;
+
+                return this.locations.getNodesInVicinity(base.unscaledPosition(this.mainGroup), step).length > 0 &&
+                    !this.bases.getNodesInVicinity(base.unscaledPosition(this.mainGroup), step).length;
+            }
         );
-        //
-        // dock.register(
-        //     "Basic Location Node C",
-        //     "A simple node signifying a location in the x-y plane.",
-        //     (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
-        // );
 
         dock.attachDepictionTo(select(anchor));
 
@@ -232,11 +234,6 @@ export class MapEditorController {
             if (node instanceof BaseUnit) this.initializeBaseNode(node);
 
         });
-
-
-        // debug
-        this.initializeLocationNode(new LocationUnit("test b", C(10, 10)))
-        this.initializeLocationNode(new LocationUnit("test a", C(75, 75)))
 
     }
 
@@ -428,7 +425,6 @@ export class MapEditorController {
 
         this.bases.add(b);
         b.snapSelf();
-        b.disableDrag();
 
     }
 

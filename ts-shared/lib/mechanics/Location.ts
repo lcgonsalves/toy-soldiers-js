@@ -7,14 +7,12 @@ import {Interval} from "../geometry/Interval";
 
 export class LocationContext<N extends LocationNode> extends WorldContext<N> {
 
-    onAdd: (n: N) => void = () => {};
 
     // all nodes in the location context must be associated with said context
     add(...n: N[]): LocationContext<N> {
         super.add(...n);
         n.forEach(_ => {
             _.associate(this);
-            this.onAdd(_);
         });
         return this;
     }
@@ -33,7 +31,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
      */
     snap(coordinate: ICoordinate): ICoordinate {
 
-        const errorMessage = "Somehow I fucked up the math. If you see this error, you fucked up the math. Go fix the code";
+        const errorMessage = "No available starting square for placement in the grid.";
 
         // make a copy
         const c = this.domain.snap(coordinate.simple);
@@ -123,7 +121,7 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         const startingSquare = [topL, topR, bottomL, bottomR].find(_ => _.overlaps(coordinate));
 
         // somehow none of the starting squares contains the original coord...
-        if (!startingSquare) return // throw new Error(errorMessage);
+        if (!startingSquare) throw new Error(errorMessage);
         else {
             const finalCoord = findClosestAvailableCoordinateRec(startingSquare);
             return coordinate.translateToCoord(finalCoord);

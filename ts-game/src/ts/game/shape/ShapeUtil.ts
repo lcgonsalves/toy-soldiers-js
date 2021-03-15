@@ -19,7 +19,7 @@ import {map} from "rxjs/operators";
  */
 export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SVGElement>
     implements ISerializable,
-        IMovable,
+        IMovable<AbstractShape<AssociatedSVGElement>>,
         ICopiable,
         IDepictable<AssociatedSVGElement>,
         IHoverable<ICoordinate>,
@@ -137,20 +137,20 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
      * @param x
      * @param y
      */
-    abstract translateTo(x: number, y: number): ICoordinate;
+    abstract translateTo(x: number, y: number): AbstractShape<AssociatedSVGElement>;
 
     /**
      * Translates shape to other coordinate and refreshes its depiction.
      * @param other
      */
-    abstract translateToCoord(other: ICoordinate): ICoordinate;
+    abstract translateToCoord(other: ICoordinate): AbstractShape<AssociatedSVGElement>;
 
     /**
      * Translates shape by x units horizontally and y units vertically and refreshes its depiction.
      * @param x
      * @param y
      */
-    abstract translateBy(x: number, y: number): ICoordinate;
+    abstract translateBy(x: number, y: number): AbstractShape<AssociatedSVGElement>;
 
     /**
      * Returns a new instance of this shape.
@@ -175,4 +175,5 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
     }
 
 }
+
 

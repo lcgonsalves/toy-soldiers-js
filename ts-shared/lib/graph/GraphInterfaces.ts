@@ -210,13 +210,10 @@ export interface IGraph<Node extends IGraphNode>
      * If "from" is connected to "to", returns any nodes that are
      * intersecting with the edge. Otherwise returns an empty array.
      *
-     * @param {DeprecatedNode} from
-     * @param {DeprecatedNode} to
+     * @param e
      */
     getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): IGraphNode[];
 
-    /** Function that is run for each node that gets added */
-    onAdd: (node: Node) => void;
 
 }
 
