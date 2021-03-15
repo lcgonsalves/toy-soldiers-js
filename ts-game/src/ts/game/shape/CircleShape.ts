@@ -7,12 +7,12 @@ import {AbstractShape} from "./ShapeUtil";
 
 export class CircleShape extends AbstractShape<SVGCircleElement> {
 
-    protected center: ICoordinate;
+    public readonly center: ICoordinate;
+    
     protected radius: number;
 
     constructor(
         radius: number = 1,
-        // TODO
         center: ICoordinate = Coordinate.origin,
         depiction: SimpleDepiction = defaultDepictions.grays.light
     ) {

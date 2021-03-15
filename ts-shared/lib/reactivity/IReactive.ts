@@ -1,12 +1,33 @@
-/**
- * Defines method API for reactive elements. A reactive element can be treated as a
- * static item (evaluated at runtime once) or as an observable whose value is emitted every update.
- */
-export default interface IReactive<Datum> {
+import {Observable, Subject, Subscription} from "rxjs";
 
-    /**
-     * Returns most recent value of the datum.
-     */
-    current(): Datum;
+/**
+ * Defines API for elements that emit events when clicked.
+ */
+export interface IClickable<Datum> {
+
+    /** Observable that emits when a clickable layer is clicked. Observable value is the shape that was clicked. */
+    readonly $click: Observable<Datum>;
+
+    /** Assigns a callback to be triggered when IClickable is clicked. Same as _.$mouseEnter.subscribe(observer) */
+    onClick(observer: (evt: Datum) => void): Subscription;
+
+}
+
+/**
+ * Defines API for elements that emit events when hovered.
+ */
+export interface IHoverable<Datum> {
+
+    /** Observable that emits every time the mouse leaves one of the layers. Observable value is the position of this event. */
+    readonly $mouseLeave: Observable<Datum>;
+
+    /** Observable that emits every time the mouse enters one of the layers. Observable value is the position of this event. */
+    readonly $mouseEnter: Observable<Datum>;
+
+    /** Assigns a callback to be triggered when the mouse enters. Same as _.$mouseEnter.subscribe(observer) */
+    onMouseEnter(observer: (evt: Datum) => void): Subscription;
+
+    /** Assigns a callback to be triggered when the mouse enters. Same as _.$mouseEnter.subscribe(observer) */
+    onMouseLeave(observer: (evt: Datum) => void): Subscription;
 
 }

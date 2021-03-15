@@ -5,7 +5,10 @@ import SVGAttrs from "../../util/SVGAttrs";
 import {AnySelection} from "../../util/DrawHelpers";
 import {IDepictable} from "../units/UnitInterfaces";
 import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
-
+import {fromEvent, Subject, Subscription} from "rxjs";
+import {Events} from "../../util/Events";
+import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import {map} from "rxjs/operators";
 
 /**
  * Abstract definition of shapes. Contains functionality to render and update a shape in a selection.
@@ -18,16 +21,32 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
     implements ISerializable,
         IMovable,
         ICopiable,
-        IDepictable<AssociatedSVGElement> {
+        IDepictable<AssociatedSVGElement>,
+        IHoverable<ICoordinate>,
+        IClickable<ICoordinate>
+{
 
     readonly name: string;
     readonly depiction: SimpleDepiction;
 
     private _anchor: Selection<AssociatedSVGElement, any, any, any> | undefined;
 
+    /** Observable that emits every time the mouse enters one of the layers. Observable value is the position of this event. */
+    public readonly $mouseEnter: Subject<ICoordinate> = new Subject();
+
+    /** Observable that emits every time the mouse leaves one of the layers. Observable value is the position of this event. */
+    public readonly $mouseLeave: Subject<ICoordinate> = new Subject();
+
+    /** Observable that emits when a clickable layer is clicked. Observable value is the shape that was clicked. */
+    public readonly $click: Subject<ICoordinate> = new Subject();
+
+
     get anchor(): Selection<AssociatedSVGElement, any, any, any> | undefined {
         return this._anchor;
     }
+
+    // for handling subscriptions when mounting / unmounting elements
+    private subscriptions: Subscription[] = []
 
     /** the param {name} should always come from SVGTags */
     protected constructor(name: string, depiction: SimpleDepiction) {
@@ -37,11 +56,31 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
 
     attachDepictionTo(d3selection: AnySelection): void {
 
+        const {
+            clickable,
+            hoverable
+        } = this.depiction;
+
         // if already anchored somewhere, delete previous first
         if (this._anchor) this.deleteDepiction();
 
-        this._anchor = d3selection.append<AssociatedSVGElement>(this.name);
+        const anchor = d3selection.append<AssociatedSVGElement>(this.name);
 
+        // safe-ish cast since we just appended
+        const node = anchor.node() as AssociatedSVGElement;
+
+        // assign each listener if needed
+        if (clickable) {
+            this.subscriptions.push(fromEvent(node, Events.click).pipe(map(() => this.center)).subscribe(this.$click));
+        }
+        if (hoverable) {
+            this.subscriptions.push(
+                fromEvent(node, Events.mouseenter).pipe(map(() => this.center)).subscribe(this.$mouseEnter),
+                fromEvent(node, Events.mouseleave).pipe(map(() => this.center)).subscribe(this.$mouseLeave)
+            );
+        }
+
+        this._anchor = anchor;
         this.refresh();
 
     }
@@ -50,6 +89,9 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
 
         this.anchor?.remove();
         this._anchor = undefined;
+        this.subscriptions.forEach(_ => _.unsubscribe());
+        this.subscriptions = [];
+
 
     }
 
@@ -114,6 +156,23 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
      * Returns a new instance of this shape.
      */
     abstract duplicate(): this;
+
+    /**
+     * Returns a coordinate that represents the center of the shape.
+     */
+    abstract get center(): ICoordinate;
+
+    onClick(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$click.subscribe(observer);
+    }
+
+    onMouseEnter(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$mouseEnter.subscribe(observer);
+    }
+
+    onMouseLeave(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$mouseLeave.subscribe(observer);
+    }
 
 }
 

@@ -2,17 +2,26 @@ import {IDepictable} from "../units/UnitInterfaces";
 import {C, Coordinate, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import {select, Selection} from "d3-selection";
-import {AnySelection, defaultDepictions} from "../../util/DrawHelpers";
+import {AnySelection} from "../../util/DrawHelpers";
 import SVGTags from "../../util/SVGTags";
 import {SimpleDepiction} from "../../util/Depiction";
 import {AbstractShape} from "./ShapeUtil";
 import {CircleShape} from "./CircleShape";
+import {LineShape} from "./LineShape";
+import {combineLatest, Observable, race, Subject, Subscription} from "rxjs";
+import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
 
-export class CompositeShape implements IDepictable, IMovable, ICopiable {
+export class CompositeShape implements IDepictable, IMovable, ICopiable, IClickable<ICoordinate>, IHoverable<ICoordinate> {
 
     readonly name: string;
     readonly center: ICoordinate;
     readonly layers: AbstractShape[] = [];
+
+    get $mouseEnter(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$mouseEnter)); }
+
+    get $mouseLeave(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$mouseLeave)); }
+
+    get $click(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$click)); }
 
     get cls(): string {
         return "." + this.name
@@ -22,8 +31,12 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable {
         const suffix = "_shape";
 
         this.name = name.endsWith(suffix) ? name : name + "_shape";
-        this.layers = layers;
+        this.layers = layers.map(_ => _.duplicate());
         this.center = new Coordinate(0, 0);
+
+        // hook up individual shapes' listeners to this one
+        // this.layers.forEach();
+
     }
 
     translateBy(x: number, y: number): ICoordinate {
@@ -98,6 +111,7 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable {
         return new this.constructor(this.name, this.layers.map(_ => _.duplicate()));
     }
 
+
     /**
      * Adds a circle shape to the layers.
      * @param radius radius of the circle
@@ -116,17 +130,28 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable {
         return this;
     }
 
+    addLine(
+        points: ICoordinate[],
+        depiction?: SimpleDepiction
+    ): this {
+        const l = new LineShape(points, depiction);
+
+        // @ts-ignore – it doesnt like this shit, but it works
+        this.layers.push(l);
+        return this;
+    }
+
+    onClick(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$click.subscribe(observer);
+    }
+
+    onMouseEnter(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$mouseEnter.subscribe(observer);
+    }
+
+    onMouseLeave(observer: (evt: ICoordinate) => void): Subscription {
+        return this.$mouseLeave.subscribe(observer);
+    }
+
 }
 
-const baseDepictions = {
-    tower: defaultDepictions.grays.light.setStrokeWidth(0.5)
-}
-
-export const SampleShapes = {
-    dot: new CircleShape(1.3),
-    base: new CompositeShape("base")
-        .addCircle(1, c => c.translateBy(0, -2.5), baseDepictions.tower)
-        .addCircle(1, c => c.translateBy(-2.5, 0), baseDepictions.tower)
-        .addCircle(1, c => c.translateBy(2.5, 0),  baseDepictions.tower)
-        .addCircle(1, c => c.translateBy(0, 2.5),  baseDepictions.tower)
-}

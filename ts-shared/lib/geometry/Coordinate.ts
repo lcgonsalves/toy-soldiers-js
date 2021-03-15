@@ -28,6 +28,9 @@ export interface ICoordinate extends IComparable, IMovable {
     readonly y: number;
     readonly copy: this;
 
+    /** observable for the position change */
+    readonly $positionChange: Subject<ICoordinate>;
+
     /**
      * Centralizing all super calls that mutate x and y values in this function for better maintainability.
      * @param newPos
@@ -111,7 +114,12 @@ export class Coordinate implements ICoordinate, ISerializable {
     private _y: number;
 
     // observable that fires a reference to this instance every time its position changes
-    private $positionChange: Subject<ICoordinate> | undefined;
+    private _$positionChange: Subject<ICoordinate> | undefined;
+
+    get $positionChange(): Subject<ICoordinate> {
+        if (!this._$positionChange) this._$positionChange = new Subject();
+        return this._$positionChange;
+    }
 
     constructor(x: number, y: number) {
         this._x = x;
@@ -128,7 +136,7 @@ export class Coordinate implements ICoordinate, ISerializable {
         this._y = newPos.y;
 
         // notify observable if we have any listeners
-        if (this.$positionChange) this.$positionChange.next(this);
+        if (this._$positionChange) this._$positionChange.next(this);
     }
 
     /**
@@ -236,9 +244,9 @@ export class Coordinate implements ICoordinate, ISerializable {
     onChange(handler: (ICoordinate) => void): Subscription {
 
         // only instantiate a subject when needed.
-        if (!this.$positionChange) this.$positionChange = new Subject<this>();
+        if (!this._$positionChange) this._$positionChange = new Subject<this>();
 
-        return this.$positionChange.subscribe(handler);
+        return this._$positionChange.subscribe(handler);
 
     }
 

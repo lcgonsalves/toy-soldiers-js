@@ -291,18 +291,16 @@ export const defaultColors = {
 
 export const defaultDepictions = {
     grays: {
-        light: new SimpleDepiction(
-            defaultColors.grays.light,
-            defaultColors.grays.dark
-        ),
-        medium: new SimpleDepiction(
-            defaultColors.grays.medium,
-            defaultColors.grays.dark
-        ),
-        dark: new SimpleDepiction(
-            defaultColors.grays.dark,
-            defaultColors.grays.extradark
-        ),
+        light: new SimpleDepiction(defaultColors.grays.light, defaultColors.grays.dark),
+        medium: new SimpleDepiction(defaultColors.grays.medium, defaultColors.grays.dark),
+        dark: new SimpleDepiction(defaultColors.grays.dark, defaultColors.grays.extradark),
+    },
+    noFill: {
+        grays: {
+            light: new SimpleDepiction("none", defaultColors.grays.light),
+            medium: new SimpleDepiction("none", defaultColors.grays.dark),
+            dark: new SimpleDepiction("none", defaultColors.grays.superextradark)
+        }
     }
 }
 

@@ -4,7 +4,7 @@ import {ScalableUnit} from "./Scalable";
 import {DraggableUnit} from "./Draggable";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {AnySelection} from "../../util/DrawHelpers";
-import {SampleShapes} from "../shape/CompositeShape";
+import {SampleShapes} from "../shape/Premade";
 
 // mixin all necessary features into the parent class
 export default class LocationUnit
