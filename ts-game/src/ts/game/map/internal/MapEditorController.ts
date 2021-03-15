@@ -14,7 +14,7 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
 import {IDepictable} from "../../units/UnitInterfaces";
-import {Base, BaseContext} from "ts-shared/build/mechanics/Base";
+import {BaseContext} from "ts-shared/build/mechanics/Base";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -52,8 +52,8 @@ export class MapEditorController {
 
     // REGISTER ITEMS INTO DOCK //
 
+    /** ADD ACCEPTED TYPES HERE WHEN REGISTERING NEW ITEMS */
     public readonly dock: Dock<
-        // ## ADD ACCEPTED TYPES HERE
         LocationUnit |
         BaseUnit
     > = new Dock("Map Elements");
@@ -107,7 +107,7 @@ export class MapEditorController {
         // init zoom
         select("." + MapEditorControllerCSS.BG_ELEM).call(
             zoom<any, unknown>()
-                .scaleExtent([0.5, 2])
+                .scaleExtent([0.25, 2])
                 .translateExtent([
                     [bgCoords.topL.x - config.zoomBuffer, bgCoords.topL.y - config.zoomBuffer],
                     [bgCoords.bottomR.x + config.zoomBuffer, bgCoords.bottomR.y + config.zoomBuffer]
