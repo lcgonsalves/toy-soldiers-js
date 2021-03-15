@@ -30,8 +30,9 @@ export interface IScalable {
      */
     scaleToFit(bounds: Rectangle): this;
 
-    /** Resets scale of this object (sets it to 1), and translates it to original unscaled position. */
-    resetScale(): this;
+    /** Resets scale of this object (sets it to 1 if no selection is passed),
+     * and translates it to original unscaled position (or the equivalent position relative to the selection's transforms. */
+    resetScale(selection?: AnySelection): this;
 
 }
 
@@ -75,9 +76,11 @@ export function ScalableUnit<
             return reversed;
         };
 
-        resetScale(): this {
-            this.setPosition(this.unscaledPosition());
-            this._scale = 1;
+        resetScale(selection?: AnySelection): this {
+            const {scale} = getTransforms(selection);
+
+            this.setPosition(this.unscaledPosition(selection));
+            this._scale = scale;
             return this;
         }
 
