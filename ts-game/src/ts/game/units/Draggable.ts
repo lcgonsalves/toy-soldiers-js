@@ -1,9 +1,10 @@
 import {ICoordinate, C, Coordinate} from "ts-shared/build/geometry/Coordinate";
 import {IDepictable} from "./UnitInterfaces";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {Subject, Subscription} from "rxjs"
+import {Observable, Subject, Subscription} from "rxjs"
 import {drag} from "d3-drag";
 import {ISnappable} from "ts-shared/build/util/ISnappable";
+import {filter} from "rxjs/operators";
 
 /**
  * An element that, when dragged with a mouse, will translate to the mouse position.
@@ -69,9 +70,11 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
             snapWhileDragging: false
         };
 
-        private $dragStart: Subject<DragEvent> = new Subject();
-        private $dragging: Subject<DragEvent> = new Subject();
-        private $dragEnd: Subject<DragEvent> = new Subject();
+        private dragEnabled: boolean = true;
+
+        private $dragStart: Subject<DragEvent> = new Subject<DragEvent>();
+        private $dragging: Subject<DragEvent> = new Subject<DragEvent>();
+        private $dragEnd: Subject<DragEvent> = new Subject<DragEvent>();
 
         // keeping track of the subscriptions
         private defaultHandlers: Subscription[] = [];
@@ -95,7 +98,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
             if (!this.defaultHandlers.length) {
 
                 this.defaultHandlers.push(
-                    $dragStart.subscribe((e: DragEvent) => {
+                    this.onDragStart((e: DragEvent) => {
 
                         // simply initialize (or reset) the last cursor position
                         this.lastDragCursorPosition?.translateToCoord(e.position);
@@ -107,7 +110,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         this.anchor?.classed(DragCSS.GRABBED, true);
 
                     }),
-                    $dragging.subscribe((e: DragEvent) => {
+                    this.onDrag((e: DragEvent) => {
 
                         /* distance to be translated must be calculated between last "virtual position", i.e. the scaled down
                            position of the mouse (the original event coordinates, since the event happens within a transformed SVG group). */
@@ -119,7 +122,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                             this.translateBy(unscaledDistance.x, unscaledDistance.y);
 
                     }),
-                    $dragEnd.subscribe((e: DragEvent) => {
+                    this.onDragEnd((e: DragEvent) => {
 
                         this.lastDragCursorPosition?.translateToCoord(e.position);
 
@@ -160,7 +163,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
 
                 });
 
-                d.on(DragEvents.END, function (this: SVGGElement, event: any, coords: ICoordinate): void {
+                d.on(DragEvents.END, function (this: SVGGElement, event: any): void {
 
                     $dragEnd.next({
                         element: this,
@@ -177,17 +180,26 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
         }
 
         onDragStart(newAction: (e: DragEvent) => void) {
-            return this.$dragStart.subscribe(newAction);
+            return this.$dragStart.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
         onDrag(newAction: (e: DragEvent) => void) {
-            return this.$dragging.subscribe(newAction);
+            return this.$dragging.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
         onDragEnd(newAction: (e: DragEvent) => void) {
-            return this.$dragEnd.subscribe(newAction);
+            return this.$dragEnd.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
+        enableDrag(): this {
+            this.dragEnabled = true;
+            return this;
+        }
+
+        disableDrag(): this {
+            this.dragEnabled = false;
+            return this;
+        }
 
     }
 }

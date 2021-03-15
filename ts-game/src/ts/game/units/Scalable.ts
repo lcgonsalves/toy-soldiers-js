@@ -3,6 +3,7 @@ import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import {IDepictable, IDepictableWithSprite} from "./UnitInterfaces";
 import SVGAttrs from "../../util/SVGAttrs";
+import {AnySelection, getTransforms} from "../../util/DrawHelpers";
 
 /**
  * Describes methods to be implement by Scalable units. These allow an object to change its size
@@ -14,8 +15,8 @@ export interface IScalable {
      * scaled down, >1 the object is scaled up */
     readonly scale: number;
 
-    /** Returns the position of this object, with the scale transform removed */
-    readonly unscaledPosition: ICoordinate;
+    /** Returns the position of this object, with the scale transform removed, and with the transforms of the selection applied. */
+    unscaledPosition(selection?: AnySelection): ICoordinate;
 
     /** Translates to a given coordinate, but scaled to the size of this unit. */
     translateToScaledCoord(other: ICoordinate): this;
@@ -52,10 +53,30 @@ export function ScalableUnit<
         private _scale: number = 1;
 
         get scale(): number { return this._scale };
-        get unscaledPosition(): ICoordinate { return C(this.x, this.y).translateTo(this.x * this.scale, this.y * this.scale) };
+
+
+        unscaledPosition(selection?: AnySelection): ICoordinate {
+
+            // reverse transforms to place node in correct coordinate
+            const {
+                translation,
+                scale
+            } = getTransforms(selection);
+
+            // undo current transforms
+            const reversed = C(this.x, this.y).translateTo(this.x * this.scale, this.y * this.scale);
+
+            // apply selection's transforms
+            reversed.translateTo(
+                ((reversed.x / scale) - (translation.x / scale)),
+                ((reversed.y / scale) - (translation.y / scale))
+            );
+
+            return reversed;
+        };
 
         resetScale(): this {
-            this.setPosition(this.unscaledPosition);
+            this.setPosition(this.unscaledPosition());
             this._scale = 1;
             return this;
         }

@@ -8,6 +8,9 @@ import {IGraphNode, IncompatibleTargetError} from "../graph/GraphInterfaces";
  * and other stats.
  */
 export class Base extends LocationNode implements IBase {
+
+    readonly key: string = "base";
+
     private _occupation: number = 0;
     readonly capacity: number = 10;
 

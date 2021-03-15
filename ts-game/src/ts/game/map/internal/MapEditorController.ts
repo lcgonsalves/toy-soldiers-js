@@ -198,13 +198,21 @@ export class MapEditorController {
         dock.register(
             "BuildableLocation",
             "A simple node signifying a location in the x-y plane.",
-            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
+            (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name),
+            // location units can be placed anywhere
+            () => true
         );
 
         dock.register(
             "TestBase",
             "A  base where pawns can occupy.",
-            (x: number, y: number, id: string, name: string) => new BaseUnit(id, C(x, y), name)
+            (x: number, y: number, id: string, name: string) => {
+                const b = new BaseUnit(id, C(x, y), name)
+
+                return b;
+            },
+            // base units can be placed only on top of unoccupied location units
+            (base) => this.locations.getNodesInVicinity(base.unscaledPosition(this.mainGroup), 5).length > 0 && !this.bases.getNodesInVicinity(base.unscaledPosition(this.mainGroup), 5).length
         );
         //
         // dock.register(
@@ -215,7 +223,6 @@ export class MapEditorController {
 
         dock.attachDepictionTo(select(anchor));
 
-        // todo: hook this up to node placement observable
         dock.onNodePlacement((node) => {
 
             // REGISTER ITEMS INTO DOCK //
@@ -421,6 +428,7 @@ export class MapEditorController {
 
         this.bases.add(b);
         b.snapSelf();
+        b.disableDrag();
 
     }
 

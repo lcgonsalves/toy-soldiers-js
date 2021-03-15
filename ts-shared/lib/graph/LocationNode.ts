@@ -8,6 +8,7 @@ import {ISnappable} from "../util/ISnappable";
  */
 export default class LocationNode extends AbstractNode implements IGraphNode, ISnappable {
 
+    readonly key: string = "location";
 
     constructor(id: string, position: ICoordinate = Coordinate.origin, name: string = "untitled") {
         super(id, position.x, position.y, 2);

@@ -7,6 +7,9 @@ import {SerializableObject, SObj} from "../util/ISerializable";
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {
 
+    /** identifier for kind of node */
+    abstract readonly key: string;
+
     protected readonly _edges: Map<IGraphNode, IGraphEdge<IGraphNode, IGraphNode>> = new Map();
     protected readonly _id: string;
     protected readonly _radius: number;

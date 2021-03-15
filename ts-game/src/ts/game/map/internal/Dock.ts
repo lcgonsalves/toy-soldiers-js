@@ -47,7 +47,8 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         const assignedBox = assignedItem?.container;
         const menuBounds = this.config.bounds;
 
-        if (assignedBox && menuBounds.overlaps(node.unscaledPosition))
+        // if node is either above the menu, or the predicate function returns false, snap it back into the box
+        if ((assignedItem && assignedBox) && (menuBounds.overlaps(node.unscaledPosition()) || !assignedItem.placementPredicate(node)))
             return node.translateToScaledCoord(assignedBox);
         else if (!assignedItem) throw new Error("No menu item assigned to this node.");
         else if (!assignedBox) throw new Error("No assigned box found.");
@@ -132,17 +133,12 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
     public register<NewUnit extends AcceptedUnits>(
         title: string,
         description: string,
-        constructor: UnitConstructor<NewUnit>
+        constructor: UnitConstructor<NewUnit>,
+        placementPredicate: (unit: NewUnit) => boolean = () => false
     ): void {
         const id = "menu_item_" + this.registeredItems.size;
         const container = this.getNextBox(this.registeredItems.size);
-        const item = new DockItem<NewUnit>(
-            id,
-            title,
-            description,
-            constructor,
-            container
-        );
+        const item = new DockItem<NewUnit>(id, title, description, constructor, placementPredicate, container);
 
         this.registeredItems.set(
             id,
@@ -152,7 +148,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         this.instantiate(item);
     }
 
-    private instantiate(item: DockItem<AcceptedUnits>): AcceptedUnits {
+    private instantiate<NewUnit extends AcceptedUnits>(item: DockItem<NewUnit>): AcceptedUnits {
 
         const {container, title, id} = item;
         const gameUnitInstance = item.make(container.x, container.y, title + this.itemsCreated, id);
@@ -256,8 +252,8 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
 
     }
 
-    // TODO: implement
     deleteDepiction(): void {
+        this.anchor?.remove();
     }
 
     // TODO: finish implementation, update text content
@@ -273,20 +269,6 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
             .attr(SVGAttrs.fill, this.config.dockItemContainerConfig.fill);
 
         dataJoin?.exit().remove();
-
-    }
-
-    toggleHighlight(): void {
-
-        // TODO: implement
-
-        /*
-
-            1. Upon hover, set to a var the highlighted box
-            2. Call toggleHighlight()
-            3. Change bg color of highlighted square to be lighter, while all other squares remain the base color
-
-         */
 
     }
 
@@ -307,6 +289,7 @@ class DockItem<NewUnit> {
     title: string;
     description: string;
     make: UnitConstructor<NewUnit>;
+    placementPredicate: (unit: any) => boolean
     container: Rectangle;
 
     constructor(
@@ -314,12 +297,14 @@ class DockItem<NewUnit> {
         title: string,
         description: string,
         makeFunction: UnitConstructor<NewUnit>,
+        placementPredicate: (unit: NewUnit) => boolean,
         container: Rectangle
     ) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.make = makeFunction;
+        this.placementPredicate = placementPredicate;
         this.container = container;
     }
 }
