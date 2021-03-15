@@ -12,12 +12,12 @@ const primitives = {
 }
 
 const baseDepiction = new CompositeShape("base")
-    .addLine([C(0, -3.5), C(0, 3.5)], primitives.connector)
-    .addLine([C(-3.5, 0), C(3.5, 0)], primitives.connector)
-    .addCircle(1.6, c => c.translateBy(0, -3.5), primitives.tower)
-    .addCircle(1.6, c => c.translateBy(-3.5, 0), primitives.tower)
-    .addCircle(1.6, c => c.translateBy(3.5, 0), primitives.tower)
-    .addCircle(1.6, c => c.translateBy(0, 3.5), primitives.tower);
+    .addLine([C(0, -4), C(0, 4)], primitives.connector)
+    .addLine([C(-4, 0), C(4, 0)], primitives.connector)
+    .addCircle(1.6, c => c.translateBy(0, -4), primitives.tower)
+    .addCircle(1.6, c => c.translateBy(-4, 0), primitives.tower)
+    .addCircle(1.6, c => c.translateBy(4, 0), primitives.tower)
+    .addCircle(1.6, c => c.translateBy(0, 4), primitives.tower);
 
 
 export default class BaseUnit

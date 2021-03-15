@@ -14,8 +14,6 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
 import {IDepictable} from "../../units/UnitInterfaces";
-import {ISnappable} from "ts-shared/build/util/ISnappable";
-import {IDraggable} from "../../units/Draggable";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -46,8 +44,8 @@ enum MapEditorControllerCSS {
 export class MapEditorController {
 
     // valid locations on the map for things to exist
-    public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(5);
-    public readonly bases: LocationContext<BaseUnit> = new LocationContext<BaseUnit>(5);
+    public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(15, 300, 300);
+    public readonly bases: LocationContext<BaseUnit> = new LocationContext<BaseUnit>(15, 300, 300);
 
     // REGISTER ITEMS INTO DOCK //
 
@@ -181,8 +179,8 @@ export class MapEditorController {
         } = getTransforms(this.mainGroup);
 
         n.translateTo(
-            ((n.x / scale) - translation.x),
-            ((n.y / scale) - translation.y)
+            ((n.x / scale) - (translation.x / scale)),
+            ((n.y / scale) - (translation.y / scale))
         );
 
         // attach depictions
