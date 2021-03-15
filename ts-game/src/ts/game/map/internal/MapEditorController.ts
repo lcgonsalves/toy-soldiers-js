@@ -3,27 +3,25 @@ import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
 import {path, Path} from "d3-path";
-import DeprecatedLocationUnit from "../../units/DeprecatedLocationUnit";
 import {AnySelection, getTransforms} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
 import {ActionTooltip} from "./Tooltip";
 import {Events} from "../../../util/Events";
-import {C, Coordinate} from "ts-shared/build/geometry/Coordinate";
+import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {TAction, TargetAction} from "../../../util/Action";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
+import BaseUnit from "../../units/BaseUnit";
+import {IDepictable} from "../../units/UnitInterfaces";
+import {ISnappable} from "ts-shared/build/util/ISnappable";
+import {IDraggable} from "../../units/Draggable";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
     foregroundColor: string;
     gridStroke: string;
     zoomBuffer: number;
-}
-
-interface NodeAction {
-    key: string,
-    apply: (n: DeprecatedLocationUnit) => void
 }
 
 enum MapEditorControllerCSS {
@@ -49,13 +47,14 @@ export class MapEditorController {
 
     // valid locations on the map for things to exist
     public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(5);
+    public readonly bases: LocationContext<BaseUnit> = new LocationContext<BaseUnit>(5);
 
     // REGISTER ITEMS INTO DOCK //
 
     public readonly dock: Dock<
         // ## ADD ACCEPTED TYPES HERE
-        LocationUnit
-
+        LocationUnit |
+        BaseUnit
     > = new Dock("Map Elements");
 
     // anchors
@@ -173,21 +172,42 @@ export class MapEditorController {
         
     }
 
+    private undoTransform(n: IDepictable & ICoordinate) {
+
+        // reverse transforms to place node in correct coordinate
+        const {
+            translation,
+            scale
+        } = getTransforms(this.mainGroup);
+
+        n.translateTo(
+            ((n.x / scale) - translation.x),
+            ((n.y / scale) - translation.y)
+        );
+
+        // attach depictions
+        n.attachDepictionTo(this.nodeContainer);
+
+    }
+
     /** Constructs and mounts bottom menu */
     private initBottomMenu(anchor: SVGSVGElement): void {
 
+        // REGISTER ITEMS INTO DOCK //
+
+        // ## construct function, name and title
         const {dock} = this;
         dock.register(
-            "Basic Location Node A",
+            "BuildableLocation",
             "A simple node signifying a location in the x-y plane.",
             (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
         );
 
-        // dock.register(
-        //     "Basic Location Node B",
-        //     "A simple node signifying a location in the x-y plane.",
-        //     (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name)
-        // );
+        dock.register(
+            "TestBase",
+            "A  base where pawns can occupy.",
+            (x: number, y: number, id: string, name: string) => new BaseUnit(id, C(x, y), name)
+        );
         //
         // dock.register(
         //     "Basic Location Node C",
@@ -199,9 +219,13 @@ export class MapEditorController {
 
         // todo: hook this up to node placement observable
         dock.onNodePlacement((node) => {
-            console.log(node.toString());
 
-            this.initializeLocationNode(node);
+            // REGISTER ITEMS INTO DOCK //
+            this.undoTransform(node);
+
+            if (node instanceof LocationUnit) this.initializeLocationNode(node);
+            if (node instanceof BaseUnit) this.initializeBaseNode(node);
+
         });
 
 
@@ -215,23 +239,7 @@ export class MapEditorController {
     private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         this.locations.add(n);
-
-        // reverse transforms to place node in correct coordinate
-        const {
-            translation,
-            scale
-        } = getTransforms(this.mainGroup);
-
-        console.log(`translate: (${translation.x}, ${translation.y}) scale: ${scale}`);
-        n.translateTo(
-            ((n.x / scale) - translation.x),
-            ((n.y / scale) - translation.y)
-        );
-
         n.snapSelf();
-
-        // attach depictions
-        n.attachDepictionTo(this.nodeContainer);
 
         const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
                 this.locations.nodes.forEach(nodeInContext => {
@@ -254,7 +262,7 @@ export class MapEditorController {
 
             // create virtual node
             const mouseTrackerNodeID = "tracker";
-            const mouseTrackerNode = new DeprecatedLocationUnit(mouseTrackerNodeID, mouseTrackerNodeID, node, 1);
+            const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, node);
 
             // connect to it
             node.connectTo(mouseTrackerNode);
@@ -408,6 +416,13 @@ export class MapEditorController {
         n.onDragEnd(() => {
             this.actionTooltip.enabled = true;
         });
+
+    }
+
+    private initializeBaseNode<Base extends BaseUnit>(b: Base): void {
+
+        this.bases.add(b);
+        b.snapSelf();
 
     }
 

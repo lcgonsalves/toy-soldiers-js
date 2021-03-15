@@ -8,7 +8,6 @@ import {IGraphNode, IncompatibleTargetError} from "../graph/GraphInterfaces";
  * and other stats.
  */
 export class Base extends LocationNode implements IBase {
-
     private _occupation: number = 0;
     readonly capacity: number = 10;
 
@@ -30,8 +29,11 @@ export class Base extends LocationNode implements IBase {
     connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
         if (!(other instanceof Base)) throw new IncompatibleTargetError("Target should be a Base.");
 
+        this._occupation++;
+
         return super.connectTo(other, bidirectional);
     }
+
 }
 
 export interface IBase extends IGraphNode {

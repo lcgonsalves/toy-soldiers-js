@@ -1,4 +1,3 @@
-import DeprecatedLocationUnit from "../../units/DeprecatedLocationUnit";
 import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
 import { IDepictable } from "../../units/UnitInterfaces";
 import SVGTags from "../../../util/SVGTags";

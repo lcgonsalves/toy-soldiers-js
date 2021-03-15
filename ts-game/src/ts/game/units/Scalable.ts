@@ -34,8 +34,6 @@ export interface IScalable {
 
 }
 
-interface Acceptable<Element extends SVGGElement>
-    extends IDepictable<Element>, ICoordinate {}
 
 /**
  * @mixin
