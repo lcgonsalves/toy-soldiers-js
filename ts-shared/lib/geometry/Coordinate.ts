@@ -6,16 +6,16 @@ import {Subject, Subscription} from "rxjs";
 /**
  * Interface for components that have translate() methods.
  */
-export interface IMovable {
+export interface IMovable<T = ICoordinate> {
 
     /** Changes value of current coordinate to given x-y value */
-    translateTo (x: number, y: number): ICoordinate;
+    translateTo (x: number, y: number): T;
 
     /** adds values to given coordinate */
-    translateBy (x: number, y: number): ICoordinate;
+    translateBy (x: number, y: number): T;
 
     /** Changes value of current coordinate to given x-y value */
-    translateToCoord (other: ICoordinate): ICoordinate;
+    translateToCoord (other: ICoordinate): T;
 
 }
 
