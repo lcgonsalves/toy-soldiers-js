@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
 
 import "../../../css/DirectedGraph.css";
-import "../../../css/Editor.css"
+import "../../../css/Editor.css";
+import "../../../css/Shape.css";
 
 import {MapEditorController} from "./internal/MapEditorController";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";

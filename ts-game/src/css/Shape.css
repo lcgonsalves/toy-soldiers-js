@@ -1,0 +1,8 @@
+
+.interactive {
+    cursor: pointer;
+}
+
+.grabbable {
+    cursor: grab;
+}

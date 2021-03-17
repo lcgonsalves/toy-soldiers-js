@@ -90,7 +90,8 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
             const {
                 _$dragStart,
                 _$dragEnd,
-                _$dragging
+                _$dragging,
+                dragEnabled
             } = this;
 
             // instantiate handlers if this is the first time running
@@ -106,7 +107,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         this.translateToCoord(e.position);
 
                         // set grabbed class for visual handling
-                        this.anchor?.classed(DragCSS.GRABBED, true);
+                        this.anchor?.classed(DragCSS.GRABBED, true).classed(DragCSS.GRABBABLE, false);
 
                     }),
                     this.onDrag((e: DragEvent) => {
@@ -124,7 +125,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         this.lastDragCursorPosition?.translateToCoord(e.position);
 
                         // remove grabbed class for visual handling
-                        this.anchor?.classed(DragCSS.GRABBED, false);
+                        this.anchor?.classed(DragCSS.GRABBED, false).classed(DragCSS.GRABBABLE, this.dragEnabled);
 
                     })
                 )
@@ -163,11 +164,19 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         position: C(event.x, event.y)
                     });
 
+
                 });
 
                 this.anchor.call(d);
 
+                this.anchor.classed(DragCSS.GRABBABLE, dragEnabled);
+
             } else console.warn("Attempting to initialize drag behavior without an anchor. You need an anchor to drag.")
+
+        }
+
+        refresh(): void {
+            super.refresh();
 
         }
 
@@ -185,11 +194,13 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
 
         enableDrag(): this {
             this.dragEnabled = true;
+            this.anchor?.classed(DragCSS.GRABBABLE, this.dragEnabled);
             return this;
         }
 
         disableDrag(): this {
             this.dragEnabled = false;
+            this.anchor?.classed(DragCSS.GRABBABLE, this.dragEnabled);
             return this;
         }
 
@@ -218,5 +229,6 @@ export enum DragEvents {
 
 // css class and ID definitions
 export enum DragCSS {
-    GRABBED = "grabbed"
+    GRABBED = "grabbed",
+    GRABBABLE = "grabbable"
 }

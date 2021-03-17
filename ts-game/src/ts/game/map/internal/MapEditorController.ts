@@ -433,6 +433,14 @@ export class MapEditorController {
         this.bases.add(b);
 
         // listen for hovers
+        this.registerSubscription(
+            b.id + b.key,
+            b.onMouseEnter(e => {
+                this.actionTooltip.focus(e.target, [b.buildRoad(this.bgGroup.node())], e.focus, 150)
+            }),
+            b.onMouseLeave(() => this.actionTooltip.unfocus(250)),
+            b.onDragStart(() => this.actionTooltip.unfocus(0))
+        );
 
     }
 

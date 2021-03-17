@@ -10,6 +10,10 @@ import {Events} from "../../util/Events";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
 import {map} from "rxjs/operators";
 
+export enum ShapeCSS {
+    INTERACTIVE = "interactive"
+}
+
 /**
  * Abstract definition of shapes. Contains functionality to render and update a shape in a selection.
  * When implementing specific shapes, you must override the `refreshAttributes` function, that should call anchor.attr(...) for
@@ -79,10 +83,13 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
                 fromEvent(node, Events.mouseleave).pipe(map(() => this.center)).subscribe(this.$mouseLeave)
             );
         }
+
         if (!hoverable && !clickable) {
 
             node.setAttribute("pointer-events", "none");
 
+        } else {
+            // anchor.classed(ShapeCSS.INTERACTIVE, true);
         }
 
         this._anchor = anchor;
