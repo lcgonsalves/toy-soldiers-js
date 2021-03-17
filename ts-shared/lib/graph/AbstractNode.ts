@@ -10,6 +10,7 @@ export default abstract class AbstractNode
     protected readonly _edges: Map<IGraphNode, IGraphEdge<IGraphNode, IGraphNode>> = new Map();
     protected readonly _id: string;
     protected readonly _radius: number;
+
     get adjacent(): IGraphNode[] {
         return [ ...this._edges.keys() ];
     }
@@ -45,13 +46,13 @@ export default abstract class AbstractNode
     }
 
 
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
+    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
         if (!this.isAdjacent(other)) this._edges.set(other, Edge<AbstractNode, N>(this, other));
         if (bidirectional) other.connectTo(this);
         return this;
     }
 
-    disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
+    disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
         this._edges.delete(other);
         if (bidirectional) other.disconnectFrom(this);
         return this;

@@ -40,7 +40,7 @@ export interface IGraphNode
      * @param {boolean} bidirectional optional – whether the connection should work both ways
      * @returns {IGraphNode} this node (for chaining)
      */
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode;
+    connectTo(other: IGraphNode, bidirectional?: boolean): this;
 
     /**
      * Disconnects this GraphNode from other GraphNode.
@@ -49,7 +49,7 @@ export interface IGraphNode
      * @param {boolean} bidirectional optional – whether this node should be removed from the other's connections.
      * @returns {IGraphNode} this node (for chaining)
      */
-    disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode;
+    disconnectFrom(other: IGraphNode, bidirectional?: boolean): this;
 
     /**
      * Returns true if other node is directly accessible from this node.

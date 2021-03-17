@@ -51,7 +51,7 @@ export type Sprite<E extends SVGElement> = IDepictable<E> & IMovable<any> & ICop
  */
 export function DepictableUnit<
     E extends SVGElement,
-    T extends GenericConstructor<IWorldNode> = GenericConstructor<IWorldNode>,
+    T extends GenericConstructor<IWorldNode> = GenericConstructor<LocationNode>,
     S extends Sprite<E> = Sprite<E>
     >(Base: T, sprite: S) {
 
@@ -128,6 +128,11 @@ export function DepictableUnit<
             this.sprite?.delete();
             this.refreshOnPositionUpdate?.unsubscribe();
             this.$positionChange.complete();
+        }
+
+        connectTo(other: IGraphNode, bidirectional?: boolean): this {
+            super.connectTo(other, bidirectional);
+            return this;
         }
 
     }

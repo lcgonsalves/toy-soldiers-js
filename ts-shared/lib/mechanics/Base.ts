@@ -1,5 +1,5 @@
 import LocationNode from "../graph/LocationNode";
-import {IGraphNode, IncompatibleTargetError} from "../graph/GraphInterfaces";
+import {IGraphNode} from "../graph/GraphInterfaces";
 import {LocationContext} from "./Location";
 import {ICoordinate} from "../geometry/Coordinate";
 
@@ -45,11 +45,14 @@ export class Base extends LocationNode implements IBase {
      * @param other
      * @param bidirectional
      */
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
-        if (!(other instanceof Base || other instanceof LocationNode)) throw new IncompatibleTargetError("Target should be a Base or a LocationNode.");
-        if (this.adjacent.length >= this.roadConnectors) return this;
+    connectTo(other: IGraphNode, bidirectional?: boolean): this {
+        super.connectTo(other, bidirectional);
+        return this;
+    }
 
-        return super.connectTo(other, bidirectional);
+    disconnectFrom(other: IGraphNode, bidirectional?: boolean): this {
+        super.disconnectFrom(other, bidirectional);
+        return this;
     }
 
     associate(worldContext: BaseContext<Base>): this {

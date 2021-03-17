@@ -41,10 +41,6 @@ export default class LocationNode extends AbstractNode implements IWorldNode, IS
         return new this.LocationNode(this.id);
     }
 
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): IGraphNode {
-        return super.connectTo(other, bidirectional);
-    }
-
     toString(): string {
         return `${this.constructor.name}${super.toString()}`;
     }
