@@ -1,10 +1,7 @@
 import {ICoordinate} from "../geometry/Coordinate";
-import {ILine} from "../geometry/Line";
 import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
-import Vector from "../util/Vector";
 import {ISerializable} from "../util/ISerializable";
-import {Dictionary} from "typescript-collections";
 import EMap from "../util/EMap";
 
 /**
@@ -21,10 +18,8 @@ export interface IGraphNode
 
     // attributes and getters
 
-    /** returns edges of this node */
-    readonly edges: IGraphEdge<IGraphNode, IGraphNode>[];
     /** returns nodes accessible from this node */
-    readonly adjacent: IGraphNode[];
+    readonly adjacent: this[];
     /** returns unique identifier of this node */
     readonly id: string;
     /** @deprecated use depiction to determine size
@@ -40,7 +35,7 @@ export interface IGraphNode
      * @param {boolean} bidirectional optional – whether the connection should work both ways
      * @returns {IGraphNode} this node (for chaining)
      */
-    connectTo(other: IGraphNode, bidirectional?: boolean): this;
+    connectTo(other: this, bidirectional?: boolean): this;
 
     /**
      * Disconnects this GraphNode from other GraphNode.
@@ -64,44 +59,6 @@ export interface IGraphNode
 
 }
 
-/**
- * Defines a connection between two graph nodes, which can have different implementations.
- */
-export interface IGraphEdge<FromNode extends IGraphNode, ToNode extends IGraphNode>
-    extends ILine, IComparable {
-
-    // attributes and getters
-
-    /** source node */
-    readonly from: FromNode;
-    /** destination node */
-    readonly to: ToNode;
-    /** unique identifier */
-    readonly id: string;
-    /** edge to Vector conversion */
-    readonly toVector: Vector;
-    /** edge to Line conversion */
-    readonly toLine: ILine;
-    /** Point equidistant from both nodes */
-    readonly midpoint: ICoordinate;
-    /** size of a vector from the source to the destination node */
-    readonly size: number;
-
-    // methods
-
-    /** corresponding string representation */
-    toString(): string;
-    /** determines if a given Node is collinear (intersects, collides) with a straight line between
-     * the nodes of this edge */
-    intersects(node: IGraphNode): boolean;
-
-}
-
-export type EdgeInstantiator<
-    FN extends IGraphNode,
-    TN extends IGraphNode,
-    E extends IGraphEdge<FN, TN>
-    > = (FN, TN) => E;
 
 /**
  * Defines a set of nodes and some helpers.
@@ -112,7 +69,7 @@ export interface IGraph<Node extends IGraphNode>
     // attributes and getters
 
     /** set of nodes contained in graph */
-    readonly nodes: EMap<string, IGraphNode>;
+    readonly nodes: EMap<string, Node>;
     /** the values of x & y allowed for nodes */
     readonly domain: Domain;
 
@@ -214,7 +171,7 @@ export interface IGraph<Node extends IGraphNode>
      *
      * @param e
      */
-    getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): IGraphNode[];
+    getNodesIntersecting(from: IGraphNode, to: IGraphNode): IGraphNode[];
 
 
 }

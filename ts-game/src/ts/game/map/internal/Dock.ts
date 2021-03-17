@@ -9,7 +9,6 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {IScalable} from "../../units/Scalable";
 import {Subject, Subscription} from "rxjs";
-import LocationUnit from "../../units/LocationUnit";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit

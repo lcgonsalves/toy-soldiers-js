@@ -1,21 +1,15 @@
 import {Coordinate, ICoordinate} from "../geometry/Coordinate";
-import {IGraphEdge, IGraphNode} from "./GraphInterfaces";
-import {Edge} from "./SimpleDirectedEdge";
-import WorldContext from "../mechanics/WorldContext";
+import {IGraphNode} from "./GraphInterfaces";
 import {SerializableObject, SObj} from "../util/ISerializable";
 
 export default abstract class AbstractNode
     extends Coordinate implements IGraphNode {
 
-    protected readonly _edges: Map<IGraphNode, IGraphEdge<IGraphNode, IGraphNode>> = new Map();
+    protected readonly _edges: Map<string, this> = new Map();
     protected readonly _id: string;
     protected readonly _radius: number;
 
-    get adjacent(): IGraphNode[] {
-        return [ ...this._edges.keys() ];
-    }
-
-    get edges(): IGraphEdge<IGraphNode, IGraphNode>[] {
+    get adjacent(): this[] {
         return [ ...this._edges.values() ];
     }
 
@@ -46,20 +40,20 @@ export default abstract class AbstractNode
     }
 
 
-    connectTo<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
-        if (!this.isAdjacent(other)) this._edges.set(other, Edge<AbstractNode, N>(this, other));
+    connectTo(other: this, bidirectional?: boolean): this {
+        if (!this.isAdjacent(other)) this._edges.set(other.id, other);
         if (bidirectional) other.connectTo(this);
         return this;
     }
 
-    disconnectFrom<N extends IGraphNode>(other: N, bidirectional?: boolean): this {
-        this._edges.delete(other);
+    disconnectFrom(other: this, bidirectional?: boolean): this {
+        this._edges.delete(other.id);
         if (bidirectional) other.disconnectFrom(this);
         return this;
     }
 
     isAdjacent(other: IGraphNode): boolean {
-        return this._edges.has(other);
+        return this._edges.has(other.id);
     }
 
 

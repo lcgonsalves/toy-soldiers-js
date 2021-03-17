@@ -2,9 +2,9 @@ import Domain from "../geometry/Domain";
 import {Interval} from "../geometry/Interval";
 import {ICoordinate} from "../geometry/Coordinate";
 import IComparable from "../util/IComparable";
-import {IGraph, IGraphEdge, IGraphNode} from "./GraphInterfaces";
-import {Dictionary} from "typescript-collections"
+import {IGraph, IGraphNode} from "./GraphInterfaces";
 import EMap from "../util/EMap";
+import {Line} from "../geometry/Line";
 
 export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGraph<Node> {
     readonly domain: Domain;
@@ -99,16 +99,34 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
         return this.all().filter((n): boolean => n.distance(center) <= radius);
     }
 
-    getNodesIntersecting(e: IGraphEdge<IGraphNode, IGraphNode>): Node[] {
-        const {from, to} = e;
+    getNodesIntersecting(from: IGraphNode, to: IGraphNode): Node[] {
+
+        const bufferRadius = 2;
+
         let intersects = this.all().filter(n => {
+
             const isNotFromNode = !n.equals(from);
             const isNotToNode = !n.equals(to);
 
+            const distanceToEdge = Line.from(from, to).shortestDistanceBetween(n);
+            const distanceToA = from.distance(n);
+            const distanceToB = to.distance(n);
+
+            const radius = bufferRadius? bufferRadius : 0;
+            const intersectsLine = distanceToEdge <= n.radius + radius;
+
+            const dist = from.distance(to);
+
+            const aIsOutside = distanceToA > dist;
+            const bIsOutside = distanceToB > dist;
+
+            const intersectsNode = intersectsLine && !(aIsOutside || bIsOutside);
+
             return isNotFromNode &&
                 isNotToNode &&
-                e.intersects(n)
+                intersectsNode
         });
+
         return intersects;
     }
 

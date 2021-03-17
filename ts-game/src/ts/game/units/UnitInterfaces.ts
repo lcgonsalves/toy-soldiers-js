@@ -6,9 +6,10 @@ import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import LocationNode, {IWorldNode} from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGTags from "../../util/SVGTags";
-import {Observable, Subscription} from "rxjs";
+import {Observable, Subject, Subscription} from "rxjs";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
-import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import {UnitInteraction} from "./BaseUnit";
+import {map, throttleTime} from "rxjs/operators";
 
 /**
  * Encompasses operations for mounting, unmounting, and updating element UI.
@@ -51,15 +52,38 @@ export type Sprite<E extends SVGElement> = IDepictable<E> & IMovable<any> & ICop
  */
 export function DepictableUnit<
     E extends SVGElement,
-    T extends GenericConstructor<IWorldNode> = GenericConstructor<LocationNode>,
+    T extends GenericConstructor<IWorldNode> = GenericConstructor<IWorldNode>,
     S extends Sprite<E> = Sprite<E>
     >(Base: T, sprite: S) {
 
-    return class Depictable extends Base implements IDepictableWithSprite<SVGGElement, S>, IMovable, ICoordinate, IWorldNode {
+    return class Depictable extends Base
+        implements IDepictableWithSprite<SVGGElement, S>,
+            IMovable,
+            ICoordinate,
+            IWorldNode,
+            IClickable<UnitInteraction<Depictable>>,
+            IHoverable<UnitInteraction<Depictable>>
+    {
 
         anchor: Selection<SVGGElement, IDepictable<E>, any, any> | undefined;
         sprite: S | undefined;
         refreshOnPositionUpdate: Subscription | undefined;
+
+        readonly $click: Subject<UnitInteraction<this>> = new Subject();
+        readonly $mouseEnter: Subject<UnitInteraction<this>> = new Subject();
+        readonly $mouseLeave: Subject<UnitInteraction<this>> = new Subject();
+
+        onClick(observer: (evt: UnitInteraction<this>) => void): Subscription {
+            return this.$click.subscribe(observer);
+        }
+
+        onMouseEnter(observer: (evt: UnitInteraction<this>) => void): Subscription {
+            return this.$mouseEnter.subscribe(observer);
+        }
+
+        onMouseLeave(observer: (evt: UnitInteraction<this>) => void): Subscription {
+            return this.$mouseLeave.subscribe(observer);
+        }
 
         /**
          * Attaches depiction and initializes sprite if not done already.
@@ -88,6 +112,29 @@ export function DepictableUnit<
 
             // then we attach it to the selection
             this.sprite.attachDepictionTo(container);
+
+            this.sprite?.$mouseEnter.pipe(
+                throttleTime(200),
+                map((coord: ICoordinate) => ({
+                    target: this,
+                    focus: coord
+                }))
+            ).subscribe(this.$mouseEnter);
+
+            this.sprite?.$mouseLeave.pipe(
+                throttleTime(400),
+                map((coord: ICoordinate) => ({
+                    target: this,
+                    focus: coord
+                }))
+            ).subscribe(this.$mouseLeave);
+
+            this.sprite?.$click.pipe(
+                map((coord: ICoordinate) => ({
+                    target: this,
+                    focus: coord
+                }))
+            ).subscribe(this.$click);
 
         }
 
@@ -128,11 +175,6 @@ export function DepictableUnit<
             this.sprite?.delete();
             this.refreshOnPositionUpdate?.unsubscribe();
             this.$positionChange.complete();
-        }
-
-        connectTo(other: IGraphNode, bidirectional?: boolean): this {
-            super.connectTo(other, bidirectional);
-            return this;
         }
 
     }

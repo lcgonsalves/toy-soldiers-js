@@ -18,55 +18,28 @@ export class Base extends LocationNode implements IBase {
 
     readonly roadConnectors: number = 4;
 
-    get worldContext(): BaseContext<Base> { return super.worldContext as BaseContext<Base> }
-
     get occupation(): number {
         return this._occupation;
     }
 
     /** returns all of the (this.adjacent) that are specifically LocationNodes */
     get adjacentLocations(): LocationNode[] {
-        return this.adjacent.filter(_ => _.key === LocationNode.key);
+        return this.adjacent.filter(_ => (_ instanceof LocationNode) && !(_ instanceof Base)) as unknown as LocationNode[];
     }
 
     /** returns all of the (this.adjacent) that are specifically Bases */
     get adjacentBases(): Base[] {
-        // type case enforced by key definition
-        return this.adjacent.filter(_ => _.key === Base.key) as Base[];
-    }
-
-    get adjacent(): (Base | LocationNode)[] {
-        // type cast enforced by this.connectTo() function
-        return super.adjacent as (Base | LocationNode)[];
-    }
-
-    /**
-     * Connects this base to another Base, if a connection is available.
-     * @param other
-     * @param bidirectional
-     */
-    connectTo(other: IGraphNode, bidirectional?: boolean): this {
-        super.connectTo(other, bidirectional);
-        return this;
-    }
-
-    disconnectFrom(other: IGraphNode, bidirectional?: boolean): this {
-        super.disconnectFrom(other, bidirectional);
-        return this;
-    }
-
-    associate(worldContext: BaseContext<Base>): this {
-        return super.associate(worldContext);
+        return this.adjacent.filter(_ => _ instanceof Base) as unknown as Base[];
     }
 
 }
 
 
-export class BaseContext<B extends Base, L extends LocationNode = LocationNode> extends LocationContext<B> {
+export class BaseContext<B extends Base, L extends LocationNode> extends LocationContext<B> {
 
     readonly locations: LocationContext<L>;
 
-    get availableLocations(): LocationNode[] {
+    get availableLocations(): L[] {
 
         // get all positions, sorted by distance
         const allLocations = this.locations.all();

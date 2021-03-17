@@ -1,7 +1,7 @@
 import {ICoordinate, C, Coordinate} from "ts-shared/build/geometry/Coordinate";
 import {IDepictable} from "./UnitInterfaces";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {Observable, Subject, Subscription} from "rxjs"
+import {Subject, Subscription} from "rxjs"
 import {drag} from "d3-drag";
 import {ISnappable} from "ts-shared/build/util/ISnappable";
 import {filter} from "rxjs/operators";
@@ -46,17 +46,6 @@ export interface DragEvent {
 }
 
 /**
- * Parameters that model how the IDraggable should behave.
- *
- * - SnapOnEnd: Calls IDepictable.snap() when drag ends, snapping the element in place.
- * - SnapWhileDragging: Calls IDepictable.snap() during drag operation, limiting free movement of the IDepictable.
- */
-export interface DragConfig {
-    snapOnEnd: boolean;
-    snapWhileDragging: boolean;
-}
-
-/**
  * @mixin
  *
  * Injects drag behavior and handlers to a depictable coordinate-like Base class.
@@ -64,11 +53,6 @@ export interface DragConfig {
  */
 export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate & ISnappable>>(Base: T) {
     return class Draggable extends Base implements IDraggable {
-
-        public config: DragConfig = {
-            snapOnEnd: true,
-            snapWhileDragging: false
-        };
 
         private dragEnabled: boolean = true;
 
@@ -90,8 +74,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
             const {
                 $dragStart,
                 $dragEnd,
-                $dragging,
-                config
+                $dragging
             } = this;
 
             // instantiate handlers if this is the first time running
@@ -117,9 +100,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         const unscaledDistance = this.lastDragCursorPosition?.distanceInComponents(e.position) ?? this.distanceInComponents(e.position);
                         this.lastDragCursorPosition?.translateToCoord(e.position);
 
-                        config.snapWhileDragging ?
-                            this.snapSelf() :
-                            this.translateBy(unscaledDistance.x, unscaledDistance.y);
+                        this.translateBy(unscaledDistance.x, unscaledDistance.y);
 
                     }),
                     this.onDragEnd((e: DragEvent) => {
@@ -130,9 +111,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         this.anchor?.classed(DragCSS.GRABBED, false);
 
                         // translate to final coordinate
-                        config.snapOnEnd ?
-                            this.snapSelf() :
-                            this.translateToCoord(e.position);
+                        this.translateToCoord(e.position);
 
                     })
                 )

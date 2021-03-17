@@ -4,7 +4,7 @@ import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
 import AssetLoader from "../game/map/internal/AssetLoader";
 import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import {IGraphEdge, IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {PayloadRectangle} from "ts-shared/build/geometry/Payload";
 import {sq} from "ts-shared/build/util/Shorthands";
@@ -168,9 +168,8 @@ export class DockConfig extends RectConfig {
 }
 
 /** Returns coordinate of point (x1,y1) as defined in the usage of d3.path().arcTo() from a given curvature degree parameter */
-export function getArcToTangentPoint(edge: IGraphEdge<IGraphNode, IGraphNode>, intersectingNode?: IGraphNode, bufferRadius: number = 0): ICoordinate {
+export function getArcToTangentPoint(from: IGraphNode, to: IGraphNode, intersectingNode?: IGraphNode, bufferRadius: number = 0): ICoordinate {
 
-    const {from, to} = edge;
     const midpoint = from.midpoint(to);
     const curvature = intersectingNode ? intersectingNode.radius + bufferRadius : 0;
 
@@ -194,8 +193,7 @@ export function getArcToTangentPoint(edge: IGraphEdge<IGraphNode, IGraphNode>, i
 
 }
 
-export function getCurveRadius(edge: IGraphEdge<IGraphNode, IGraphNode>, intersectingNode?: IGraphNode, bufferRadius: number = 0): number {
-    const {from, to} = edge;
+export function getCurveRadius(from: IGraphNode, to: IGraphNode, intersectingNode?: IGraphNode, bufferRadius: number = 0): number {
     const curvature = intersectingNode ? intersectingNode.radius + bufferRadius : 0;
     return (4 * sq(curvature) + sq(from.distance(to))) / (8 * curvature);
 }

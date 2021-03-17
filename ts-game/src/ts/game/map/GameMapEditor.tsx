@@ -5,8 +5,6 @@ import "../../../css/Editor.css"
 
 import {MapEditorController} from "./internal/MapEditorController";
 import {Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import {LocationContext} from "ts-shared/build/mechanics/Location";
-import LocationUnit from "../units/LocationUnit";
 
 
 // todo: move state to props

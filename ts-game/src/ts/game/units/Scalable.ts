@@ -1,7 +1,7 @@
 import {C, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {IDepictable, IDepictableWithSprite} from "./UnitInterfaces";
+import {IDepictableWithSprite} from "./UnitInterfaces";
 import SVGAttrs from "../../util/SVGAttrs";
 import {AnySelection, getTransforms} from "../../util/DrawHelpers";
 

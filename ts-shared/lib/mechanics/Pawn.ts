@@ -10,7 +10,7 @@ const FootSoldierKey = "foot_soldier";
  * interact with other Pawns, and other actions. Pawns have health and will die when its HP reaches zero.
  * Each Pawn implementation has to define how those stats behave.
  */
-export class FootSoldier extends LocationNode implements IPawn, IArmyPossession {
+export class FootSoldier extends LocationNode<FootSoldier> implements IPawn, IArmyPossession {
     readonly key: string = FootSoldierKey;
 
     private _hp: number = MAX_HP;

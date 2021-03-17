@@ -2,13 +2,13 @@ import AbstractNode from "./AbstractNode";
 import {IGraphNode} from "./GraphInterfaces";
 import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {ISnappable} from "../util/ISnappable";
-import WorldContext from "../mechanics/WorldContext";
 
 
 /**
  * Represents a location or position on the map.  Is instantialized at (0,0) by default.
  */
-export default class LocationNode extends AbstractNode implements IWorldNode, ISnappable {
+export default class LocationNode
+    extends AbstractNode implements IWorldNode, ISnappable {
 
     readonly key: string = LocationNode.key;
     static readonly key: string = "location";
@@ -31,7 +31,7 @@ export default class LocationNode extends AbstractNode implements IWorldNode, IS
         return this;
     }
 
-    get adjacent(): IGraphNode[] {
+    get adjacent(): this[] {
         return super.adjacent;
     }
 
@@ -46,18 +46,7 @@ export default class LocationNode extends AbstractNode implements IWorldNode, IS
     }
 
     snapSelf(): void {
-        this.worldContext.snap(this);
-    }
 
-    private _worldContext: WorldContext<IGraphNode>;
-
-    get worldContext(): WorldContext<IGraphNode> {
-        return this._worldContext;
-    }
-
-    associate(worldContext: WorldContext<IGraphNode>): this {
-        this._worldContext = worldContext;
-        return this;
     }
 
 }
@@ -67,10 +56,5 @@ export interface IWorldNode extends IGraphNode {
     /** identifier for kind of node */
     readonly key: string;
     readonly name: string;
-
-    readonly worldContext: WorldContext<IGraphNode>;
-
-    /** Associates this node to a world context. */
-    associate(worldContext: WorldContext<IGraphNode>): this;
 
 }

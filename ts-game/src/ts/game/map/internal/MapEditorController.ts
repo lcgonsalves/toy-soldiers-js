@@ -1,4 +1,4 @@
-import {pointer, select} from "d3-selection";
+import {select} from "d3-selection";
 import SVGAttrs from "../../../util/SVGAttrs";
 import SVGTags from "../../../util/SVGTags";
 import {zoom} from "d3-zoom";
@@ -6,10 +6,7 @@ import {path, Path} from "d3-path";
 import {AnySelection, getTransforms} from "../../../util/DrawHelpers";
 import Dock from "./Dock";
 import {ActionTooltip} from "./Tooltip";
-import {Events} from "../../../util/Events";
 import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import LocationNode from "ts-shared/build/graph/LocationNode";
-import {TAction, TargetAction} from "../../../util/Action";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
@@ -48,7 +45,7 @@ export class MapEditorController {
     public readonly locations: LocationContext<LocationUnit> = new LocationContext<LocationUnit>(15, 300, 300);
 
     // context where bases exist
-    public readonly bases: BaseContext<BaseUnit> = new BaseContext<BaseUnit>(this.locations);
+    public readonly bases: BaseContext<BaseUnit, LocationUnit> = new BaseContext<BaseUnit, LocationUnit>(this.locations);
 
     // REGISTER ITEMS INTO DOCK //
 
@@ -199,7 +196,7 @@ export class MapEditorController {
         // ## construct function, name and title
         const {dock} = this;
         dock.register(
-            "BuildableLocation",
+            "Buildable Location",
             "A simple node signifying a location in the x-y plane.",
             (x: number, y: number, id: string, name: string) => new LocationUnit(id, C(x, y), name),
             // location units can be placed anywhere
@@ -207,7 +204,7 @@ export class MapEditorController {
         );
 
         dock.register(
-            "TestBase",
+            "Test Base",
             "A  base where pawns can occupy.",
             (x: number, y: number, id: string, name: string) => {
                 const b = new BaseUnit(id, C(x, y), name)
@@ -245,161 +242,161 @@ export class MapEditorController {
 
         
 
-        // allowed actions upon every node
-
-        // moves into connecting state, tracking a virtual node until either the esc key is pressed,
-        // or the user clicks on a node, or the user clicks somewhere in the map.
-        const connectToAction = TAction<Unit>("connect", "connect", node => {
-
-            // create virtual node
-            const mouseTrackerNodeID = "tracker";
-            const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, node);
-
-            // connect to it
-            node.connectTo(mouseTrackerNode);
-
-            // disable tooltip to not create a mess
-            this.actionTooltip.enabled = false;
-            this.actionTooltip.unfocus();
-
-            // make this node undraggable
-            // node.draggable = false;
-
-            // make background track mouse movement and update node location
-
-            // attach a listener to this node to detect clicks.
-            // clicking on this node should create a connection
-            // callback function should undo everything.
-            const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
-
-                node.connectTo(n, true);
-
-                allLocations.forEach(_ => {
-                    // _.removeOnMouseClick(hook.key);
-                    // _.draggable = true;
-                });
-                // node.draggable = true;
-
-                this.bgGroup?.on(Events.mousemove, null);
-                node.disconnectFrom(mouseTrackerNode);
-                select("body").on(Events.keydown, null);
-                this.actionTooltip.enabled = true;
-
-
-            });
-
-            // prepare nodes for connection
-            const allLocations = this.locations.all().filter(l => !l.overlaps(node));
-            allLocations.forEach(l => {
-
-                // now they are listening for that sweet sweet click
-                // l.onMouseClick(hook.key, () => hook.apply(l));
-
-                // now they stop being draggable
-                // l.draggable = false;
-
-            });
-
-
-            this.bgGroup?.on(Events.mousemove, function(evt: any) {
-
-                const [x, y] = pointer(evt);
-                const eventCoordinate = C(x, y);
-
-                // magnet zone
-                const magnetZone = 5;
-                const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
-                closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
-
-                // node.refreshEdgeDepiction();
-
-            });
-
-            // listen for esc press, stop all when pressed
-            select("body").on(Events.keydown, e => {
-                if (e.code === "Escape") {
-
-                    allLocations.forEach(_ => {
-                        // _.removeOnMouseClick(hook.key);
-                        // _.draggable = true;
-                    });
-                    // node.draggable = true;
-
-                    this.bgGroup?.on(Events.mousemove, null);
-                    node.disconnectFrom(mouseTrackerNode);
-                    select("body").on(Events.keydown, null);
-                    this.actionTooltip.enabled = true;
-
-                }
-            });
-
-        });
-        connectToAction.depiction = TargetAction.depiction.neutral
-
-        const removeAction = TAction<Unit>("remove", "remove", node => {
-            this.locations.rm(node.id);
-            this.actionTooltip.unfocus(0);
-            this.locations.getNodesAdjacentTo(node).forEach(adj => {
-                node.disconnectFrom(adj, true);
-                console.log(adj.adjacent);
-                // adj.refreshEdgeDepiction();
-            });
-
-            node.deleteDepiction();
-
-        });
-        removeAction.depiction = TargetAction.depiction.delete;
-
-        const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
-            // build a new action for each adjacent node
-            const newActions = node.adjacent.map((adjNode) => {
-                const actionName = "dc_" + adjNode.id;
-
-                return TAction<LocationUnit>(
-                    actionName,
-                    actionName,
-                    () => {
-
-                        // because we do want the line to disappear, otherwise it looks weird
-                        node.disconnectFrom(adjNode, true);
-
-                        // also remove the button
-                        this.actionTooltip.removeAction(actionName);
-
-                    },
-                    {
-                        start: () => {
-                            // adjNode.toggleHighlight();
-                            console.log("highlight on " + adjNode.toString())
-                        },
-                        stop: () => {
-                            // adjNode.toggleHighlight()
-                            console.log("highlight off " + adjNode.toString())
-                        }
-                    });
-
-            });
-
-            this.actionTooltip.setActions<Unit>(newActions, node, 0);
-
-        });
-        disconnectFromAction.depiction = TargetAction.depiction.neutral;
-
-        const actionsForLooseNodes = [connectToAction, removeAction];
-
-        // display tooltip on hover
-        // n.onMouseIn("display_tooltip", () => {
-        //     const hasNeighbors = n.adjacent.length > 0;
+        // // allowed actions upon every node
         //
-        //     this.actionTooltip.focus(
-        //         n,
-        //         hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
-        //         n.coordinate.translateBy(0, -n.radius),
-        //         670
-        //     )
+        // // moves into connecting state, tracking a virtual node until either the esc key is pressed,
+        // // or the user clicks on a node, or the user clicks somewhere in the map.
+        // const connectToAction = TAction<Unit>("connect", "connect", node => {
+        //
+        //     // create virtual node
+        //     const mouseTrackerNodeID = "tracker";
+        //     const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, node);
+        //
+        //     // connect to it
+        //     node.connectTo(mouseTrackerNode);
+        //
+        //     // disable tooltip to not create a mess
+        //     this.actionTooltip.enabled = false;
+        //     this.actionTooltip.unfocus();
+        //
+        //     // make this node undraggable
+        //     // node.draggable = false;
+        //
+        //     // make background track mouse movement and update node location
+        //
+        //     // attach a listener to this node to detect clicks.
+        //     // clicking on this node should create a connection
+        //     // callback function should undo everything.
+        //     const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
+        //
+        //         node.connectTo(n, true);
+        //
+        //         allLocations.forEach(_ => {
+        //             // _.removeOnMouseClick(hook.key);
+        //             // _.draggable = true;
+        //         });
+        //         // node.draggable = true;
+        //
+        //         this.bgGroup?.on(Events.mousemove, null);
+        //         node.disconnectFrom(mouseTrackerNode);
+        //         select("body").on(Events.keydown, null);
+        //         this.actionTooltip.enabled = true;
+        //
+        //
+        //     });
+        //
+        //     // prepare nodes for connection
+        //     const allLocations = this.locations.all().filter(l => !l.overlaps(node));
+        //     allLocations.forEach(l => {
+        //
+        //         // now they are listening for that sweet sweet click
+        //         // l.onMouseClick(hook.key, () => hook.apply(l));
+        //
+        //         // now they stop being draggable
+        //         // l.draggable = false;
+        //
+        //     });
+        //
+        //
+        //     this.bgGroup?.on(Events.mousemove, function(evt: any) {
+        //
+        //         const [x, y] = pointer(evt);
+        //         const eventCoordinate = C(x, y);
+        //
+        //         // magnet zone
+        //         const magnetZone = 5;
+        //         const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
+        //         closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
+        //
+        //         // node.refreshEdgeDepiction();
+        //
+        //     });
+        //
+        //     // listen for esc press, stop all when pressed
+        //     select("body").on(Events.keydown, e => {
+        //         if (e.code === "Escape") {
+        //
+        //             allLocations.forEach(_ => {
+        //                 // _.removeOnMouseClick(hook.key);
+        //                 // _.draggable = true;
+        //             });
+        //             // node.draggable = true;
+        //
+        //             this.bgGroup?.on(Events.mousemove, null);
+        //             node.disconnectFrom(mouseTrackerNode);
+        //             select("body").on(Events.keydown, null);
+        //             this.actionTooltip.enabled = true;
+        //
+        //         }
+        //     });
+        //
         // });
-        // n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
-
+        // connectToAction.depiction = TargetAction.depiction.neutral
+        //
+        // const removeAction = TAction<Unit>("remove", "remove", node => {
+        //     this.locations.rm(node.id);
+        //     this.actionTooltip.unfocus(0);
+        //     this.locations.getNodesAdjacentTo(node).forEach(adj => {
+        //         node.disconnectFrom(adj, true);
+        //         console.log(adj.adjacent);
+        //         // adj.refreshEdgeDepiction();
+        //     });
+        //
+        //     node.deleteDepiction();
+        //
+        // });
+        // removeAction.depiction = TargetAction.depiction.delete;
+        //
+        // const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
+        //     // build a new action for each adjacent node
+        //     const newActions = node.adjacent.map((adjNode) => {
+        //         const actionName = "dc_" + adjNode.id;
+        //
+        //         return TAction<LocationUnit>(
+        //             actionName,
+        //             actionName,
+        //             () => {
+        //
+        //                 // because we do want the line to disappear, otherwise it looks weird
+        //                 node.disconnectFrom(adjNode, true);
+        //
+        //                 // also remove the button
+        //                 this.actionTooltip.removeAction(actionName);
+        //
+        //             },
+        //             {
+        //                 start: () => {
+        //                     // adjNode.toggleHighlight();
+        //                     console.log("highlight on " + adjNode.toString())
+        //                 },
+        //                 stop: () => {
+        //                     // adjNode.toggleHighlight()
+        //                     console.log("highlight off " + adjNode.toString())
+        //                 }
+        //             });
+        //
+        //     });
+        //
+        //     this.actionTooltip.setActions<Unit>(newActions, node, 0);
+        //
+        // });
+        // disconnectFromAction.depiction = TargetAction.depiction.neutral;
+        //
+        // const actionsForLooseNodes = [connectToAction, removeAction];
+        //
+        // // display tooltip on hover
+        // // n.onMouseIn("display_tooltip", () => {
+        // //     const hasNeighbors = n.adjacent.length > 0;
+        // //
+        // //     this.actionTooltip.focus(
+        // //         n,
+        // //         hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
+        // //         n.coordinate.translateBy(0, -n.radius),
+        // //         670
+        // //     )
+        // // });
+        // // n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
+        //
         // n.onDragStart(() => {
         //     this.actionTooltip.enabled = false;
         //     this.actionTooltip.unfocus(0, true);
@@ -410,15 +407,19 @@ export class MapEditorController {
 
     }
 
-    private initializeBaseNode<Base extends BaseUnit>(b: Base): void {
+    private initializeBaseNode<B extends BaseUnit>(b: B): void {
 
         this.bases.add(b);
         b.snapSelf();
 
         // listen for hovers
         b.onMouseEnter(e => {
-            // this.actionTooltip.focus(e.focus)
-        })
+            this.actionTooltip.focus(e.target, [b.buildRoad(this.bgGroup.node())], e.focus, 150);
+        });
+
+        b.onMouseLeave(() => this.actionTooltip.unfocus(250));
+
+        b.onDragStart(() => this.actionTooltip.unfocus(0));
 
     }
 

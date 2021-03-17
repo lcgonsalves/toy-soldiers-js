@@ -8,7 +8,7 @@ import {SimpleDepiction} from "../../util/Depiction";
 import {AbstractShape} from "./ShapeUtil";
 import {CircleShape} from "./CircleShape";
 import {LineShape} from "./LineShape";
-import {combineLatest, Observable, race, Subject, Subscription} from "rxjs";
+import {merge, Observable, Subscription} from "rxjs";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
 
 export class CompositeShape implements IDepictable, IMovable, ICopiable, IClickable<ICoordinate>, IHoverable<ICoordinate> {
@@ -17,11 +17,11 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
     readonly center: ICoordinate;
     readonly layers: AbstractShape[] = [];
 
-    get $mouseEnter(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$mouseEnter)); }
+    get $mouseEnter(): Observable<ICoordinate> { return merge(...this.layers.map(_ => _.$mouseEnter)); }
 
-    get $mouseLeave(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$mouseLeave)); }
+    get $mouseLeave(): Observable<ICoordinate> { return merge(...this.layers.map(_ => _.$mouseLeave)); }
 
-    get $click(): Observable<ICoordinate> { return race(this.layers.map(_ => _.$click)); }
+    get $click(): Observable<ICoordinate> { return merge(...this.layers.map(_ => _.$click)); }
 
     get cls(): string {
         return "." + this.name
@@ -35,7 +35,6 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
         this.center = new Coordinate(0, 0);
 
         // hook up individual shapes' listeners to this one
-        // this.layers.forEach();
 
     }
 

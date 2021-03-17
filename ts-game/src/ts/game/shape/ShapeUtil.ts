@@ -79,6 +79,11 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
                 fromEvent(node, Events.mouseleave).pipe(map(() => this.center)).subscribe(this.$mouseLeave)
             );
         }
+        if (!hoverable && !clickable) {
+
+            node.setAttribute("pointer-events", "none");
+
+        }
 
         this._anchor = anchor;
         this.refresh();

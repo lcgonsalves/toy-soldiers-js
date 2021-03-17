@@ -1,9 +1,9 @@
 import {AbstractShape} from "./ShapeUtil";
-import {C, ICoordinate} from "ts-shared/build/geometry/Coordinate";
+import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {SimpleDepiction} from "../../util/Depiction";
 import {defaultDepictions} from "../../util/DrawHelpers";
 import SVGTags from "../../util/SVGTags";
-import {combineLatest, interval, Subject} from "rxjs";
+import {combineLatest, Subject} from "rxjs";
 import {line, Line} from "d3-shape"
 import {throttleTime} from "rxjs/operators";
 import SVGAttrs from "../../util/SVGAttrs";
