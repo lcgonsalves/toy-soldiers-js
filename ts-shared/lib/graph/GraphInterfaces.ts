@@ -3,6 +3,7 @@ import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
 import {ISerializable} from "../util/ISerializable";
 import EMap from "../util/EMap";
+import {Observable, Subscription} from "rxjs";
 
 /**
  * Generically describes items that have graph node properties. They can be
@@ -173,6 +174,31 @@ export interface IGraph<Node extends IGraphNode>
      */
     getNodesIntersecting(from: IGraphNode, to: IGraphNode): IGraphNode[];
 
+    // observables
+
+    /**
+     * Fires events every time a node is added, containing the instance of the node
+     * that was added.
+     */
+    readonly $add: Observable<Node[]>;
+
+    /**
+     * Fires events every time a node is removed, containing the instance of the node
+     * that was added.
+     */
+    readonly $rm: Observable<Node[]>;
+
+    /**
+     * Watches node additions to the graph.
+     * @param observer
+     */
+    onAdd(observer: (node: Node[]) => void): Subscription;
+
+    /**
+     * Watches node removals from the graph.
+     * @param observer
+     */
+    onRm(observer: (node: Node[]) => void): Subscription;
 
 }
 

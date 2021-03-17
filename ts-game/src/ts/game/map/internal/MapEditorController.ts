@@ -11,7 +11,8 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
 import {IDepictable} from "../../units/UnitInterfaces";
-import {BaseContext} from "ts-shared/build/mechanics/Base";
+import {Base, BaseContext} from "ts-shared/build/mechanics/Base";
+import {merge, Subscription} from "rxjs";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -47,6 +48,9 @@ export class MapEditorController {
     // context where bases exist
     public readonly bases: BaseContext<BaseUnit, LocationUnit> = new BaseContext<BaseUnit, LocationUnit>(this.locations);
 
+    // for internal reactive management
+    private subscriptions: Map<string, Subscription[]> = new Map<string, Subscription[]>();
+
     // REGISTER ITEMS INTO DOCK //
 
     /** ADD ACCEPTED TYPES HERE WHEN REGISTERING NEW ITEMS */
@@ -66,6 +70,16 @@ export class MapEditorController {
 
     // putting all of the boilerplate in here
     constructor(anchor: SVGSVGElement, config: MapEditorMapConfig) {
+
+        // watch for node removals and clear subscriptions
+        merge<LocationUnit[], BaseUnit[]>(this.locations.$rm, this.bases.$rm)
+            .subscribe((removedUnits: Array<LocationUnit | BaseUnit>) => {
+                removedUnits.forEach(unit => this.subscriptions.get(unit.id + unit.key)?.forEach(_ => _.unsubscribe()))
+            });
+
+        // watch for node additions and snap them
+        this.locations.onAdd((locations) => locations.forEach(_ => this.locations.snap(_)));
+        this.bases.onAdd((bases) => bases.forEach(_ => this.bases.snap(_)));
 
         const gridCoords = {
             topL: new Coordinate(this.locations.domain.x.min, this.locations.domain.y.min),
@@ -234,13 +248,19 @@ export class MapEditorController {
 
     }
 
+    registerSubscription(id: string, ...s: Subscription[]): void {
+        if (this.subscriptions.has(id)) {
+            this.subscriptions.get(id)?.push(...s);
+        } else this.subscriptions.set(id, s);
+    }
+
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
     private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         this.locations.add(n);
-        n.snapSelf();
 
-        
+        // snap on end of drag
+        this.registerSubscription(n.id + n.key, n.onDragEnd(() => this.locations.snap(n)));
 
         // // allowed actions upon every node
         //
@@ -410,16 +430,9 @@ export class MapEditorController {
     private initializeBaseNode<B extends BaseUnit>(b: B): void {
 
         this.bases.add(b);
-        b.snapSelf();
+        this.bases.snap(b);
 
         // listen for hovers
-        b.onMouseEnter(e => {
-            this.actionTooltip.focus(e.target, [b.buildRoad(this.bgGroup.node())], e.focus, 150);
-        });
-
-        b.onMouseLeave(() => this.actionTooltip.unfocus(250));
-
-        b.onDragStart(() => this.actionTooltip.unfocus(0));
 
     }
 

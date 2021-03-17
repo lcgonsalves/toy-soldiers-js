@@ -5,13 +5,26 @@ import IComparable from "../util/IComparable";
 import {IGraph, IGraphNode} from "./GraphInterfaces";
 import EMap from "../util/EMap";
 import {Line} from "../geometry/Line";
+import {Observable, Subject, Subscription} from "rxjs";
 
 export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGraph<Node> {
+
     readonly domain: Domain;
     readonly nodes: EMap<string, Node> = new EMap<string, Node>();
     readonly width: number;
     readonly height: number;
     get step(): number { return this.domain.x.step }
+
+    private _$add: Subject<Node[]> = new Subject<Node[]>();
+    private _$rm: Subject<Node[]> = new Subject<Node[]>();
+
+    get $add(): Observable<Node[]> {
+        return this._$add;
+    }
+
+    get $rm(): Subject<Node[]> {
+        return this._$rm;
+    }
 
     constructor(step?: number, width: number = 200, height: number = 200) {
 
@@ -31,12 +44,22 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
 
     add(...n: Node[]): IGraph<Node> {
         n.forEach(n => this.nodes.setValue(n.id, n));
+        this._$add.next(n);
         return this;
     }
 
+    onAdd(observer: (node: Node[]) => void): Subscription {
+        return this.$add.subscribe(observer);
+    }
+
     rm(...n: string[]): IGraph<Node> {
-        n.forEach(nodeID => this.nodes.remove(nodeID));
+        const nrm = n.flatMap(nodeID => this.nodes.remove(nodeID));
+        this._$rm.next(nrm);
         return this;
+    }
+
+    onRm(observer: (node: Node[]) => void): Subscription {
+        return this.$rm.subscribe(observer);
     }
 
     contains(id: string): boolean {

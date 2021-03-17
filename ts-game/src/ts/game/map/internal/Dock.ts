@@ -9,6 +9,7 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationNode from "ts-shared/build/graph/LocationNode";
 import {IScalable} from "../../units/Scalable";
 import {Subject, Subscription} from "rxjs";
+import {isDraggable} from "../../units/Draggable";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit
@@ -23,13 +24,14 @@ enum DockCSS {
 /**
  * Implementation of a menu that can instantiate Units.
  */
-export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepictable = (LocationNode & IScalable & IDepictable)>
-    extends LocationContext<AcceptedUnits> implements IDepictable {
+export default class Dock<Unit extends LocationNode & IScalable & IDepictable = (LocationNode & IScalable & IDepictable)>
+    extends LocationContext<Unit> implements IDepictable {
 
-    private registeredItems: Map<string, DockItem<AcceptedUnits> | undefined> = new Map<string, DockItem<AcceptedUnits> | undefined>();
+    private registeredItems: Map<string, DockItem<Unit> | undefined> = new Map<string, DockItem<Unit> | undefined>();
+    private subscriptions: Map<string, Subscription> = new Map();
     private itemsCreated: number = 0;
     public readonly config: DockConfig;
-    private $nodePlacement: Subject<AcceptedUnits> = new Subject();
+    private $nodePlacement: Subject<Unit> = new Subject();
 
     public anchor: AnySelection | undefined;
 
@@ -37,10 +39,44 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         super();
         if (name) config.rename(name);
         this.config = config;
+
+        // hook position listeners to snap, if the Unit is draggable
+        this.$add.subscribe((nodes: Unit[]) => {
+
+            nodes.forEach(n => {
+
+                // if this node happens to be Draggable
+                if (isDraggable(n)) {
+
+                    this.subscriptions.set(
+                        n.id,
+                        n.onDragEnd(() => {
+                            this.snap(n)
+                        })
+                    );
+
+                }
+
+            });
+
+        });
+
+        // upon removal, clear subscription and remove from tracker
+        this.$rm.subscribe((nodes: Unit[]) => {
+
+            nodes.forEach(n => {
+
+                this.subscriptions.get(n.id)?.unsubscribe();
+                this.subscriptions.delete(n.id);
+
+            });
+
+        });
+
     }
 
 
-    snap(node: AcceptedUnits): ICoordinate {
+    snap(node: Unit): ICoordinate {
 
         const assignedItem = this.registeredItems.get(node.name);
         const assignedBox = assignedItem?.container;
@@ -75,12 +111,14 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
 
             // return
             return node;
+
         };
         // else connect to node context and apply the transform
 
     }
 
-    add(...n: AcceptedUnits[]): this {
+    /** DO NOT USE ADD ON THE DOCK. Instead, register depictable items. Items can be draggable. See `register()` documentation. */
+    add(...n: Unit[]): this {
         console.error("You cannot add items to the menu context manually.");
         return this;
     }
@@ -119,22 +157,32 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
 
     }
 
-    get allMenuItems(): DockItem<AcceptedUnits>[] {
+    get allMenuItems(): DockItem<Unit>[] {
         // filter removed items and cast properly because js sucks
-        return [... this.registeredItems.values()].filter(_ => _ !== undefined) as DockItem<AcceptedUnits>[];
+        return [... this.registeredItems.values()].filter(_ => _ !== undefined) as DockItem<Unit>[];
     }
 
     /**
-     * Registers a menu item.
-     * @returns {string} the ID of this new menu item. Can be used to control said menu
-     * item externally.
+     * Registers a menu item. If instantiated items (can be fetched by running Dock.nodes) translate to a location
+     * within the bounds of the doc, and snapped, they will be snapped back to the box. If outside the bounds of the dock,
+     * snapping will trigger the `placementPredicate` function, which should return true if the item is at a position
+     * that is valid. If it is valid, the Dock will run its removal/placement routine, resetting the node's scale, removing it
+     * from this context, deleting its depiction, and triggering the $nodePlacement observable. The Dock is not responsible
+     * for placing the node, this should be handled by whoever manages the Dock.
+     *
+     * @param title {string} the title that will be displayed for a given item.
+     * @param description {string} the description to be displayed for the given item
+     * @param constructor {function} function that instantiates the Unit
+     * @param placementPredicate {function} returns true if the unit is currently at a valid placement location.
+     *
+     * @returns {string} the ID of this new menu item. Can be used to fetch information about the item externally.
      */
-    public register<NewUnit extends AcceptedUnits>(
+    public register<NewUnit extends Unit>(
         title: string,
         description: string,
         constructor: UnitConstructor<NewUnit>,
         placementPredicate: (unit: NewUnit) => boolean = () => false
-    ): void {
+    ): string {
         const id = "menu_item_" + this.registeredItems.size;
         const container = this.getNextBox(this.registeredItems.size);
         const item = new DockItem<NewUnit>(id, title, description, constructor, placementPredicate, container);
@@ -145,9 +193,11 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         );
 
         this.instantiate(item);
+
+        return id;
     }
 
-    private instantiate<NewUnit extends AcceptedUnits>(item: DockItem<NewUnit>): AcceptedUnits {
+    private instantiate<NewUnit extends Unit>(item: DockItem<NewUnit>): Unit {
 
         const {container, title, id} = item;
         const gameUnitInstance = item.make(container.x, container.y, title + this.itemsCreated, id);
@@ -179,7 +229,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         this.attachTabDepictionTo(selection);
 
         // draw containers for each registered item
-        selection.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockCSS.ITEM_CONTAINER_CLS)
+        selection.selectAll<SVGGElement, DockItem<Unit>>("." + DockCSS.ITEM_CONTAINER_CLS)
             .data(this.allMenuItems)
             .enter()
             .append(SVGTags.SVGGElement)
@@ -263,7 +313,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
     // TODO: finish implementation, update text content
     refresh(): void {
 
-        const dataJoin = this.anchor?.selectAll<SVGGElement, DockItem<AcceptedUnits>>("." + DockCSS.ITEM_CONTAINER_CLS)
+        const dataJoin = this.anchor?.selectAll<SVGGElement, DockItem<Unit>>("." + DockCSS.ITEM_CONTAINER_CLS)
             .data(this.allMenuItems);
 
         dataJoin?.attr(SVGAttrs.x, _ => _.container.topLeft.x)
@@ -276,7 +326,7 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
 
     }
 
-    onNodePlacement(handler: (node: AcceptedUnits) => void): Subscription {
+    onNodePlacement(handler: (node: Unit) => void): Subscription {
         return this.$nodePlacement.subscribe(handler);
     }
 

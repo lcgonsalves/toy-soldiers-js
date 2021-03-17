@@ -1,7 +1,7 @@
 import {ICoordinate, C, Coordinate} from "ts-shared/build/geometry/Coordinate";
 import {IDepictable} from "./UnitInterfaces";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {Subject, Subscription} from "rxjs"
+import {Observable, Subject, Subscription} from "rxjs"
 import {drag} from "d3-drag";
 import {ISnappable} from "ts-shared/build/util/ISnappable";
 import {filter} from "rxjs/operators";
@@ -10,6 +10,10 @@ import {filter} from "rxjs/operators";
  * An element that, when dragged with a mouse, will translate to the mouse position.
  */
 export interface IDraggable {
+
+    readonly $dragStart: Observable<DragEvent>;
+    readonly $dragging: Observable<DragEvent>;
+    readonly $dragEnd: Observable<DragEvent>;
 
     /** Initializes drag behavior. */
     initializeDrag(): void;
@@ -53,12 +57,24 @@ export interface DragEvent {
  */
 export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordinate & ISnappable>>(Base: T) {
     return class Draggable extends Base implements IDraggable {
-
         private dragEnabled: boolean = true;
 
-        private $dragStart: Subject<DragEvent> = new Subject<DragEvent>();
-        private $dragging: Subject<DragEvent> = new Subject<DragEvent>();
-        private $dragEnd: Subject<DragEvent> = new Subject<DragEvent>();
+        private _$dragStart: Subject<DragEvent> = new Subject<DragEvent>();
+        private _$dragging: Subject<DragEvent> = new Subject<DragEvent>();
+        private _$dragEnd: Subject<DragEvent> = new Subject<DragEvent>();
+
+        get $dragStart(): Observable<DragEvent>{
+            return this._$dragStart;
+        }
+
+        get $dragging(): Observable<DragEvent>{
+            return this._$dragStart;
+        }
+
+        get $dragEnd(): Observable<DragEvent>{
+            return this._$dragStart;
+        }
+
 
         // keeping track of the subscriptions
         private defaultHandlers: Subscription[] = [];
@@ -72,9 +88,9 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
             if (!this.lastDragCursorPosition) this.lastDragCursorPosition = Coordinate.origin;
 
             const {
-                $dragStart,
-                $dragEnd,
-                $dragging
+                _$dragStart,
+                _$dragEnd,
+                _$dragging
             } = this;
 
             // instantiate handlers if this is the first time running
@@ -124,7 +140,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
 
                 d.on(DragEvents.START, function (this: SVGGElement, event: any): void {
 
-                    $dragStart.next({
+                    _$dragStart.next({
                         element: this,
                         event,
                         position: C(event.x, event.y)
@@ -134,7 +150,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
 
                 d.on(DragEvents.DRAG, function (this: SVGGElement, event: any): void {
 
-                    $dragging.next({
+                    _$dragging.next({
                         element: this,
                         event,
                         position: C(event.x, event.y)
@@ -144,7 +160,7 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
 
                 d.on(DragEvents.END, function (this: SVGGElement, event: any): void {
 
-                    $dragEnd.next({
+                    _$dragEnd.next({
                         element: this,
                         event,
                         position: C(event.x, event.y)
@@ -159,15 +175,15 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
         }
 
         onDragStart(newAction: (e: DragEvent) => void) {
-            return this.$dragStart.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
+            return this._$dragStart.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
         onDrag(newAction: (e: DragEvent) => void) {
-            return this.$dragging.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
+            return this._$dragging.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
         onDragEnd(newAction: (e: DragEvent) => void) {
-            return this.$dragEnd.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
+            return this._$dragEnd.pipe(filter(_ => this.dragEnabled)).subscribe(newAction);
         }
 
         enableDrag(): this {
@@ -181,6 +197,19 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
         }
 
     }
+}
+
+export function isDraggable(obj: any): obj is IDraggable {
+
+    return (
+        "$dragEnd" in obj &&
+        "$dragStart" in obj &&
+        "$dragging" in obj &&
+        "onDragStart" in obj &&
+        "onDrag" in obj &&
+        "onDragEnd" in obj
+    )
+
 }
 
 // supported events
