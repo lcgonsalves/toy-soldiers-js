@@ -5,6 +5,7 @@ import {DraggableUnit} from "./Draggable";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {AnySelection} from "../../util/DrawHelpers";
 import {SampleShapes} from "../shape/Premade";
+import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 
 
 /** #################################### *
@@ -15,7 +16,7 @@ import {SampleShapes} from "../shape/Premade";
  *  Represent a valid location, where other units can be placed.
  */
 export default class LocationUnit
-    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGCircleElement>(LocationNode, SampleShapes.dot))) {
+    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGCircleElement, GenericConstructor<LocationNode>>(LocationNode, SampleShapes.dot))) {
 
     // declare constructor so the code-analysis doesn't freak out
     constructor(id: string, position?: ICoordinate, name?: string) {

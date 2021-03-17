@@ -95,6 +95,14 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
 
     }
 
+    delete() {
+        this.deleteDepiction();
+        this.$click.complete();
+        this.$mouseEnter.complete();
+        this.$mouseLeave.complete();
+        for ( let s of this.subscriptions ) { s.unsubscribe() }
+    }
+
     refresh(): void {
 
         const {

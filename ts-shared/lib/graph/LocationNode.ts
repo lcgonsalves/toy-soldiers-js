@@ -4,12 +4,14 @@ import {Coordinate, ICoordinate} from "../geometry/Coordinate";
 import {ISnappable} from "../util/ISnappable";
 import WorldContext from "../mechanics/WorldContext";
 
+
 /**
  * Represents a location or position on the map.  Is instantialized at (0,0) by default.
  */
 export default class LocationNode extends AbstractNode implements IWorldNode, ISnappable {
 
-    readonly key: string = "location";
+    readonly key: string = LocationNode.key;
+    static readonly key: string = "location";
 
     constructor(id: string, position: ICoordinate = Coordinate.origin, name: string = "untitled") {
         super(id, position.x, position.y, 2);
@@ -68,6 +70,7 @@ export interface IWorldNode extends IGraphNode {
 
     /** identifier for kind of node */
     readonly key: string;
+    readonly name: string;
 
     readonly worldContext: WorldContext<IGraphNode>;
 

@@ -4,6 +4,8 @@ import IComparable from "../util/IComparable";
 import Domain from "../geometry/Domain";
 import Vector from "../util/Vector";
 import {ISerializable} from "../util/ISerializable";
+import {Dictionary} from "typescript-collections";
+import EMap from "../util/EMap";
 
 /**
  * Generically describes items that have graph node properties. They can be
@@ -110,7 +112,7 @@ export interface IGraph<Node extends IGraphNode>
     // attributes and getters
 
     /** set of nodes contained in graph */
-    readonly nodes: Map<string, IGraphNode>;
+    readonly nodes: EMap<string, IGraphNode>;
     /** the values of x & y allowed for nodes */
     readonly domain: Domain;
 

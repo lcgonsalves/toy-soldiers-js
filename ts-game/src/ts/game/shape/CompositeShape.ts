@@ -89,6 +89,11 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
 
     }
 
+    delete() {
+        this.deleteDepiction();
+        this.layers.forEach(layer => layer.delete());
+    }
+
     refresh(): void {
 
         const dataJoin = this.anchor?.selectAll<any, AbstractShape>("*")
@@ -110,7 +115,6 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
         // @ts-ignore
         return new this.constructor(this.name, this.layers.map(_ => _.duplicate()));
     }
-
 
     /**
      * Adds a circle shape to the layers.

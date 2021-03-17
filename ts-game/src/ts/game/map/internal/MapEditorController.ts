@@ -169,7 +169,7 @@ export class MapEditorController {
         this.initBottomMenu(anchor);
 
         // attach nodes already in context to group
-        this.locations.nodes.forEach(n => this.initializeLocationNode(n));
+        this.locations.nodes.forEach((id, n) => this.initializeLocationNode(n));
         
     }
 
@@ -243,17 +243,6 @@ export class MapEditorController {
         this.locations.add(n);
         n.snapSelf();
 
-        const refreshEndpoints = TAction("refresh_endpoints", "refresh_endpoints", () => {
-                this.locations.nodes.forEach(nodeInContext => {
-                    if (!nodeInContext.equals(n) && nodeInContext.isAdjacent(n)) {}
-                        // nodeInContext.refreshEdgeDepiction();
-
-                });
-            });
-
-        // detect when nodes move and react to it
-        n.onDrag(refreshEndpoints.apply);
-        n.onDragEnd(refreshEndpoints.apply);
         
 
         // allowed actions upon every node
@@ -411,13 +400,13 @@ export class MapEditorController {
         // });
         // n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
 
-        n.onDragStart(() => {
-            this.actionTooltip.enabled = false;
-            this.actionTooltip.unfocus(0, true);
-        });
-        n.onDragEnd(() => {
-            this.actionTooltip.enabled = true;
-        });
+        // n.onDragStart(() => {
+        //     this.actionTooltip.enabled = false;
+        //     this.actionTooltip.unfocus(0, true);
+        // });
+        // n.onDragEnd(() => {
+        //     this.actionTooltip.enabled = true;
+        // });
 
     }
 
@@ -425,6 +414,11 @@ export class MapEditorController {
 
         this.bases.add(b);
         b.snapSelf();
+
+        // listen for hovers
+        b.onMouseEnter(e => {
+            // this.actionTooltip.focus(e.focus)
+        })
 
     }
 

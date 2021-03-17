@@ -1,5 +1,5 @@
 
-import {Selection} from "d3-selection";
+import {pointer, Selection} from "d3-selection";
 import SVGTags from "./SVGTags";
 import SVGAttrs from "./SVGAttrs";
 import AssetLoader from "../game/map/internal/AssetLoader";
@@ -9,6 +9,9 @@ import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {PayloadRectangle} from "ts-shared/build/geometry/Payload";
 import {sq} from "ts-shared/build/util/Shorthands";
 import {SimpleDepiction} from "./Depiction";
+import {fromEvent, Subscription} from "rxjs";
+import {Events} from "./Events";
+import {map} from "rxjs/operators";
 
 export type AnySelection = Selection<any, any, any, any>;
 
@@ -112,6 +115,23 @@ export class TooltipConfig extends RectConfig {
         return this;
 
     }
+
+}
+
+/**
+ * Maps the event of a mousemove into an ICoordinate. Don't forget to unsubscribe!
+ * @param elem
+ * @param callback
+ */
+export function followMouseIn(elem: SVGElement, callback: (mousePositionInContext: ICoordinate) => void): Subscription {
+
+    return fromEvent<Event>(elem, Events.mousemove)
+        .pipe<ICoordinate>(
+            map((event: Event): ICoordinate => {
+                const [x, y] = pointer(event);
+                return C(x,y);
+            })
+        ).subscribe(callback);
 
 }
 

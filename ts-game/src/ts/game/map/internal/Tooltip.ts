@@ -376,6 +376,10 @@ export class ActionTooltip extends Rectangle implements IDepictable {
         this.anchor?.remove();
     }
 
+    delete() {
+        this.deleteDepiction();
+    }
+
     refresh(): void {
 
         const s = this.anchor;
@@ -402,19 +406,6 @@ export class ActionTooltip extends Rectangle implements IDepictable {
                 return p.toString();
             });
 
-
-    }
-
-    toggleHighlight(): void {
-
-        // TODO: implement
-
-        /*
-
-            Highlighting the tooltip means making it blink a few times with a yellow border around it
-            to call the attention of the user to this element.
-
-         */
 
     }
 

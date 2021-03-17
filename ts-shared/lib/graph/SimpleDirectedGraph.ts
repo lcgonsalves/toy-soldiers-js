@@ -3,10 +3,12 @@ import {Interval} from "../geometry/Interval";
 import {ICoordinate} from "../geometry/Coordinate";
 import IComparable from "../util/IComparable";
 import {IGraph, IGraphEdge, IGraphNode} from "./GraphInterfaces";
+import {Dictionary} from "typescript-collections"
+import EMap from "../util/EMap";
 
 export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGraph<Node> {
     readonly domain: Domain;
-    readonly nodes: Map<string, Node> = new Map<string, Node>();
+    readonly nodes: EMap<string, Node> = new EMap<string, Node>();
     readonly width: number;
     readonly height: number;
     get step(): number { return this.domain.x.step }
@@ -28,17 +30,17 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     }
 
     add(...n: Node[]): IGraph<Node> {
-        n.forEach(n => this.nodes.set(n.id, n));
+        n.forEach(n => this.nodes.setValue(n.id, n));
         return this;
     }
 
     rm(...n: string[]): IGraph<Node> {
-        n.forEach(nodeID => this.nodes.delete(nodeID));
+        n.forEach(nodeID => this.nodes.remove(nodeID));
         return this;
     }
 
     contains(id: string): boolean {
-        return !!this.nodes.get(id);
+        return !!this.nodes.getValue(id);
     }
 
     containsNodeAtLocation(location: ICoordinate): boolean {
@@ -77,7 +79,7 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     }
 
     get(id: string): Node | undefined {
-        return this.nodes.get(id);
+        return this.nodes.getValue(id);
     }
 
     getNodesAtPosition(location: ICoordinate): Node[] {
@@ -117,12 +119,12 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
     }
 
     getOrElse<T>(id: string, fallbackValue: T): Node | T {
-        const node: Node = this.nodes.get(id);
+        const node: Node = this.nodes.getValue(id);
         return !!node ? node : fallbackValue;
     }
 
     replace(n: Node, reconnect?: boolean): IGraph<Node> {
-        const prevNode: Node | undefined = this.nodes.get(n.id);
+        const prevNode: Node | undefined = this.nodes.getValue(n.id);
         if (reconnect && prevNode) {
             prevNode.adjacent.forEach(adjacentNode => {
                 // connect to new, if connection exists back
@@ -134,8 +136,10 @@ export default class SimpleDirectedGraph<Node extends IGraphNode> implements IGr
         }
 
         // replace
-        this.nodes.set(n.id, n);
+        this.nodes.setValue(n.id, n);
         return this;
     }
 
 }
+
+

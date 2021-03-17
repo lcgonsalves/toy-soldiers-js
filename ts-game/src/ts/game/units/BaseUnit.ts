@@ -2,7 +2,7 @@ import {DraggableUnit} from "./Draggable";
 import {ScalableUnit} from "./Scalable";
 import {DepictableUnit} from "./UnitInterfaces";
 import {C, ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import {AnySelection, defaultDepictions} from "../../util/DrawHelpers";
+import {AnySelection, defaultDepictions, followMouseIn} from "../../util/DrawHelpers";
 import {Base} from "ts-shared/build/mechanics/Base";
 import {CompositeShape} from "../shape/CompositeShape";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
@@ -12,7 +12,12 @@ import {AbstractShape} from "../shape/ShapeUtil";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {RectangleShape} from "../shape/RectangleShape";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
-import {Observable, Subject, Subscription} from "rxjs";
+import {Subject, Subscription} from "rxjs";
+import {TAction, TargetAction} from "../../util/Action";
+import LocationNode from "ts-shared/build/graph/LocationNode";
+import LocationUnit from "./LocationUnit";
+import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import {DestinationInvalidError} from "../../util/Errors";
 
 
 /** #################################### *
@@ -73,9 +78,9 @@ export default class BaseUnit
 
     }
 
-    readonly $click: Observable<BaseUnit> = new Subject();
-    readonly $mouseEnter: Observable<BaseUnitHoverEvent> = new Subject();
-    readonly $mouseLeave: Observable<BaseUnitHoverEvent> = new Subject();
+    readonly $click: Subject<BaseUnit> = new Subject();
+    readonly $mouseEnter: Subject<BaseUnitHoverEvent> = new Subject();
+    readonly $mouseLeave: Subject<BaseUnitHoverEvent> = new Subject();
 
     onClick(observer: (evt: BaseUnit) => void): Subscription {
         return this.$click.subscribe(observer);
@@ -89,6 +94,71 @@ export default class BaseUnit
         return this.$mouseLeave.subscribe(observer);
     }
 
+    /** #################################### *
+     *            Base Target Actions        *
+     *  #################################### */
 
+    /**
+     *  Routine for connecting a road between two bases, or between a base and a location.
+     *
+     *  @param backgroundContext SVG element that contains the background
+     *  @param pre any preprocessing needed to be done before initiating a connection sequence, such as disabling tooltip, freezing nodes in place, etc.
+     *  @param post any postprocessing needed to be done after a connection sequence finishes, either cancelled, failed, or successful, such as re-enabling tooltip, re-enabling drag on nodes, etc.
+     */
+    buildRoad(
+        backgroundContext: SVGGElement
+    ): TargetAction<BaseUnit> {
+        return TAction(
+            "build_road",
+            "Build Road",
+            (base) => {
+
+                // instantiate a location node, connect to it. track its movement with an observable.
+                const mouseTrackingNode = new LocationUnit("mtn", this, "Mouse Tracking Node");
+                base.connectTo(mouseTrackingNode);
+
+                // neighbors that can be connected to, sorted by distance to base
+                const availableNeighbors = this.worldContext.nodes
+                    .filter((_, node: Base) => node.occupation < node.capacity)
+                    .sort((a, b) => {
+                        const [_, baseA] = a;
+                        const [__, baseB] = b;
+
+                        return baseA.distance(base) - baseB.distance(base);
+
+                    });
+
+                // for all other bases & locations in the context, we stop them from being dragged, and attach listeners for clicks
+                this.worldContext.availableLocations.forEach(l => {
+
+                });
+
+
+                // make them listen to clicks now
+
+
+                const $mouseTracker = followMouseIn(backgroundContext, mousePos => {
+                });
+
+
+
+            },
+            {
+                start: b => {},
+                stop: b => {}
+            }
+        );
+    }
+
+    // performs cleanup, and disconnects from all adjacent nodes, deletes depiction and roads.
+    delete(): void {
+
+        // clear subscriptions
+        this.$click.complete();
+        this.$mouseLeave.complete();
+        this.$mouseEnter.complete();
+
+
+    }
 
 }

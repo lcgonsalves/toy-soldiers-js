@@ -3,11 +3,12 @@ import {Selection} from "d3-selection";
 import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {IDraggable} from "./Draggable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import LocationNode from "ts-shared/build/graph/LocationNode";
+import LocationNode, {IWorldNode} from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGTags from "../../util/SVGTags";
 import {Observable, Subscription} from "rxjs";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
 
 /**
  * Encompasses operations for mounting, unmounting, and updating element UI.
@@ -25,6 +26,9 @@ export interface IDepictable<E extends SVGElement = SVGGElement> {
 
     /** Refreshes depiction to reflect any changes in this Unit's content */
     refresh(): void;
+
+    /** performs deletion routine, clearing subscriptions  */
+    delete(): void;
 
 }
 
@@ -47,11 +51,11 @@ export type Sprite<E extends SVGElement> = IDepictable<E> & IMovable<any> & ICop
  */
 export function DepictableUnit<
     E extends SVGElement,
-    T extends GenericConstructor<LocationNode> = GenericConstructor<LocationNode>,
+    T extends GenericConstructor<IWorldNode> = GenericConstructor<IWorldNode>,
     S extends Sprite<E> = Sprite<E>
     >(Base: T, sprite: S) {
 
-    return class Depictable extends Base implements IDepictableWithSprite<SVGGElement, S>, IMovable, ICoordinate {
+    return class Depictable extends Base implements IDepictableWithSprite<SVGGElement, S>, IMovable, ICoordinate, IWorldNode {
 
         anchor: Selection<SVGGElement, IDepictable<E>, any, any> | undefined;
         sprite: S | undefined;
@@ -120,9 +124,14 @@ export function DepictableUnit<
 
         }
 
+        delete(): void {
+            this.sprite?.delete();
+            this.refreshOnPositionUpdate?.unsubscribe();
+            this.$positionChange.complete();
+        }
+
     }
 }
-
 
 export type DragHandler = (evt: any, n: IDraggable, coords: ICoordinate) => void
 export type Handler = (this: SVGGElement, event: any) => void

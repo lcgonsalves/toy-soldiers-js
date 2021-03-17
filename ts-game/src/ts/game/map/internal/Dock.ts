@@ -256,6 +256,11 @@ export default class Dock<AcceptedUnits extends LocationNode & IScalable & IDepi
         this.anchor?.remove();
     }
 
+    delete() {
+        this.deleteDepiction();
+        this.$nodePlacement.complete();
+    }
+
     // TODO: finish implementation, update text content
     refresh(): void {
 
