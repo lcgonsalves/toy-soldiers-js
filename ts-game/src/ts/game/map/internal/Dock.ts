@@ -78,13 +78,15 @@ export default class Dock<Unit extends LocationNode & IScalable & IDepictable = 
 
     snap(node: Unit): ICoordinate {
 
+        // debugger
+
         const assignedItem = this.registeredItems.get(node.name);
         const assignedBox = assignedItem?.container;
         const menuBounds = this.config.bounds;
 
         // if node is either above the menu, or the predicate function returns false, snap it back into the box
         if ((assignedItem && assignedBox) && (menuBounds.overlaps(node.unscaledPosition()) || !assignedItem.placementPredicate(node)))
-            return node.translateToScaledCoord(assignedBox);
+            return node.translateToCoord(assignedBox);
         else if (!assignedItem) throw new Error("No menu item assigned to this node.");
         else if (!assignedBox) throw new Error("No assigned box found.");
         else {

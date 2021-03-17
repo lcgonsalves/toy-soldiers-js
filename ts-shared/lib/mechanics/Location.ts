@@ -109,7 +109,6 @@ export class LocationContext<N extends LocationNode> extends WorldContext<N> {
         if (!startingSquare) throw new Error(errorMessage);
         else {
             const finalCoord = findClosestAvailableCoordinateRec(startingSquare);
-            console.log("snapp")
             return coordinate.translateToCoord(finalCoord);
         }
 

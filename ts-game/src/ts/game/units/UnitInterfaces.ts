@@ -67,7 +67,10 @@ export function DepictableUnit<
 
         anchor: Selection<SVGGElement, IDepictable<E>, any, any> | undefined;
         sprite: S | undefined;
+
         refreshOnPositionUpdate: Subscription | undefined;
+        interactionEmitters: Subscription[] = [];
+
 
         readonly $click: Subject<UnitInteraction<this>> = new Subject();
         readonly $mouseEnter: Subject<UnitInteraction<this>> = new Subject();
@@ -113,28 +116,32 @@ export function DepictableUnit<
             // then we attach it to the selection
             this.sprite.attachDepictionTo(container);
 
-            this.sprite?.$mouseEnter.pipe(
-                throttleTime(200),
-                map((coord: ICoordinate) => ({
-                    target: this,
-                    focus: coord
-                }))
-            ).subscribe(this.$mouseEnter);
+            if (!this.interactionEmitters.length && this.sprite) {
+                this.interactionEmitters.push(
+                    this.sprite.$mouseEnter.pipe(
+                        throttleTime(200),
+                        map((coord: ICoordinate) => ({
+                            target: this,
+                            focus: coord
+                        }))
+                    ).subscribe(this.$mouseEnter),
 
-            this.sprite?.$mouseLeave.pipe(
-                throttleTime(400),
-                map((coord: ICoordinate) => ({
-                    target: this,
-                    focus: coord
-                }))
-            ).subscribe(this.$mouseLeave);
+                    this.sprite.$mouseLeave.pipe(
+                        throttleTime(400),
+                        map((coord: ICoordinate) => ({
+                            target: this,
+                            focus: coord
+                        }))
+                    ).subscribe(this.$mouseLeave),
 
-            this.sprite?.$click.pipe(
-                map((coord: ICoordinate) => ({
-                    target: this,
-                    focus: coord
-                }))
-            ).subscribe(this.$click);
+                    this.sprite.$click.pipe(
+                        map((coord: ICoordinate) => ({
+                            target: this,
+                            focus: coord
+                        }))
+                    ).subscribe(this.$click)
+                )
+            }
 
         }
 
@@ -142,6 +149,8 @@ export function DepictableUnit<
             this.sprite?.deleteDepiction();
             this.anchor?.selectAll("*").remove();
             this.anchor?.remove();
+            this.interactionEmitters.forEach(_ => _.unsubscribe());
+            this.interactionEmitters = [];
         }
 
         refresh(): void {

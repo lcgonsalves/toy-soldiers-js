@@ -75,7 +75,8 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
     attachDepictionTo(d3selection: AnySelection): void {
 
         this._anchor = d3selection.append<SVGGElement>(SVGTags.SVGGElement)
-            .classed(this.name, true);
+            .classed(this.name, true)
+            .attr("center", this.center.toString());
 
         this.refresh();
 
@@ -94,6 +95,8 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
     }
 
     refresh(): void {
+
+        this.anchor?.attr("center", this.center.toString());
 
         const dataJoin = this.anchor?.selectAll<any, AbstractShape>("*")
             .data<AbstractShape>(this.layers, _ => _.serialize);

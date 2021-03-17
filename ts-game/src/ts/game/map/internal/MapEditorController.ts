@@ -258,6 +258,7 @@ export class MapEditorController {
     private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         this.locations.add(n);
+        this.locations.snap(n)
 
         // snap on end of drag
         this.registerSubscription(n.id + n.key, n.onDragEnd(() => this.locations.snap(n)));
@@ -430,7 +431,6 @@ export class MapEditorController {
     private initializeBaseNode<B extends BaseUnit>(b: B): void {
 
         this.bases.add(b);
-        this.bases.snap(b);
 
         // listen for hovers
 

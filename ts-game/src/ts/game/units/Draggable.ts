@@ -126,9 +126,6 @@ export function DraggableUnit<T extends GenericConstructor<IDepictable & ICoordi
                         // remove grabbed class for visual handling
                         this.anchor?.classed(DragCSS.GRABBED, false);
 
-                        // translate to final coordinate
-                        this.translateToCoord(e.position);
-
                     })
                 )
 
