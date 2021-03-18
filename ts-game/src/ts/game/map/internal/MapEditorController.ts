@@ -430,16 +430,17 @@ export class MapEditorController {
 
         this.bases.add(b);
 
+        this.registerSubscription(b.id + b.key, b.onDragEnd(() => this.bases.snap(b)))
+
         const bg: SVGGElement | null = this.bgGroup.node();
         if (!bg) throw new Error("Initializing node with no background. Need the background to track mouse movement.")
 
         const actions = b.getActions(
             bg,
-            () => this.locations.nodes.values(),
-            () => this.bases.nodes.values()
+            this.actionTooltip,
+            this.locations,
+            this.bases
         );
-
-        console.log(actions)
 
         // listen for hovers
         this.registerSubscription(

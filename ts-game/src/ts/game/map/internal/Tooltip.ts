@@ -180,7 +180,10 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .attr(SVGAttrs.cx, _ => _.x)
             .attr(SVGAttrs.cy, _ => _.y)
             .attr(SVGAttrs.r, buttonRadius / 1.2)
-            .attr(SVGAttrs.fill, _ => _.payload.depiction.fill)
+            .attr(SVGAttrs.fill, _ => {
+                debugger
+                return _.payload.depiction.fill
+            })
             .attr(SVGAttrs.stroke, _ => _.payload.depiction.stroke)
             .attr(SVGAttrs.strokeWidth, _ => _.payload.depiction.strokeWidth)
             .transition(TooltipTransitions.button_pop)

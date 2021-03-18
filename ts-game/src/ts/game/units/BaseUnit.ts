@@ -3,7 +3,7 @@ import {ScalableUnit} from "./Scalable";
 import {DepictableUnit} from "./UnitInterfaces";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {AnySelection} from "../../util/DrawHelpers";
-import {Base} from "ts-shared/build/mechanics/Base";
+import {Base, BaseContext} from "ts-shared/build/mechanics/Base";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import {TAction, TargetAction} from "../../util/Action";
 import {SampleShapes} from "../shape/Premade";
@@ -12,6 +12,8 @@ import {Selection} from "d3-selection";
 import LocationUnit from "./LocationUnit";
 import {Set} from "typescript-collections";
 import EMap from "ts-shared/build/util/EMap";
+import {LocationContext} from "ts-shared/build/mechanics/Location";
+import {ActionTooltip} from "../map/internal/Tooltip";
 
 /** #################################### *
  *        Construct Depictable Base      *
@@ -66,15 +68,19 @@ export default class BaseUnit
 
     getActions(
         backgroundContext: SVGGElement,
-        getAvailableLocations: () => LocationUnit[],
-        getAvailableNeighboringBases: () => BaseUnit[]
+        tooltip: ActionTooltip,
+        locations: LocationContext<LocationUnit>,
+        bases: BaseContext<BaseUnit, LocationUnit>
     ): TargetAction<BaseUnit>[] {
 
         const a = [];
 
         // if we have at least 1 connector availabe, we can have the connect action
         if (this.adjacent.length < this.roadConnectors)
-            a.push(this.buildRoad(backgroundContext, getAvailableLocations, getAvailableNeighboringBases));
+            a.push(this.buildRoadAction(backgroundContext, locations.nodes.values, bases.nodes.values));
+
+        // add delete action at the end
+        a.push(this.deleteBaseAction(bases, tooltip));
 
         return a;
 
@@ -87,47 +93,65 @@ export default class BaseUnit
      *  @param getAvailableLocations getter for fetching locations in context
      *  @param getAvailableNeighboringBases getter for fetching bases in ctx
      */
-    buildRoad(
+    buildRoadAction(
         backgroundContext: SVGGElement,
         getAvailableLocations: () => LocationUnit[],
         getAvailableNeighboringBases: () => BaseUnit[]
     ): TargetAction<BaseUnit> {
-        return TAction(
-            "connect",
-            "Build Road",
-            (base) => {
+        return TAction("connect", "Build Road", TargetAction.depiction.neutral, (base) => {
 
-                // lock everything in place
-                const basesAndLoc = [ ...getAvailableNeighboringBases(), ...getAvailableLocations() ];
+            // lock everything in place
+            const basesAndLoc = [...getAvailableNeighboringBases(), ...getAvailableLocations()];
 
-                // set will compare by string, which in this case is the position. Hence if I add the Bases first,
-                // and Locations second, we will yield the Bases + Unoccupied locations.
-                const validPlacements = new Set<BaseUnit | LocationUnit>(item => item.simple.toString());
+            // set will compare by string, which in this case is the position. Hence if I add the Bases first,
+            // and Locations second, we will yield the Bases + Unoccupied locations.
+            const validPlacements = new Set<BaseUnit | LocationUnit>(item => item.simple.toString());
 
-                basesAndLoc.forEach(_ => {
-                    // get filter for bases that have at least 1 available connector
-                    if (_ instanceof Base && (_.adjacent.length < _.roadConnectors)) {
-                        validPlacements.add(_);
-                    } else if (_ instanceof LocationUnit) {
-                        // the else if here prevents us from adding if the connector > adjacent check returns false
-                        validPlacements.add(_)
-                    }
+            basesAndLoc.forEach(_ => {
+                // get filter for bases that have at least 1 available connector
+                if (_ instanceof Base && (_.adjacent.length < _.roadConnectors)) {
+                    validPlacements.add(_);
+                } else if (_ instanceof LocationUnit) {
+                    // the else if here prevents us from adding if the connector > adjacent check returns false
+                    validPlacements.add(_)
+                }
 
-                    _.disableDrag();
-                });
+                _.disableDrag();
+            });
 
-                // hook observers on the valid placements. Listen for clicks!
-                validPlacements.forEach(trgt => {
-                    trgt.onClick((evt: UnitInteraction<BaseUnit | LocationUnit>) => console.log(evt.focus, evt.target))
+            // hook observers on the valid placements. Listen for clicks!
+            validPlacements.forEach(trgt => {
+                trgt.onClick((evt: UnitInteraction<BaseUnit | LocationUnit>) => console.log(evt.focus, evt.target))
 
 
-                });
+            });
 
+        }, {
+            start: b => {
             },
-            {
-                start: b => {},
-                stop: b => {}
+            stop: b => {
             }
+        });
+    }
+
+    /**
+     * Deletes base from context, and clears depiction and listeners.
+     * @param context
+     * @param tooltip
+     */
+    deleteBaseAction(
+        context: BaseContext<BaseUnit, LocationUnit>,
+        tooltip: ActionTooltip
+    ): TargetAction<BaseUnit> {
+        return TAction(
+            "remove",
+            "Delete Base",
+            TargetAction.depiction.delete,
+            (base) => {
+                tooltip.unfocus();
+                context.rm(base.id);
+                base.delete();
+            },
         );
     }
 

@@ -32,20 +32,21 @@ export class TargetAction<Target> extends GenericAction {
     constructor(
         key: string,
         name: string,
-        fn: (t: Target) => void,
-        preview: {
-            start: (t: Target) => void,
-            stop: (t: Target) => void
-        } = {
-            start: () => {},
-            stop: () => {}
-        }
-    ) {
+        depiction: SimpleDepiction = TargetAction.depiction.neutral,
+        fn: (t: Target) => void
+        , preview: { start: (t: Target) => void; stop: (t: Target) => void } = {
+            start: () => {
+            },
+            stop: () => {
+            }
+        }) {
         super(key, name, fn);
 
         this.preview = preview.start;
         this.stopPreview = preview.stop;
         this.apply = fn;
+        this.depiction = depiction;
+
     };
 
     // default kinds of action depictions
@@ -62,9 +63,9 @@ export class TargetAction<Target> extends GenericAction {
 export function TAction<Target>(
     key: string,
     name: string,
+    depiction: SimpleDepiction,
     fn: (t: Target) => void,
-    preview?: {
-        start: (t: Target) => void,
-        stop: (t: Target) => void
-    }
-): TargetAction<Target> { return new TargetAction(key, name, fn, preview) }
+    preview?: { start: (t: Target) => void; stop: (t: Target) => void }
+): TargetAction<Target> {
+    return new TargetAction(key, name, depiction, fn, preview)
+}
