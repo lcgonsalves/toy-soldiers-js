@@ -4,7 +4,7 @@ import {ICopiable, ISerializable, SerializableObject, SObj} from "ts-shared/buil
 import SVGAttrs from "../../util/SVGAttrs";
 import {AnySelection} from "../../util/DrawHelpers";
 import {IDepictable} from "../units/UnitInterfaces";
-import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
+import {Coordinate, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {fromEvent, Subject, Subscription} from "rxjs";
 import {Events} from "../../util/Events";
 import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
@@ -22,6 +22,7 @@ export enum ShapeCSS {
  * i.e. a CircleShape (AbstractShape<SVGCircleElement>) should call anchor.attr(cx, ...).attr(cy, ...) and so on.
  */
 export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SVGElement>
+    extends Coordinate
     implements ISerializable,
         IMovable<AbstractShape<AssociatedSVGElement>>,
         ICopiable,
@@ -54,6 +55,7 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
 
     /** the param {name} should always come from SVGTags */
     protected constructor(name: string, depiction: SimpleDepiction) {
+        super(0, 0);
         this.name = name;
         this.depiction = depiction;
     }
@@ -159,20 +161,36 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
      * @param x
      * @param y
      */
-    abstract translateTo(x: number, y: number): AbstractShape<AssociatedSVGElement>;
+    translateTo(x: number, y: number): AbstractShape<AssociatedSVGElement> {
+        super.translateTo(x,y);
+
+        // overriding to allow for returning this;
+        return this;
+    }
 
     /**
      * Translates shape to other coordinate and refreshes its depiction.
      * @param other
      */
-    abstract translateToCoord(other: ICoordinate): AbstractShape<AssociatedSVGElement>;
+    translateToCoord(other: ICoordinate): AbstractShape<AssociatedSVGElement> {
+        super.translateToCoord(other);
+
+        // overriding to allow for returning this;
+        return this;
+    }
 
     /**
      * Translates shape by x units horizontally and y units vertically and refreshes its depiction.
      * @param x
      * @param y
      */
-    abstract translateBy(x: number, y: number): AbstractShape<AssociatedSVGElement>;
+    translateBy(x: number, y: number): AbstractShape<AssociatedSVGElement> {
+        super.translateBy(x, y);
+
+        // overriding to allow for returning this;
+        return this;
+
+    }
 
     /**
      * Returns a new instance of this shape.

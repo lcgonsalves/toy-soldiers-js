@@ -11,8 +11,14 @@ export class RectangleShape extends AbstractShape<SVGRectElement> {
     bounds: Rectangle;
 
     constructor(bounds: Rectangle, depiction: SimpleDepiction = defaultDepictions.grays.medium) {
+
         super(SVGTags.SVGRectElement, depiction);
-        this.bounds = bounds;
+        this.bounds = bounds.copy;
+
+        this.translateToCoord(bounds);
+
+        // since we are now a coordinate, might as well react to our position changes and pass them to the bounds
+        this.$positionChange.subscribe(c => this.bounds.translateToCoord(c));
 
         // react to bound changes
         this.bounds.onChange(() => this.refreshAttributes());
@@ -42,22 +48,6 @@ export class RectangleShape extends AbstractShape<SVGRectElement> {
             .attr(SVGAttrs.height, height);
 
     }
-
-    translateBy(x: number, y: number): AbstractShape<SVGRectElement> {
-        this.bounds.translateBy(x, y);
-        return this;
-    }
-
-    translateTo(x: number, y: number): AbstractShape<SVGRectElement> {
-        this.bounds.translateTo(x, y);
-        return this;
-    }
-
-    translateToCoord(other: ICoordinate): AbstractShape<SVGRectElement> {
-        this.bounds.translateToCoord(other);
-        return this;
-    }
-
 
 
 }

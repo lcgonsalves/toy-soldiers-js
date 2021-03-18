@@ -3,7 +3,7 @@ import {Selection} from "d3-selection";
 import {ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {IDraggable} from "./Draggable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import LocationNode, {IWorldNode} from "ts-shared/build/graph/LocationNode";
+import {IWorldNode} from "ts-shared/build/graph/LocationNode";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import SVGTags from "../../util/SVGTags";
 import {Observable, Subject, Subscription} from "rxjs";

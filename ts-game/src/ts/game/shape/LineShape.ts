@@ -25,7 +25,14 @@ export class LineShape extends AbstractShape<SVGPathElement> {
         // copy points just in case
         this.points = points.map(_ => _.copy);
 
+        this.translateToCoord(this.center);
+
         this.$modifiedPoints = new Subject();
+
+        // react to position changes and update
+        this.$positionChange.subscribe(c => {
+            this.points.forEach(_ => _.translateToCoord(c))
+        });
 
         // subscribe to changes in any of the points's positions
         combineLatest(this.points.map(_ => _.$positionChange), this.$modifiedPoints)
@@ -44,21 +51,6 @@ export class LineShape extends AbstractShape<SVGPathElement> {
         this.anchor?.datum<ICoordinate[]>(this.points)
             .attr(SVGAttrs.d, this.line);
 
-    }
-
-    translateToCoord(other: ICoordinate): this {
-        this.points.forEach(_ => _.translateToCoord(other));
-        return this;
-    }
-
-    translateBy(x: number, y: number): this {
-        this.points.forEach(_ => _.translateBy(x, y));
-        return this;
-    }
-
-    translateTo(x: number, y: number): this {
-        this.points.forEach(_ => _.translateTo(x, y));
-        return this;
     }
 
     get center(): ICoordinate {

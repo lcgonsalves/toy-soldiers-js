@@ -70,7 +70,7 @@ export default class Rectangle extends Coordinate {
 
     get copy(): this {
         // @ts-ignore
-        return new this.constructor(this._topLeft, this._topRight, this._bottomLeft, this._bottomRight);
+        return new this.constructor(this._topLeft.copy, this._topRight.copy, this._bottomLeft.copy, this._bottomRight.copy);
     }
 
     equals(other: ICoordinate): boolean {
@@ -94,7 +94,9 @@ export default class Rectangle extends Coordinate {
     }
 
     translateToCoord(other: ICoordinate): Rectangle {
-        super.translateToCoord(other);
+        const dic = this.distanceInComponents(other);
+        this.translateBy(dic.x, dic.y);
+
         return this;
     }
 

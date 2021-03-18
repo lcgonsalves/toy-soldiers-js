@@ -8,6 +8,10 @@ import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import {TAction, TargetAction} from "../../util/Action";
 import {SampleShapes} from "../shape/Premade";
 import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import {Selection} from "d3-selection";
+import LocationUnit from "./LocationUnit";
+import {Set} from "typescript-collections";
+import EMap from "ts-shared/build/util/EMap";
 
 /** #################################### *
  *        Construct Depictable Base      *
@@ -21,9 +25,19 @@ export interface UnitInteraction<Unit> {
     focus: ICoordinate
 }
 
+export interface Road<F extends ICoordinate, T extends ICoordinate> {
+    from: F,
+    to: T,
+    intermediates: ICoordinate[]
+}
+
 export default class BaseUnit
     extends DraggableUnit(ScalableUnit(DepictableUnit<SVGGElement, GenericConstructor<Base>>(Base, SampleShapes.base)))
         implements IGraphNode {
+
+    // maps id of
+    roads: EMap<string, Road<ICoordinate, any>> = new EMap<string, Road<ICoordinate, any>>();
+    roadAnchor: Selection<SVGGElement, [ICoordinate, ICoordinate], any, any> | undefined;
 
     // declare constructor so the code-analysis doesn't freak out
     constructor(id: string, position?: ICoordinate, name?: string) {
@@ -50,22 +64,64 @@ export default class BaseUnit
      *            Base Target Actions        *
      *  #################################### */
 
+    getActions(
+        backgroundContext: SVGGElement,
+        getAvailableLocations: () => LocationUnit[],
+        getAvailableNeighboringBases: () => BaseUnit[]
+    ): TargetAction<BaseUnit>[] {
+
+        const a = [];
+
+        // if we have at least 1 connector availabe, we can have the connect action
+        if (this.adjacent.length < this.roadConnectors)
+            a.push(this.buildRoad(backgroundContext, getAvailableLocations, getAvailableNeighboringBases));
+
+        return a;
+
+    }
+
     /**
      *  Routine for connecting a road between two bases, or between a base and a location.
      *
      *  @param backgroundContext SVG element that contains the background
-     *  @param pre any preprocessing needed to be done before initiating a connection sequence, such as disabling tooltip, freezing nodes in place, etc.
-     *  @param post any postprocessing needed to be done after a connection sequence finishes, either cancelled, failed, or successful, such as re-enabling tooltip, re-enabling drag on nodes, etc.
+     *  @param getAvailableLocations getter for fetching locations in context
+     *  @param getAvailableNeighboringBases getter for fetching bases in ctx
      */
     buildRoad(
-        backgroundContext: SVGGElement
+        backgroundContext: SVGGElement,
+        getAvailableLocations: () => LocationUnit[],
+        getAvailableNeighboringBases: () => BaseUnit[]
     ): TargetAction<BaseUnit> {
         return TAction(
-            "build_road",
+            "connect",
             "Build Road",
             (base) => {
 
+                // lock everything in place
+                const basesAndLoc = [ ...getAvailableNeighboringBases(), ...getAvailableLocations() ];
 
+                // set will compare by string, which in this case is the position. Hence if I add the Bases first,
+                // and Locations second, we will yield the Bases + Unoccupied locations.
+                const validPlacements = new Set<BaseUnit | LocationUnit>(item => item.simple.toString());
+
+                basesAndLoc.forEach(_ => {
+                    // get filter for bases that have at least 1 available connector
+                    if (_ instanceof Base && (_.adjacent.length < _.roadConnectors)) {
+                        validPlacements.add(_);
+                    } else if (_ instanceof LocationUnit) {
+                        // the else if here prevents us from adding if the connector > adjacent check returns false
+                        validPlacements.add(_)
+                    }
+
+                    _.disableDrag();
+                });
+
+                // hook observers on the valid placements. Listen for clicks!
+                validPlacements.forEach(trgt => {
+                    trgt.onClick((evt: UnitInteraction<BaseUnit | LocationUnit>) => console.log(evt.focus, evt.target))
+
+
+                });
 
             },
             {

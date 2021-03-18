@@ -11,7 +11,7 @@ import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
 import {IDepictable} from "../../units/UnitInterfaces";
-import {Base, BaseContext} from "ts-shared/build/mechanics/Base";
+import {BaseContext} from "ts-shared/build/mechanics/Base";
 import {merge, Subscription} from "rxjs";
 
 interface MapEditorMapConfig {
@@ -24,16 +24,12 @@ interface MapEditorMapConfig {
 enum MapEditorControllerCSS {
     BG_ELEM = "bg_elememnt",
     MAIN_ELEM = "main_element",
-    BOTTOM_MENU = "bottom_menu",
-    TOOLTIP = "tooltip",
     GRID_ID = "grid_element",
     GRID_CLS = "grid",
     NODE_CONTAINER_ID = "nodes",
     NODE_CONTAINER_CLS = "node",
     POINTER_EVENTS = "none",
     EDGE_CONTAINER_ID = "edges",
-    GAME_UNIT_BOX = "game_unit_box",
-    TOOLTIP_ACTION_BUTTON = "tooltip_action_button"
 }
 
 /**
@@ -125,6 +121,7 @@ export class MapEditorController {
                 ])
                 .on("zoom", (event: any) => {
                     mainGroup.attr("transform", event.transform.toString());
+                    this.actionTooltip.unfocus();
                 })
         );
 
@@ -233,6 +230,7 @@ export class MapEditorController {
                     !this.bases.getNodesInVicinity(base.unscaledPosition(this.mainGroup), step).length;
             }
         );
+
 
         dock.attachDepictionTo(select(anchor));
 
@@ -432,11 +430,22 @@ export class MapEditorController {
 
         this.bases.add(b);
 
+        const bg: SVGGElement | null = this.bgGroup.node();
+        if (!bg) throw new Error("Initializing node with no background. Need the background to track mouse movement.")
+
+        const actions = b.getActions(
+            bg,
+            () => this.locations.nodes.values(),
+            () => this.bases.nodes.values()
+        );
+
+        console.log(actions)
+
         // listen for hovers
         this.registerSubscription(
             b.id + b.key,
             b.onMouseEnter(e => {
-                this.actionTooltip.focus(e.target, [b.buildRoad(this.bgGroup.node())], e.focus, 150)
+                this.actionTooltip.focus(e.target, actions, e.focus, 150)
             }),
             b.onMouseLeave(() => this.actionTooltip.unfocus(250)),
             b.onDragStart(() => this.actionTooltip.unfocus(0))
