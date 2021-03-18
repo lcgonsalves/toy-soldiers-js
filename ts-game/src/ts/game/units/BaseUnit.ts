@@ -148,6 +148,8 @@ export default class BaseUnit
             "Delete Base",
             TargetAction.depiction.delete,
             (base) => {
+                console.log(base)
+
                 tooltip.unfocus();
                 context.rm(base.id);
                 base.delete();
