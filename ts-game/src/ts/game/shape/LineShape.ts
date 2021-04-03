@@ -3,7 +3,7 @@ import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {SimpleDepiction} from "../../util/Depiction";
 import {defaultDepictions} from "../../util/DrawHelpers";
 import SVGTags from "../../util/SVGTags";
-import {combineLatest, Subject} from "rxjs";
+import {combineLatest, Observable, race, Subject} from "rxjs";
 import {line, Line} from "d3-shape"
 import {throttleTime} from "rxjs/operators";
 import SVGAttrs from "../../util/SVGAttrs";
@@ -14,36 +14,46 @@ export class LineShape extends AbstractShape<SVGPathElement> {
     protected line: Line<ICoordinate> = line<ICoordinate>().x(d => d.x).y(d => d.y);
 
     /** Observable that is triggered for every */
-    protected $modifiedPoints: Subject<any>;
+    private readonly _$modifiedPoints: Subject<any>;
+
+    /** Observable that emits every time the points in this line get set. */
+    get $modifiedPoints(): Observable<any>{
+        return this._$modifiedPoints;
+    }
 
     constructor(
         points: ICoordinate[] = [],
-        depiction: SimpleDepiction = defaultDepictions.noFill.grays.dark
+        depiction: SimpleDepiction = defaultDepictions.noFill.grays.dark,
+        copy?: boolean
     ) {
         super(SVGTags.SVGPathElement, depiction);
 
         // copy points just in case
-        this.points = points.map(_ => _.copy);
+        this.points = copy ? points.map(_ => _.copy) : points;
 
         this.translateToCoord(this.center);
 
-        this.$modifiedPoints = new Subject();
+        this._$modifiedPoints = new Subject();
 
         // react to position changes and update
         this.$positionChange.subscribe(c => {
-            this.points.forEach(_ => _.translateToCoord(c))
+            const {x, y} = this.center.distanceInComponents(c);
+            this.points.forEach(_ => _.translateBy(x, y));
         });
 
         // subscribe to changes in any of the points's positions
-        combineLatest(this.points.map(_ => _.$positionChange), this.$modifiedPoints)
+        race(this.points.map(_ => _.$positionChange), this._$modifiedPoints)
             .pipe(throttleTime(15))
-            .subscribe(() => this.refreshAttributes());
+            .subscribe(() => {
+                console.log("points changed or their position changed")
+                this.refreshAttributes();
+            });
 
     }
 
     duplicate(): this {
         // @ts-ignore
-        return new this.constructor(this.points.map(_ => _.copy), this.depiction);
+        return new this.LineShape(this.points, this.depiction, true);
     }
 
     refreshAttributes(): void {
@@ -51,6 +61,15 @@ export class LineShape extends AbstractShape<SVGPathElement> {
         this.anchor?.datum<ICoordinate[]>(this.points)
             .attr(SVGAttrs.d, this.line);
 
+    }
+
+    /**
+     * Updates points in line and emits to $modifiedPoints when done.
+     * @param newPts
+     */
+    setPoints(...newPts: ICoordinate[]): void {
+        this.points = newPts.map(_ => _.copy);
+        this._$modifiedPoints.next();
     }
 
     get center(): ICoordinate {

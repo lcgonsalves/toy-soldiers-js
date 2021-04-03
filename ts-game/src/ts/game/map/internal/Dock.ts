@@ -1,5 +1,5 @@
 import { AnySelection, defaultConfigurations, DockConfig, rect } from "../../../util/DrawHelpers";
-import { IDepictable } from "../../units/UnitInterfaces";
+import { IDepictable } from "../../units/mixins/Depictable";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
 import { path } from "d3";
@@ -7,9 +7,9 @@ import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationNode from "ts-shared/build/graph/LocationNode";
-import {IScalable} from "../../units/Scalable";
+import {IScalable} from "../../units/mixins/Scalable";
 import {Subject, Subscription} from "rxjs";
-import {isDraggable} from "../../units/Draggable";
+import {isDraggable} from "../../units/mixins/Draggable";
 
 
 type UnitConstructor<Unit> = (x: number, y: number, id: string, name: string) => Unit

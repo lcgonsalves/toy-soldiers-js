@@ -1,4 +1,5 @@
-import {Observable, Subscription} from "rxjs";
+import {Observable, Subject, Subscription} from "rxjs";
+import {ICoordinate} from "../geometry/Coordinate";
 
 /**
  * Defines API for elements that emit events when clicked.
@@ -29,5 +30,15 @@ export interface IHoverable<Datum> {
 
     /** Assigns a callback to be triggered when the mouse enters. Same as _.$mouseEnter.subscribe(observer) */
     onMouseLeave(observer: (evt: Datum) => void): Subscription;
+
+}
+
+export interface ITrackable {
+
+    /**
+     * Responds to changes in position of a given coordinate.
+     * @param c
+     */
+    follow(c: ICoordinate): Subscription;
 
 }

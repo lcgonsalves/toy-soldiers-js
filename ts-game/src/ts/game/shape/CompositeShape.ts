@@ -1,4 +1,4 @@
-import {IDepictable} from "../units/UnitInterfaces";
+import {IDepictable} from "../units/mixins/Depictable";
 import {C, Coordinate, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {ICopiable} from "ts-shared/build/util/ISerializable";
 import {select, Selection} from "d3-selection";
@@ -9,9 +9,13 @@ import {AbstractShape} from "./ShapeUtil";
 import {CircleShape} from "./CircleShape";
 import {LineShape} from "./LineShape";
 import {merge, Observable, Subscription} from "rxjs";
-import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import {IClickable, IHoverable, ITrackable} from "ts-shared/build/reactivity/IReactive";
 
-export class CompositeShape implements IDepictable, IMovable, ICopiable, IClickable<ICoordinate>, IHoverable<ICoordinate> {
+export interface IMultiLayer {
+    readonly layers: AbstractShape[];
+}
+
+export class CompositeShape implements IDepictable, IMovable, ICopiable, IMultiLayer, IClickable<ICoordinate>, IHoverable<ICoordinate>, ITrackable {
 
     readonly name: string;
     readonly center: ICoordinate;
@@ -140,7 +144,7 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
         points: ICoordinate[],
         depiction?: SimpleDepiction
     ): this {
-        const l = new LineShape(points, depiction);
+        const l = new LineShape(points, depiction, false);
 
         // @ts-ignore – it doesnt like this shit, but it works
         this.layers.push(l);
@@ -157,6 +161,15 @@ export class CompositeShape implements IDepictable, IMovable, ICopiable, IClicka
 
     onMouseLeave(observer: (evt: ICoordinate) => void): Subscription {
         return this.$mouseLeave.subscribe(observer);
+    }
+
+    /**
+     * Finds difference between this center and c, and translates all layers by this difference
+     * at every position change C experiences.
+     * @param c
+     */
+    follow(c: ICoordinate): Subscription {
+        return c.onChange(newPos => this.translateToCoord(newPos));
     }
 
 }

@@ -19,6 +19,10 @@ export interface IMovable<T = ICoordinate> {
 
 }
 
+export function closest(target: ICoordinate, pts: ICoordinate[]): ICoordinate {
+    return pts.sort((a, b) => a.distance(target) - b.distance(target))[0];
+}
+
 /**
  * Defines properties of two dimensional points and operations
  * between them.

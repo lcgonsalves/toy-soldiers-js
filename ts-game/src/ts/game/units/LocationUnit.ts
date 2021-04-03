@@ -1,12 +1,16 @@
-import {DepictableUnit} from "./UnitInterfaces";
+import {DepictableUnit, Sprite} from "./mixins/Depictable";
 import LocationNode from "ts-shared/build/graph/LocationNode";
-import {ScalableUnit} from "./Scalable";
-import {DraggableUnit} from "./Draggable";
+import {ScalableUnit} from "./mixins/Scalable";
+import {DraggableUnit} from "./mixins/Draggable";
 import {ICoordinate} from "ts-shared/build/geometry/Coordinate";
-import {AnySelection} from "../../util/DrawHelpers";
+import {AnySelection, defaultDepictions} from "../../util/DrawHelpers";
 import {SampleShapes} from "../shape/Premade";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
+import {CompositeShape} from "../shape/CompositeShape";
+import {CircleShape} from "../shape/CircleShape";
 
+export const LocationUnitDepiction: Sprite =
+    new CompositeShape("location_unit").addCircle(1.5, x=>x, defaultDepictions.grays.medium.setClickable(true));
 
 /** #################################### *
  *      Construct Depictable Location    *
@@ -16,7 +20,7 @@ import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
  *  Represent a valid location, where other units can be placed.
  */
 export default class LocationUnit
-    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGCircleElement, GenericConstructor<LocationNode>>(LocationNode, SampleShapes.dot))) {
+    extends DraggableUnit(ScalableUnit(DepictableUnit<SVGGElement, GenericConstructor<LocationNode>>(LocationNode, LocationUnitDepiction))) {
 
     // declare constructor so the code-analysis doesn't freak out
     constructor(id: string, position?: ICoordinate, name?: string) {

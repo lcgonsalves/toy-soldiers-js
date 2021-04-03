@@ -73,6 +73,9 @@ class AssetLoader {
         i?.setAttribute(SVGAttrs.width, newWidth + "px");
         i?.setAttribute(SVGAttrs.height, newHeight + "px");
 
+        // by default, disable mouse events on the icon
+        i?.setAttribute(SVGAttrs.pointerEvents, "none");
+
         return i?.cloneNode(true) as HTMLElement | undefined;
     }
 

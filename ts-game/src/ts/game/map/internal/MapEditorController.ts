@@ -10,9 +10,12 @@ import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
 import {LocationContext} from "ts-shared/build/mechanics/Location";
 import LocationUnit from "../../units/LocationUnit";
 import BaseUnit from "../../units/BaseUnit";
-import {IDepictable} from "../../units/UnitInterfaces";
+import {IDepictable, Sprite} from "../../units/mixins/Depictable";
 import {BaseContext} from "ts-shared/build/mechanics/Base";
 import {merge, Subscription} from "rxjs";
+import {IGraphNode} from "ts-shared/build/graph/GraphInterfaces";
+import EMap from "ts-shared/build/util/EMap";
+import {RoadUnit, RoadUnitCSS} from "../../units/RoadUnit";
 
 interface MapEditorMapConfig {
     backgroundColor: string;
@@ -30,6 +33,8 @@ enum MapEditorControllerCSS {
     NODE_CONTAINER_CLS = "node",
     POINTER_EVENTS = "none",
     EDGE_CONTAINER_ID = "edges",
+    LOCATIONS_CONTAINER_CLS = "locations",
+    BASES_CONTAINER_CLS = "locations"
 }
 
 /**
@@ -44,6 +49,9 @@ export class MapEditorController {
     // context where bases exist
     public readonly bases: BaseContext<BaseUnit, LocationUnit> = new BaseContext<BaseUnit, LocationUnit>(this.locations);
 
+    // keep track of all connections between graph nodes - maps source of road to destination of road
+    public readonly roads: EMap<IGraphNode, RoadUnit[]> = new EMap<IGraphNode, RoadUnit[]>(x => x.id);
+
     // for internal reactive management
     private subscriptions: Map<string, Subscription[]> = new Map<string, Subscription[]>();
 
@@ -56,9 +64,10 @@ export class MapEditorController {
     > = new Dock("Map Elements");
 
     // anchors
-    private readonly edgeContainer: AnySelection;
-    private readonly nodeContainer: AnySelection;
+    private readonly roadContainer: AnySelection;
     private readonly mainGroup: AnySelection;
+    private readonly locationGroup: AnySelection;
+    private readonly baseGroup: AnySelection;
     private readonly bgGroup: AnySelection;
 
     // tooltip reference
@@ -67,10 +76,17 @@ export class MapEditorController {
     // putting all of the boilerplate in here
     constructor(anchor: SVGSVGElement, config: MapEditorMapConfig) {
 
-        // watch for node removals and clear subscriptions
+        // watch for node removals and perform cleanup
         merge<LocationUnit[], BaseUnit[]>(this.locations.$rm, this.bases.$rm)
             .subscribe((removedUnits: Array<LocationUnit | BaseUnit>) => {
-                removedUnits.forEach(unit => this.subscriptions.get(unit.id + unit.key)?.forEach(_ => _.unsubscribe()))
+                removedUnits.forEach(unit => {
+
+                    // unsubscribe
+                    this.subscriptions.get(unit.id + unit.key)?.forEach(_ => _.unsubscribe());
+
+                    // clear all roads
+
+                });
             });
 
         // watch for node additions and snap them
@@ -161,13 +177,11 @@ export class MapEditorController {
 
 
         // append edges svg group first to respect rendering order
-        this.edgeContainer = mainGroup.append(SVGTags.SVGGElement)
+        this.roadContainer = mainGroup.append(SVGTags.SVGGElement)
             .attr(SVGAttrs.id, MapEditorControllerCSS.EDGE_CONTAINER_ID);
 
-        // append nodes svg group
-        this.nodeContainer = mainGroup.append(SVGTags.SVGGElement)
-            .attr(SVGAttrs.id, MapEditorControllerCSS.NODE_CONTAINER_ID)
-            .classed(MapEditorControllerCSS.NODE_CONTAINER_CLS, true);
+        this.locationGroup = mainGroup.append(SVGTags.SVGGElement).classed(MapEditorControllerCSS.LOCATIONS_CONTAINER_CLS, true);
+        this.baseGroup     = mainGroup.append(SVGTags.SVGGElement).classed(MapEditorControllerCSS.BASES_CONTAINER_CLS, true);
 
         
         // instantiate tooltip
@@ -179,6 +193,18 @@ export class MapEditorController {
         // attach nodes already in context to group
         this.locations.nodes.forEach((id, n) => this.initializeLocationNode(n));
         
+    }
+
+    /**
+     * For a given IGraphNode ID, register the passed subscriptions. If the ID has already
+     * subscriptions registed, it will append. Otherwise it will set the map to the values.
+     * @param id
+     * @param s
+     */
+    registerSubscription(id: string, ...s: Subscription[]): void {
+        if (this.subscriptions.has(id)) {
+            this.subscriptions.get(id)?.push(...s);
+        } else this.subscriptions.set(id, s);
     }
 
     private undoTransform(n: IDepictable & ICoordinate) {
@@ -193,9 +219,6 @@ export class MapEditorController {
             ((n.x / scale) - (translation.x / scale)),
             ((n.y / scale) - (translation.y / scale))
         );
-
-        // attach depictions
-        n.attachDepictionTo(this.nodeContainer);
 
     }
 
@@ -246,207 +269,43 @@ export class MapEditorController {
 
     }
 
-    registerSubscription(id: string, ...s: Subscription[]): void {
-        if (this.subscriptions.has(id)) {
-            this.subscriptions.get(id)?.push(...s);
-        } else this.subscriptions.set(id, s);
-    }
-
     /** attaches depictions, and associates handlers to toggle lable and refresh edge endpoints */
     private initializeLocationNode<Unit extends LocationUnit>(n: Unit): void {
 
         this.locations.add(n);
         this.locations.snap(n)
+        n.attachDepictionTo(this.locationGroup);
 
         // snap on end of drag
         this.registerSubscription(n.id + n.key, n.onDragEnd(() => this.locations.snap(n)));
 
-        // // allowed actions upon every node
-        //
-        // // moves into connecting state, tracking a virtual node until either the esc key is pressed,
-        // // or the user clicks on a node, or the user clicks somewhere in the map.
-        // const connectToAction = TAction<Unit>("connect", "connect", node => {
-        //
-        //     // create virtual node
-        //     const mouseTrackerNodeID = "tracker";
-        //     const mouseTrackerNode = new LocationUnit(mouseTrackerNodeID, node);
-        //
-        //     // connect to it
-        //     node.connectTo(mouseTrackerNode);
-        //
-        //     // disable tooltip to not create a mess
-        //     this.actionTooltip.enabled = false;
-        //     this.actionTooltip.unfocus();
-        //
-        //     // make this node undraggable
-        //     // node.draggable = false;
-        //
-        //     // make background track mouse movement and update node location
-        //
-        //     // attach a listener to this node to detect clicks.
-        //     // clicking on this node should create a connection
-        //     // callback function should undo everything.
-        //     const hook = new TargetAction<LocationNode>("hook", "hook", (n) => {
-        //
-        //         node.connectTo(n, true);
-        //
-        //         allLocations.forEach(_ => {
-        //             // _.removeOnMouseClick(hook.key);
-        //             // _.draggable = true;
-        //         });
-        //         // node.draggable = true;
-        //
-        //         this.bgGroup?.on(Events.mousemove, null);
-        //         node.disconnectFrom(mouseTrackerNode);
-        //         select("body").on(Events.keydown, null);
-        //         this.actionTooltip.enabled = true;
-        //
-        //
-        //     });
-        //
-        //     // prepare nodes for connection
-        //     const allLocations = this.locations.all().filter(l => !l.overlaps(node));
-        //     allLocations.forEach(l => {
-        //
-        //         // now they are listening for that sweet sweet click
-        //         // l.onMouseClick(hook.key, () => hook.apply(l));
-        //
-        //         // now they stop being draggable
-        //         // l.draggable = false;
-        //
-        //     });
-        //
-        //
-        //     this.bgGroup?.on(Events.mousemove, function(evt: any) {
-        //
-        //         const [x, y] = pointer(evt);
-        //         const eventCoordinate = C(x, y);
-        //
-        //         // magnet zone
-        //         const magnetZone = 5;
-        //         const closestNeighbor = allLocations.find(l => l.distance(eventCoordinate) <= magnetZone);
-        //         closestNeighbor !== undefined ? mouseTrackerNode.translateToCoord(closestNeighbor) : mouseTrackerNode.translateToCoord(eventCoordinate);
-        //
-        //         // node.refreshEdgeDepiction();
-        //
-        //     });
-        //
-        //     // listen for esc press, stop all when pressed
-        //     select("body").on(Events.keydown, e => {
-        //         if (e.code === "Escape") {
-        //
-        //             allLocations.forEach(_ => {
-        //                 // _.removeOnMouseClick(hook.key);
-        //                 // _.draggable = true;
-        //             });
-        //             // node.draggable = true;
-        //
-        //             this.bgGroup?.on(Events.mousemove, null);
-        //             node.disconnectFrom(mouseTrackerNode);
-        //             select("body").on(Events.keydown, null);
-        //             this.actionTooltip.enabled = true;
-        //
-        //         }
-        //     });
-        //
-        // });
-        // connectToAction.depiction = TargetAction.depiction.neutral
-        //
-        // const removeAction = TAction<Unit>("remove", "remove", node => {
-        //     this.locations.rm(node.id);
-        //     this.actionTooltip.unfocus(0);
-        //     this.locations.getNodesAdjacentTo(node).forEach(adj => {
-        //         node.disconnectFrom(adj, true);
-        //         console.log(adj.adjacent);
-        //         // adj.refreshEdgeDepiction();
-        //     });
-        //
-        //     node.deleteDepiction();
-        //
-        // });
-        // removeAction.depiction = TargetAction.depiction.delete;
-        //
-        // const disconnectFromAction = TAction<Unit>("disconnect", "disconnect", node => {
-        //     // build a new action for each adjacent node
-        //     const newActions = node.adjacent.map((adjNode) => {
-        //         const actionName = "dc_" + adjNode.id;
-        //
-        //         return TAction<LocationUnit>(
-        //             actionName,
-        //             actionName,
-        //             () => {
-        //
-        //                 // because we do want the line to disappear, otherwise it looks weird
-        //                 node.disconnectFrom(adjNode, true);
-        //
-        //                 // also remove the button
-        //                 this.actionTooltip.removeAction(actionName);
-        //
-        //             },
-        //             {
-        //                 start: () => {
-        //                     // adjNode.toggleHighlight();
-        //                     console.log("highlight on " + adjNode.toString())
-        //                 },
-        //                 stop: () => {
-        //                     // adjNode.toggleHighlight()
-        //                     console.log("highlight off " + adjNode.toString())
-        //                 }
-        //             });
-        //
-        //     });
-        //
-        //     this.actionTooltip.setActions<Unit>(newActions, node, 0);
-        //
-        // });
-        // disconnectFromAction.depiction = TargetAction.depiction.neutral;
-        //
-        // const actionsForLooseNodes = [connectToAction, removeAction];
-        //
-        // // display tooltip on hover
-        // // n.onMouseIn("display_tooltip", () => {
-        // //     const hasNeighbors = n.adjacent.length > 0;
-        // //
-        // //     this.actionTooltip.focus(
-        // //         n,
-        // //         hasNeighbors ? [connectToAction, disconnectFromAction, removeAction] : actionsForLooseNodes,
-        // //         n.coordinate.translateBy(0, -n.radius),
-        // //         670
-        // //     )
-        // // });
-        // // n.onMouseOut("hide_tooltip", () => this.actionTooltip.unfocus(250, true));
-        //
-        // n.onDragStart(() => {
-        //     this.actionTooltip.enabled = false;
-        //     this.actionTooltip.unfocus(0, true);
-        // });
-        // n.onDragEnd(() => {
-        //     this.actionTooltip.enabled = true;
-        // });
+
 
     }
 
     private initializeBaseNode<B extends BaseUnit>(b: B): void {
 
         this.bases.add(b);
+        b.attachDepictionTo(this.baseGroup);
 
         this.registerSubscription(b.id + b.key, b.onDragEnd(() => this.bases.snap(b)))
 
-        const bg: SVGGElement | null = this.bgGroup.node();
-        if (!bg) throw new Error("Initializing node with no background. Need the background to track mouse movement.")
+        const bg = this.bgGroup;
 
-        const actions = b.getActions(
-            bg,
-            this.actionTooltip,
-            this.locations,
-            this.bases
-        );
 
         // listen for hovers
         this.registerSubscription(
             b.id + b.key,
             b.onMouseEnter(e => {
-                this.actionTooltip.focus(e.target, actions, e.focus, 150)
+
+                this.actionTooltip.focus(e.target, b.getActions(
+                    bg,
+                    this.actionTooltip,
+                    this.locations,
+                    this.bases,
+                    e.focus,
+                    (from, to, toSocket?: ICoordinate) => this.addRoad(from, to, e.focus, toSocket)
+                ), e.focus, 150)
             }),
             b.onMouseLeave(() => this.actionTooltip.unfocus(250)),
             b.onDragStart(() => this.actionTooltip.unfocus(0))
@@ -464,6 +323,46 @@ export class MapEditorController {
 
         // associate context so the tooltip knows how to correct its position
         actionTooltip.setContext(this.mainGroup);
+
+    }
+
+    /**
+     * Keeps track of road connection, and attaches depiction for that road. Road depiction will update
+     * upon position changes of either node.
+     * @param from
+     * @param to
+     * @private
+     */
+    private addRoad(from: IGraphNode, to: IGraphNode, fromSocket?: ICoordinate, toSocket?: ICoordinate): void {
+
+        const roads = this.roads.getValue(from);
+        const r = new RoadUnit(from, to, fromSocket, toSocket);
+
+        // only add if road doesn't yet exist
+        if (roads && roads.findIndex(r => r.destination.equals(to)) === -1) {
+
+            // update
+            this.roads.setValue(from, [...roads, r]);
+            r.attachDepictionTo(this.roadContainer);
+
+        } if (!roads) {
+
+            // and create array if it's not
+            this.roads.setValue(from, [r]);
+            r.attachDepictionTo(this.roadContainer);
+
+        }
+
+    }
+
+    /**
+     * Removes road connecting 'from' and 'to' nodes. If 'to' node isn't specified, all connections
+     * stemming from 'from' node will be removed. Depictions are cleaned up as well.
+     * @param from
+     * @param to
+     * @private
+     */
+    private rmRoad(from: IGraphNode, to?: IGraphNode): void {
 
     }
     

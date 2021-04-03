@@ -1,5 +1,5 @@
 import {ICoordinate, C, Coordinate} from "ts-shared/build/geometry/Coordinate";
-import {IDepictable} from "./UnitInterfaces";
+import {IDepictable} from "./Depictable";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
 import {Observable, Subject, Subscription} from "rxjs"
 import {drag} from "d3-drag";

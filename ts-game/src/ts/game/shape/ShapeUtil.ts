@@ -3,11 +3,11 @@ import {Selection} from "d3-selection";
 import {ICopiable, ISerializable, SerializableObject, SObj} from "ts-shared/build/util/ISerializable";
 import SVGAttrs from "../../util/SVGAttrs";
 import {AnySelection} from "../../util/DrawHelpers";
-import {IDepictable} from "../units/UnitInterfaces";
+import {IDepictable} from "../units/mixins/Depictable";
 import {Coordinate, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import {fromEvent, Subject, Subscription} from "rxjs";
 import {Events} from "../../util/Events";
-import {IClickable, IHoverable} from "ts-shared/build/reactivity/IReactive";
+import {IClickable, IHoverable, ITrackable} from "ts-shared/build/reactivity/IReactive";
 import {map} from "rxjs/operators";
 
 export enum ShapeCSS {
@@ -21,14 +21,15 @@ export enum ShapeCSS {
  *
  * i.e. a CircleShape (AbstractShape<SVGCircleElement>) should call anchor.attr(cx, ...).attr(cy, ...) and so on.
  */
-export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SVGElement>
+export abstract class AbstractShape<AssociatedSVGElement extends SVGGElement = SVGGElement>
     extends Coordinate
     implements ISerializable,
         IMovable<AbstractShape<AssociatedSVGElement>>,
         ICopiable,
         IDepictable<AssociatedSVGElement>,
         IHoverable<ICoordinate>,
-        IClickable<ICoordinate>
+        IClickable<ICoordinate>,
+        ITrackable
 {
 
     readonly name: string;
@@ -201,6 +202,10 @@ export abstract class AbstractShape<AssociatedSVGElement extends SVGElement = SV
      * Returns a coordinate that represents the center of the shape.
      */
     abstract get center(): ICoordinate;
+
+    follow(c: ICoordinate): Subscription {
+        return c.onChange((newPos) => this.translateToCoord(newPos));
+    }
 
     onClick(observer: (evt: ICoordinate) => void): Subscription {
         return this.$click.subscribe(observer);

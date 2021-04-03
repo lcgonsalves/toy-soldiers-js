@@ -6,7 +6,7 @@ import {
     rect, renderIconForSelection,
     TooltipConfig
 } from "../../../util/DrawHelpers";
-import {IDepictable} from "../../units/UnitInterfaces";
+import {IDepictable} from "../../units/mixins/Depictable";
 import SVGTags from "../../../util/SVGTags";
 import SVGAttrs from "../../../util/SVGAttrs";
 import {C, Coordinate, ICoordinate} from "ts-shared/build/geometry/Coordinate";
@@ -262,6 +262,12 @@ export class ActionTooltip extends Rectangle implements IDepictable {
             .attr(SVGAttrs.r, buttonRadius / 1.2)
             .on("click", function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
                 action.payload.apply(target);
+            })
+            .on(Events.mouseenter, function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.preview(target);
+            })
+            .on(Events.mouseleave, function (evt: any, action: PayloadRectangle<TargetAction<Target>>) {
+                action.payload.stopPreview(target);
             })
             .attr(SVGAttrs.fill, _ => _.payload.depiction.fill)
             .attr(SVGAttrs.stroke, _ => _.payload.depiction.stroke)

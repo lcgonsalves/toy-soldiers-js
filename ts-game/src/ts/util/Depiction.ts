@@ -1,13 +1,16 @@
 import {ISerializable, SerializableObject, SObj} from "ts-shared/build/util/ISerializable";
+import IComparable from "ts-shared/build/util/IComparable";
 
-export class SimpleDepiction implements ISerializable {
-    
+export class SimpleDepiction implements ISerializable, IComparable {
+
     public readonly fill: string;
     public readonly stroke: string;
     public readonly strokeWidth: number;
     public readonly opacity: number;
     public readonly clickable: boolean;
     public readonly hoverable: boolean;
+
+    private _id: string = "";
 
     constructor(
         fill: string = "none",
@@ -28,6 +31,11 @@ export class SimpleDepiction implements ISerializable {
     /** Returns a string representing the instance of this object at the time of serialization */
     get serialize(): string {
         return this.simplified.toString();
+    }
+
+    // two depictions with the same ID are considered equal.
+    get id(): string {
+        return this._id;
     }
 
     get simplified(): SerializableObject {
@@ -69,6 +77,26 @@ export class SimpleDepiction implements ISerializable {
     /** @immutable */
     setOpacity(val: number): SimpleDepiction {
         return new SimpleDepiction(this.fill, this.stroke, this.strokeWidth, val, this.hoverable, this.clickable)
+    }
+
+    setID(id: string): SimpleDepiction {
+
+        this._id = id;
+        return this;
+
+    }
+
+    equals(other: IComparable): boolean {
+        if (other instanceof SimpleDepiction) return (
+            this.id == other.id ||
+            (this.fill == other.fill &&
+            this.stroke == other.stroke &&
+            this.strokeWidth == other.strokeWidth &&
+            this.opacity == other.opacity &&
+            this.hoverable == other.hoverable &&
+            this.clickable == other.clickable)
+        );
+        else return false;
     }
 
 }

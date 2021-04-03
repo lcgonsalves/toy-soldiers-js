@@ -17,11 +17,16 @@ export class RectangleShape extends AbstractShape<SVGRectElement> {
 
         this.translateToCoord(bounds);
 
-        // since we are now a coordinate, might as well react to our position changes and pass them to the bounds
-        this.$positionChange.subscribe(c => this.bounds.translateToCoord(c));
-
-        // react to bound changes
-        this.bounds.onChange(() => this.refreshAttributes());
+        /*
+         * React to this shape's position change by updating the position of the
+         * bounds and then by refreshing attributes synchronously. For some reason, reacting to
+         * the bounds' position change using Observables doesn't work and I don't have time to find
+         * out why.
+         */
+        this.$positionChange.subscribe(c => {
+            this.bounds.translateToCoord(c);
+            this.refreshAttributes()
+        });
 
     }
 

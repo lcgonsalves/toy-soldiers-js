@@ -1,9 +1,9 @@
 import {C, ICoordinate, IMovable} from "ts-shared/build/geometry/Coordinate";
 import Rectangle from "ts-shared/build/geometry/Rectangle";
 import {GenericConstructor} from "ts-shared/build/util/MixinUtil";
-import {IDepictableWithSprite} from "./UnitInterfaces";
-import SVGAttrs from "../../util/SVGAttrs";
-import {AnySelection, getTransforms} from "../../util/DrawHelpers";
+import {IDepictableWithSprite} from "./Depictable";
+import SVGAttrs from "../../../util/SVGAttrs";
+import {AnySelection, getTransforms} from "../../../util/DrawHelpers";
 
 /**
  * Describes methods to be implement by Scalable units. These allow an object to change its size
